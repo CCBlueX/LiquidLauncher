@@ -4,6 +4,27 @@ version = "0.1.0"
 authors = ["kawaiinekololis <marco@ccbluex.net>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+log = "0.4.0"
+env_logger = "0.8.3"
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
+anyhow = "1.0"
+thiserror = "1.0"
+void = "1"
+zip = "0.5.11"
+path-absolutize = "3.0.7"
+
+# HTTP library
+reqwest = { version = "0.11", features = ["json"] }
+
+# Framework for serializing and deserializing data
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.5"
+
+# We're using Sciter to keep the UI looking the same on every operating system. We could use Ultralight, but we decided to go with Sciter.
+# sciter-rs = "0.5.54"
+
+# Not for UI. Just to make downloading our client easy using the integrated operating system browser.
+# web-view = "0.7.3"
