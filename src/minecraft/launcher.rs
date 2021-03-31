@@ -8,31 +8,30 @@ use path_absolutize::*;
 use anyhow::Result;
 
 use super::version::VersionProfile;
+use std::fmt::Write;
 
 const CONCURRENT_DOWNLOADS: usize = 10;
 
 pub async fn launch(profile: VersionProfile) -> Result<()> {
     match profile {
-        VersionProfile::V14 { asset_index_location, assets, inherits_from, downloads, id, libraries, logging, main_class, minecraft_arguments, minimum_launcher_version, release_time, time, version_type } => {
-            // todo: implement later
+        VersionProfile::V14(version_profile) => {
+            unimplemented!();
         }
-        VersionProfile::V21 { arguments, asset_index_location, assets, inherits_from, compliance_level, downloads, id, libraries, logging, main_class, minimum_launcher_version, time, version_type } => {
+        VersionProfile::V21(version_profile) => {
             let mut class_path = String::new();
 
             // Client
             let versions_folder = Path::new("versions");
 
             // Check if json has client download (or doesn't require one)
-            if let Some(client_download) = downloads.client {
-                let client_folder = versions_folder.join(&id);
+            if let Some(client_download) = &version_profile.downloads.client {
+                let client_folder = versions_folder.join(&version_profile.id);
                 fs::create_dir_all(&client_folder).await?;
 
-                let mut client_jar = client_folder.clone();
-                client_jar.set_file_name(id);
-                client_jar.set_extension(".jar");
+                let mut client_jar = client_folder.join(format!("{}.jar", &version_profile.id));
 
                 // Add client jar to class path
-                class_path.push_str(&format!("{};", &client_jar.absolutize().unwrap().to_str().unwrap()));
+                write!(class_path, "{}{}", &client_jar.absolutize().unwrap().to_str().unwrap(), OS.get_path_separator())?;
 
                 // Download client jar
                 if !client_jar.exists() {
@@ -47,7 +46,7 @@ pub async fn launch(profile: VersionProfile) -> Result<()> {
             fs::create_dir_all(&indexes_folder).await?;
             fs::create_dir_all(&objects_folder).await?;
 
-            let asset_index = asset_index_location.load_asset_index(&indexes_folder).await?;
+            let asset_index = version_profile.asset_index_location.load_asset_index(&indexes_folder).await?;
 
             let _: Vec<Result<()>> = stream::iter(
                 asset_index.objects.iter().map(|(_, asset_object)| asset_object.download(&objects_folder))
@@ -60,10 +59,11 @@ pub async fn launch(profile: VersionProfile) -> Result<()> {
 
             // todo: make library downloader compact and async
             
-            for library in libraries {
-                if let Some(artifact) = library.downloads.artifact {
+            for library in &version_profile.libraries {
+                if let Some(artifact) = &library.downloads.artifact {
                     let library_path = libraries_folder.join(&artifact.path);
-                    class_path.push_str(&format!("{};", &library_path.absolutize().unwrap().to_str().unwrap()));
+
+                    write!(class_path, "{}{}", &library_path.absolutize().unwrap().to_str().unwrap(), OS.get_path_separator())?;
 
                     if !library_path.exists() {
                         fs::create_dir_all(&library_path.parent().unwrap()).await?;
@@ -71,11 +71,11 @@ pub async fn launch(profile: VersionProfile) -> Result<()> {
                     }
                 }
 
-                if let Some(natives) = library.natives {
+                if let Some(natives) = &library.natives {
                     if let Some(required_natives) = natives.get(&format!("{}", &OS)) {
                         debug!("required natives: {}", required_natives);
 
-                        if let Some(classifiers) = library.downloads.classifiers {
+                        if let Some(classifiers) = &library.downloads.classifiers {
                             if let Some(artifact) = classifiers.get(required_natives) {
                                 let library_path = libraries_folder.join(&artifact.path);
 
@@ -108,28 +108,28 @@ pub async fn launch(profile: VersionProfile) -> Result<()> {
 
             // todo: cleanup and make compact
 
-            for argument in arguments.jvm {
+            for argument in &version_profile.arguments.jvm {
                 if argument.rules.is_some() {
                     // todo: implement rules
                     continue;
                 }
 
-                match argument.value {
-                    super::version::ArgumentValue::SINGLE(value) => command_arguments.push(value),
+                match &argument.value {
+                    super::version::ArgumentValue::SINGLE(value) => command_arguments.push(value.to_owned()),
                     super::version::ArgumentValue::VEC(vec) => command_arguments.append(&mut vec.clone())
                 };
             }
 
-            command_arguments.push(main_class);
+            command_arguments.push(version_profile.main_class.to_owned());
 
-            for argument in arguments.game {
+            for argument in &version_profile.arguments.game {
                 if argument.rules.is_some() {
                     // todo: implement rules
                     continue;
                 }
 
-                match argument.value {
-                    super::version::ArgumentValue::SINGLE(value) => command_arguments.push(value),
+                match &argument.value {
+                    super::version::ArgumentValue::SINGLE(value) => command_arguments.push(value.to_owned()),
                     super::version::ArgumentValue::VEC(vec) => command_arguments.append(&mut vec.clone())
                 };
             }
@@ -138,15 +138,15 @@ pub async fn launch(profile: VersionProfile) -> Result<()> {
                 .replace("${version_name}", "0.0.1")
                 .replace("${game_directory}", &game_dir.absolutize().unwrap().to_str().unwrap())
                 .replace("${assets_root}", &assets_folder.absolutize().unwrap().to_str().unwrap())
-                .replace("${assets_index_name}", &asset_index_location.id)
+                .replace("${assets_index_name}", &version_profile.asset_index_location.id)
                 .replace("${auth_uuid}", "2fc2c1dd-0234-48f6-94bb-4cb5812393ab")
                 .replace("${auth_access_token}", "-")
                 .replace("${user_type}", "legacy")
-                .replace("${version_type}", &version_type)
+                .replace("${version_type}", &version_profile.version_type)
                 .replace("${natives_directory}", &natives_folder.absolutize().unwrap().to_str().unwrap())
                 .replace("${launcher_name}", "liquidlauncher")
                 .replace("${launcher_version}", "1.0.0")
-                .replace("${classpath}", &class_path))
+                .replace("${classpath}", &class_path[..class_path.len() - 1]))
                 .collect();
 
             debug!("Arguments: {:?}", mapped);

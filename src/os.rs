@@ -4,9 +4,9 @@ use serde::Deserialize;
 
 pub const OS: Os = if cfg!(windows) {
     Os::WINDOWS
-}else if cfg!(unix) {
+} else if cfg!(unix) {
     Os::LINUX
-}else if cfg!(macos) {
+} else if cfg!(macos) {
     Os::OSX
 } else {
     Os::UNKNOWN
@@ -20,13 +20,25 @@ pub enum Os {
     UNKNOWN
 }
 
+impl Os {
+    pub(crate) fn get_path_separator(&self) -> &'static str {
+        return match self {
+            Os::WINDOWS => ";",
+            Os::LINUX | Os::OSX => ":",
+            _ => panic!("Invalid OS")
+        };
+    }
+}
+
 impl Display for Os {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Os::WINDOWS => f.write_str("windows"),
-            Os::LINUX => f.write_str("linux"),
-            Os::OSX => f.write_str("osx"),
-            Os::UNKNOWN => f.write_str("unexpected os"),
-        }
+        f.write_str(
+            match self {
+                Os::WINDOWS => "windows",
+                Os::LINUX => "linux",
+                Os::OSX => "osx",
+                _ => panic!("Invalid OS")
+            }
+        )
     }
 }

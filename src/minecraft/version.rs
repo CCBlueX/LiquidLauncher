@@ -36,51 +36,57 @@ pub struct ManifestVersion {
 #[serde(untagged)] // TODO: Might guess from minimum_launcher_version just to be sure.
 pub enum VersionProfile {
     // V14 describes the old version json used by versions below 1.12.2
-    V14 {
-        #[serde(rename = "assetIndex")]
-        asset_index_location: AssetIndexLocation,
-        assets: String,
-        #[serde(rename = "inheritsFrom")]
-        inherits_from: Option<String>,
-        downloads: Downloads,
-        id: String,
-        libraries: Vec<Library>,
-        logging: Logging,
-        #[serde(rename = "mainClass")]
-        main_class: String,
-        #[serde(rename = "minecraftArguments")]
-        minecraft_arguments: String,
-        #[serde(rename = "minimumLauncherVersion")]
-        minimum_launcher_version: i32,
-        #[serde(rename = "releaseTime")]
-        release_time: String,
-        time: String,
-        #[serde(rename = "type")]
-        version_type: String
-    },
+    V14(V14VersionProfile),
     // V21 describes the new version json used by versions above 1.13.
-    V21 {
-        arguments: Arguments,
-        #[serde(rename = "assetIndex")]
-        asset_index_location: AssetIndexLocation,
-        assets: String,
-        #[serde(rename = "inheritsFrom")]
-        inherits_from: Option<String>,
-        #[serde(rename = "complianceLevel")]
-        compliance_level: Option<i32>,
-        downloads: Downloads,
-        id: String,
-        libraries: Vec<Library>,
-        logging: Logging,
-        #[serde(rename = "mainClass")]
-        main_class: String,
-        #[serde(rename = "minimumLauncherVersion")]
-        minimum_launcher_version: i32,
-        #[serde(rename = "releaseTime")]
-        time: String,
-        #[serde(rename = "type")]
-        version_type: String
-    }
+    V21(V21VersionProfile)
+}
+
+#[derive(Deserialize)]
+pub struct V14VersionProfile {
+    #[serde(rename = "assetIndex")]
+    pub asset_index_location: AssetIndexLocation,
+    pub assets: String,
+    #[serde(rename = "inheritsFrom")]
+    pub inherits_from: Option<String>,
+    pub downloads: Downloads,
+    pub id: String,
+    pub libraries: Vec<Library>,
+    pub logging: Logging,
+    #[serde(rename = "mainClass")]
+    pub main_class: String,
+    #[serde(rename = "minecraftArguments")]
+    pub minecraft_arguments: String,
+    #[serde(rename = "minimumLauncherVersion")]
+    pub minimum_launcher_version: i32,
+    #[serde(rename = "releaseTime")]
+    pub release_time: String,
+    pub time: String,
+    #[serde(rename = "type")]
+    pub version_type: String
+}
+
+#[derive(Deserialize)]
+pub struct V21VersionProfile {
+    pub arguments: Arguments,
+    #[serde(rename = "assetIndex")]
+    pub asset_index_location: AssetIndexLocation,
+    pub assets: String,
+    #[serde(rename = "inheritsFrom")]
+    pub inherits_from: Option<String>,
+    #[serde(rename = "complianceLevel")]
+    pub compliance_level: Option<i32>,
+    pub downloads: Downloads,
+    pub id: String,
+    pub libraries: Vec<Library>,
+    pub logging: Logging,
+    #[serde(rename = "mainClass")]
+    pub main_class: String,
+    #[serde(rename = "minimumLauncherVersion")]
+    pub minimum_launcher_version: i32,
+    #[serde(rename = "releaseTime")]
+    pub time: String,
+    #[serde(rename = "type")]
+    pub version_type: String
 }
 
 impl VersionProfile {
