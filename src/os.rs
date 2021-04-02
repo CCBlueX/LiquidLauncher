@@ -28,17 +28,18 @@ impl Os {
             _ => panic!("Invalid OS")
         };
     }
+    pub(crate) fn get_simple_name(&self) -> &'static str {
+        return match self {
+            Os::WINDOWS => "windows",
+            Os::LINUX => "linux",
+            Os::OSX => "osx",
+            _ => panic!("Invalid OS")
+        };
+    }
 }
 
 impl Display for Os {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(
-            match self {
-                Os::WINDOWS => "windows",
-                Os::LINUX => "linux",
-                Os::OSX => "osx",
-                _ => panic!("Invalid OS")
-            }
-        )
+        f.write_str(self.get_simple_name())
     }
 }

@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate sciter;
+
 use anyhow::Result;
 use env_logger::Env;
 use log::*;
@@ -7,23 +10,36 @@ use os::OS;
 pub mod minecraft;
 pub mod cloud;
 pub mod os;
+mod prelauncher;
+#[cfg(feature = "gui")]
+mod gui;
+#[cfg(feature = "cli")]
+mod cli;
+mod error;
 
-#[tokio::main]
-pub async fn main() -> Result<()> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+pub fn main() {
+    let args = std::env::args();
 
-    debug!("Launcher cloud: {}", cloud::LAUNCHER_CLOUD);
-    info!("Running on {}", OS);
+    let mut real_args = args.skip(1);
 
-    info!("Loading manifest...");
-    let manifest = VersionManifest::download().await?;
-    let version_manifest = manifest.versions.iter()
-        .find(|m| m.id.eq_ignore_ascii_case("1.13.1"))
-        .expect("Expected version");
-    info!("Loading version profile...");
-    let version = VersionProfile::load(version_manifest).await?;
+    if let Some((mc_version, lb_version)) = real_args.next().zip(real_args.next()) {
+        #[cfg(feature = "cli")]
+            {
+                cli::cli_main(mc_version, lb_version);
+                return;
+            }
 
-    info!("Launching {}...", version_manifest.id);
-    launch(version).await?;
-    Ok(())
+        eprintln!("This build does not support CLI.");
+        return;
+    }
+
+    #[cfg(feature = "gui")]
+        {
+            gui::gui_main();
+            return;
+        }
+
+    eprintln!("This build does not support GUI.");
+    return;
+
 }
