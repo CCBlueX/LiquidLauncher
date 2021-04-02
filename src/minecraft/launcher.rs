@@ -71,23 +71,13 @@ pub async fn launch(version_profile: VersionProfile) -> Result<()> {
 
     // todo: make library downloader compact and async
 
-    let mut already_processed = HashSet::with_capacity(version_profile.libraries.len());
-
     for library in &version_profile.libraries {
-        if already_processed.contains(&library.name) {
-            info!("Ignoring {} as it is specified twice.", library.name);
-            continue;
-        }
-        already_processed.insert(library.name.to_owned());
-
         if !crate::minecraft::rule_interpreter::check_condition(&library.rules, &features, &os_info)? {
             continue;
         }
 
         if let Some(natives) = &library.natives {
             if let Some(required_natives) = natives.get(&format!("{}", &OS)) {
-                debug!("required natives: {}", required_natives);
-
                 if let Some(classifiers) = library.downloads.as_ref().and_then(|x| x.classifiers.as_ref()) {
                     if let Some(artifact) = classifiers.get(required_natives).map(|x| LibraryDownloadInfo::from(x)) {
                         let library_path = libraries_folder.join(&artifact.path);
@@ -127,7 +117,7 @@ pub async fn launch(version_profile: VersionProfile) -> Result<()> {
     }
 
     // Game
-    let mut command = Command::new("C:\\Program Files\\AdoptOpenJDK\\jdk-8.0.275.1-hotspot\\bin\\java.exe");
+    let mut command = Command::new("java");
 
     let game_dir = Path::new("gameDir");
 
