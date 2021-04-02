@@ -26,8 +26,6 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install GTK 3 (for sciter)
-        run: sudo apt-get install libgtk-3-dev
       - name: Build
         run: cargo build --release
 
@@ -64,6 +62,8 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install GTK 3 (for sciter)
+        run: sudo apt-get install libgtk-3-dev
 
       - name: Build
         run: cargo build --release
