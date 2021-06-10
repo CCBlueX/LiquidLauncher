@@ -8,6 +8,7 @@ use void::Void;
 use os_info::{Bitness, Info};
 use std::collections::HashSet;
 use crate::error::LauncherError;
+use crate::utils::get_maven_artifact_path;
 
 // https://launchermeta.mojang.com/mc/game/version_manifest.json
 
@@ -377,14 +378,8 @@ impl Library  {
             return Ok(artifact.into());
         }
 
-        let split = self.name.split(":").collect::<Vec<_>>();
-        
-        if split.len() != 3 {
-            return Err(LauncherError::InvalidVersionProfile(format!("Invalid artifact name: {}", self.name)).into());
-        }
-
+        let path = get_maven_artifact_path(&self.name)?;
         let url = self.url.as_ref().map(|x| x.as_str()).unwrap_or("https://libraries.minecraft.net/");
-        let path = format!("{}/{name}/{ver}/{name}-{ver}.jar", split[0].replace(".", "/"), name = split[1], ver = split[2]);
 
         return Ok(
             LibraryDownloadInfo {

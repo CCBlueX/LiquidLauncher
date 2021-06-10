@@ -1,3 +1,4 @@
+#[cfg(feature = "gui")]
 #[macro_use]
 extern crate sciter;
 
@@ -6,6 +7,7 @@ use env_logger::Env;
 use log::*;
 use minecraft::{launcher::launch, version::{VersionManifest, VersionProfile}};
 use os::OS;
+use web_view::Content;
 
 pub mod minecraft;
 pub mod cloud;
@@ -16,6 +18,10 @@ mod gui;
 #[cfg(feature = "cli")]
 mod cli;
 mod error;
+mod webview_utils;
+mod utils;
+
+const LAUNCHER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn main() {
     let args = std::env::args();
@@ -41,5 +47,4 @@ pub fn main() {
 
     eprintln!("This build does not support GUI.");
     return;
-
 }
