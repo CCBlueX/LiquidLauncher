@@ -1,0 +1,26 @@
+<html lang="de">
+<body>
+<h1>LiquidLauncher</h1>
+Status: <span>Idle...</span>
+<p></p>
+<progress value="19" max="90">...</progress>
+</body>
+<script type="text/tiscript">
+    var taskNo = 0;
+
+    $(#start-task).onClick = function()
+    {
+        ++taskNo;
+
+        var taskElem = $(div#tasks > select).$append(<option>Task { taskNo }<progress max=100 /> <span.result /></option>);
+
+        function onProgress(p100) { taskElem.$(progress).value = p100; }
+        function onDone(taskId) {
+        taskElem.$(span.result).text = "Done!";
+        taskElem.$(progress).remove();
+    }
+
+        view.exec_task(taskNo, onProgress, onDone);
+    }
+</script>
+</html>

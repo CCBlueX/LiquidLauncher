@@ -5,6 +5,8 @@ use std::io::stdin;
 use crate::minecraft::version::VersionManifest;
 use env_logger::Env;
 use log::*;
+use crate::webview_utils;
+use crate::prelauncher::retrieve_and_copy_mods;
 
 pub(crate) fn cli_main(mc_version: String, lb_version: String) {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
@@ -33,6 +35,7 @@ pub(crate) fn cli_main(mc_version: String, lb_version: String) {
         }
     };
 
+
     let result = rt.block_on(async move {
         run(version_manifest, launch_target).await
     });
@@ -45,9 +48,12 @@ pub(crate) fn cli_main(mc_version: String, lb_version: String) {
 async fn run(version_manifest: ClientVersionManifest, launch_target_index: usize) -> Result<()> {
     info!("Loading version manifest...");
 
-    let mc_version_manifest = VersionManifest::download().await?;
 
     let launch_target = &version_manifest.versions[launch_target_index];
+
+    retrieve_and_copy_mods(&version_manifest, launch_target).await?;
+
+    let mc_version_manifest = VersionManifest::download().await?;
 
     crate::prelauncher::launch(&mc_version_manifest, launch_target, version_manifest.loader_versions.get(&launch_target.loader_version).ok_or_else(|| anyhow!("Loader was not found"))?).await?;
 

@@ -201,7 +201,7 @@ fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(input: &String, ret
                 template_arg.push(c);
             }
 
-            retriever(&mut output, template_arg.as_str());
+            retriever(&mut output, template_arg.as_str())?;
             continue;
         }
 
