@@ -12,38 +12,42 @@ pub(crate) async fn download_client<F>(url: &str, on_progress: F) -> anyhow::Res
 
     let cloned_cell = download_link_cell.clone();
 
-    let x = web_view::builder()
-        .title("Download LiquidBounce")
-        .content(Content::Url(format!("{}&liquidlauncher={}", url, 0)))
-        .size(1000, 600)
-        .resizable(true)
-        .debug(true)
-        .user_data(())
-        .invoke_handler(move |webview, arg| {
-            let mut split = arg.split("|");
+    {
+        let x = web_view::builder()
+            .title("Download LiquidBounce")
+            .content(Content::Url(format!("{}&liquidlauncher={}", url, 0)))
+            .size(1000, 600)
+            .resizable(true)
+            .debug(true)
+            .user_data(())
+            .invoke_handler(move |webview, arg| {
+                let mut split = arg.split("|");
 
-            if let Some(cmd) = split.next() {
-                if cmd == "download" {
-                    if let Some(dl_url) = split.next() {
-                        *cloned_cell.lock().unwrap() = Some(dl_url.to_owned());
+                if let Some(cmd) = split.next() {
+                    if cmd == "download" {
+                        if let Some(dl_url) = split.next() {
+                            *cloned_cell.lock().unwrap() = Some(dl_url.to_owned());
 
-                        webview.exit();
+                            webview.exit();
 
-                        return Ok(());
+                            return Ok(());
+                        }
                     }
                 }
-            }
 
-            Err(web_view::Error::Custom(Box::new(LauncherError::InvalidJavaScript("Invalid command".to_owned()))))
-        })
-        .build()
-        .unwrap();
+                Err(web_view::Error::Custom(Box::new(LauncherError::InvalidJavaScript("Invalid command".to_owned()))))
+            })
+            .build()
+            .unwrap();
 
-    x.run().unwrap();
+        x.run().unwrap();
+    }
 
-    let mg= download_link_cell.lock().unwrap();
+    let url = {
+        let mg= download_link_cell.lock().unwrap();
 
-    let url = mg.as_ref().ok_or_else(|| LauncherError::InvalidJavaScript("Failed to retrieve the download link".to_owned()))?;
+        mg.as_ref().ok_or_else(|| LauncherError::InvalidJavaScript("Failed to retrieve the download link".to_owned()))?.to_owned()
+    };
 
     info!("Downloading LiquidBounce from {}", url);
 

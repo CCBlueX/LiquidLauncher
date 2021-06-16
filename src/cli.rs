@@ -1,12 +1,13 @@
 use crate::cloud::{ClientVersionManifest, SUPPORTED_CLOUD_FILE_VERSION, LaunchTarget};
 use anyhow::{Result, anyhow};
 use std::collections::{HashMap, BTreeMap};
-use std::io::stdin;
+use std::io::{stdin, Write};
 use crate::minecraft::version::VersionManifest;
 use env_logger::Env;
 use log::*;
 use crate::webview_utils;
 use crate::prelauncher::retrieve_and_copy_mods;
+use crate::minecraft::launcher::{LauncherData, ProgressUpdate};
 
 pub(crate) fn cli_main(mc_version: String, lb_version: String) {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
@@ -48,14 +49,31 @@ pub(crate) fn cli_main(mc_version: String, lb_version: String) {
 async fn run(version_manifest: ClientVersionManifest, launch_target_index: usize) -> Result<()> {
     info!("Loading version manifest...");
 
-
     let launch_target = &version_manifest.versions[launch_target_index];
-
-    retrieve_and_copy_mods(&version_manifest, launch_target).await?;
 
     let mc_version_manifest = VersionManifest::download().await?;
 
-    crate::prelauncher::launch(&mc_version_manifest, launch_target, version_manifest.loader_versions.get(&launch_target.loader_version).ok_or_else(|| anyhow!("Loader was not found"))?).await?;
+    let (tx, rx) = tokio::sync::oneshot::channel();
 
+    crate::prelauncher::launch(&version_manifest, &mc_version_manifest, launch_target, version_manifest.loader_versions.get(&launch_target.loader_version).ok_or_else(|| anyhow!("Loader was not found"))?,
+    LauncherData {
+        on_stdout: handle_stdout,
+        on_stderr: handle_stdout,
+        on_progress: handle_progress,
+        terminator: rx,
+        data: Box::new(()),
+    }).await?;
+
+    Ok(())
+}
+
+
+fn handle_stdout(value: &(), data: &[u8]) -> anyhow::Result<()> {
+    std::io::stdout().lock().write_all(data)?;
+
+    Ok(())
+}
+
+fn handle_progress(value: &(), progress_update: ProgressUpdate) -> anyhow::Result<()> {
     Ok(())
 }

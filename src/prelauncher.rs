@@ -8,8 +8,14 @@ use crate::utils::{download_file, get_maven_artifact_path};
 use crate::webview_utils::download_client;
 use std::io::{Cursor, BufReader, Read};
 use std::fs;
+use crate::minecraft::launcher::{LauncherData, ProgressUpdate, ProgressReceiver, ProgressUpdateSteps};
 
-pub(crate) async fn launch(version_manifest: &VersionManifest, target: &LaunchTarget, loader_version: &LoaderVersion) -> Result<()> {
+pub(crate) async fn launch<D: Send + Sync>(client_version_manifest: &ClientVersionManifest, version_manifest: &VersionManifest, target: &LaunchTarget, loader_version: &LoaderVersion, launcher_data: LauncherData<D>) -> Result<()> {
+    launcher_data.progress_update(ProgressUpdate::set_max());
+    launcher_data.progress_update(ProgressUpdate::SetProgress(0));
+
+    retrieve_and_copy_mods(client_version_manifest, target, &launcher_data).await?;
+
     info!("Loading version profile...");
 
     let mut version = VersionProfile::load(&loader_version.launcher_manifest).await?;
@@ -31,12 +37,12 @@ pub(crate) async fn launch(version_manifest: &VersionManifest, target: &LaunchTa
 
     info!("Launching {}...", target.name);
 
-    crate::minecraft::launcher::launch(version).await?;
+    crate::minecraft::launcher::launch(version, launcher_data).await?;
 
     Ok(())
 }
 
-pub(crate) async fn retrieve_and_copy_mods(manifest: &ClientVersionManifest, target: &LaunchTarget) -> anyhow::Result<()> {
+pub(crate) async fn retrieve_and_copy_mods(manifest: &ClientVersionManifest, target: &LaunchTarget, progress: &impl ProgressReceiver) -> anyhow::Result<()> {
     let mod_cache_path = Path::new("mod_cache");
     let mods_path = Path::new("gameDir").join("mods");
 
@@ -52,11 +58,15 @@ pub(crate) async fn retrieve_and_copy_mods(manifest: &ClientVersionManifest, tar
         }
     }
 
-    for current_mod in &target.mods {
+    let max = target.mods.len() * 100;
+
+    for (mod_idx, current_mod) in target.mods.iter().enumerate() {
         // Skip mods that are not needed
         if !current_mod.required && !current_mod.default {
             continue;
         }
+
+        progress.progress_update(ProgressUpdate::set_label(format!("Downloading recommended mod {}", current_mod.name)));
 
         let current_mod_path = mod_cache_path.join(current_mod.source.get_path()?);
 
@@ -67,7 +77,7 @@ pub(crate) async fn retrieve_and_copy_mods(manifest: &ClientVersionManifest, tar
 
             match &current_mod.source {
                 ModSource::SkipAd { artifact_name, url, extract } => {
-                    let retrieved_bytes = download_client(url, |a, b| {}).await?;
+                    let retrieved_bytes = download_client(url, |a, b| progress.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLiquidBounceMods, mod_idx * 100 + (a * 100 / b.max(1)) as usize, max))).await?;
 
                     // Extract bytes
                     let final_file = if *extract {
@@ -92,7 +102,9 @@ pub(crate) async fn retrieve_and_copy_mods(manifest: &ClientVersionManifest, tar
                     info!("downloading mod {} from {}", artifact, repository);
                     let repository_url = manifest.repositories.get(repository).ok_or_else(|| LauncherError::InvalidVersionProfile(format!("There is no repository specified with the name {}", repository)))?;
 
-                    let retrieved_bytes = download_file(&format!("{}{}", repository_url, get_maven_artifact_path(artifact)?), |a, b| {}).await?;
+                    let retrieved_bytes = download_file(&format!("{}{}", repository_url, get_maven_artifact_path(artifact)?), |a, b| {
+                        progress.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLiquidBounceMods, mod_idx * 100 + (a * 100 / b.max(1)) as usize, max));
+                    }).await?;
 
                     tokio::fs::write(&current_mod_path, retrieved_bytes).await?;
                 }
