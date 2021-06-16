@@ -14,10 +14,71 @@ use crate::error::LauncherError;
 use crate::minecraft::version::LibraryDownloadInfo;
 use futures::TryFutureExt;
 use std::ops::Add;
+use tokio::time::Duration;
+use std::process::Stdio;
+use tokio::io::AsyncReadExt;
+use std::io::Write as OtherWrite;
+
+pub enum ProgressUpdateSteps {
+    DownloadLiquidBounceMods
+}
+
+impl ProgressUpdateSteps {
+    fn len() -> usize {
+        return 1;
+    }
+
+    fn step_idx(&self) -> usize {
+        match self {
+            ProgressUpdateSteps::DownloadLiquidBounceMods => 0
+        }
+    }
+}
+
+pub enum ProgressUpdate {
+    SetMax(usize),
+    SetProgress(usize),
+    SetLabel(String),
+}
+
+impl ProgressUpdate {
+    pub fn set_for_step(step: ProgressUpdateSteps, progress: usize, max: usize) -> Self {
+        let per_step = 1024;
+
+        return Self::SetProgress(step.step_idx() * per_step + (progress * per_step / max));
+    }
+    pub fn set_max() -> Self {
+        let max = ProgressUpdateSteps::len();
+        let per_step = 1024;
+
+        return Self::SetMax(max * per_step);
+    }
+    pub fn set_label<S: AsRef<str>>(str: S) -> Self {
+        return Self::SetLabel(str.as_ref().to_owned());
+    }
+}
+
+pub trait ProgressReceiver {
+    fn progress_update(&self, update: ProgressUpdate);
+}
+
+pub struct LauncherData<D: Send + Sync> {
+    pub(crate) on_stdout: fn(&D, &[u8]) -> Result<()>,
+    pub(crate) on_stderr: fn(&D, &[u8]) -> Result<()>,
+    pub(crate) on_progress: fn(&D, ProgressUpdate) -> Result<()>,
+    pub(crate) data: Box<D>,
+    pub(crate) terminator: tokio::sync::oneshot::Receiver<()>
+}
+
+impl<D: Send + Sync> ProgressReceiver for LauncherData<D> {
+    fn progress_update(&self, progress_update: ProgressUpdate) {
+        (self.on_progress)(&self.data, progress_update);
+    }
+}
 
 const CONCURRENT_DOWNLOADS: usize = 10;
 
-pub async fn launch(version_profile: VersionProfile) -> Result<()> {
+pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launcher_data: LauncherData<D>) -> Result<()> {
     let features: HashSet<String> = HashSet::new();
     let os_info = os_info::get();
 
@@ -165,11 +226,38 @@ pub async fn launch(version_profile: VersionProfile) -> Result<()> {
     debug!("MC-Arguments: {:?}", &mapped);
     command.args(mapped);
 
+    command
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped());
+
     debug!("Launching with arguments: {:?}", &command);
 
-    command.spawn()?
-        .wait()
-        .await?;
+    let mut running_task = command.spawn()?;
+
+    let mut stdout = running_task.stdout.take().unwrap();
+    let mut stderr = running_task.stderr.take().unwrap();
+
+    let mut stdout_buf = vec![0; 1024];
+    let mut stderr_buf = vec![0; 1024];
+
+    let terminator = launcher_data.terminator;
+
+    tokio::pin!(terminator);
+
+    loop {
+        tokio::select! {
+            read_len = stdout.read(&mut stdout_buf) => (launcher_data.on_stdout)(&launcher_data.data, &stdout_buf[..read_len?]).unwrap(),
+            read_len = stderr.read(&mut stderr_buf) => (launcher_data.on_stderr)(&launcher_data.data, &stderr_buf[..read_len?]).unwrap(),
+            _ = &mut terminator => {
+                running_task.kill().await?;
+
+                break;
+            },
+            _ = running_task.wait() => {
+                break;
+            },
+        }
+    }
 
     Ok(())
 }
