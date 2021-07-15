@@ -9,6 +9,8 @@ use os_info::{Bitness, Info};
 use std::collections::HashSet;
 use crate::error::LauncherError;
 use crate::utils::get_maven_artifact_path;
+use crate::minecraft::launcher::{ProgressReceiver, ProgressUpdate};
+use std::sync::Arc;
 
 // https://launchermeta.mojang.com/mc/game/version_manifest.json
 
@@ -308,7 +310,7 @@ pub struct AssetObject {
 
 impl AssetObject {
 
-    pub async fn download(&self, assets_objects_folder: impl AsRef<Path>) -> Result<()> {
+    pub async fn download(&self, assets_objects_folder: impl AsRef<Path>, progress: Arc<impl ProgressReceiver>) -> Result<bool> {
         let assets_objects_folder = assets_objects_folder.as_ref().to_owned();
         let asset_folder = assets_objects_folder.join(&self.hash[0..2]);
 
@@ -319,16 +321,21 @@ impl AssetObject {
         let asset_path = asset_folder.join(&self.hash);
         
         if !asset_path.exists() {
+            progress.progress_update(ProgressUpdate::set_label(format!("Downloading asset object {}", self.hash)));
+
             info!("downloading {}", self.hash);
             let os = reqwest::get(&*format!("http://resources.download.minecraft.net/{}/{}", &self.hash[0..2], &self.hash)).await?.error_for_status()?.bytes().await?;
             fs::write(asset_path, os).await?;
             info!("downloaded {}", self.hash);
+
+            return Ok(true);
         }
-        Ok(())
+
+        Ok(false)
     }
 
-    pub async fn download_destructing(self, assets_objects_folder: impl AsRef<Path>) -> Result<()> {
-        return self.download(assets_objects_folder).await;
+    pub async fn download_destructing(self, assets_objects_folder: impl AsRef<Path>, progress: Arc<impl ProgressReceiver>) -> Result<bool> {
+        return self.download(assets_objects_folder, progress).await;
     }
 
 }

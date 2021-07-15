@@ -8,7 +8,7 @@ use crate::utils::{download_file, get_maven_artifact_path};
 use crate::webview_utils::download_client;
 use std::io::{Cursor, BufReader, Read};
 use std::fs;
-use crate::minecraft::launcher::{LauncherData, ProgressUpdate, ProgressReceiver, ProgressUpdateSteps};
+use crate::minecraft::launcher::{LauncherData, ProgressUpdate, ProgressReceiver, ProgressUpdateSteps, get_progress, get_max};
 
 pub(crate) async fn launch<D: Send + Sync>(client_version_manifest: &ClientVersionManifest, version_manifest: &VersionManifest, target: &LaunchTarget, loader_version: &LoaderVersion, launcher_data: LauncherData<D>) -> Result<()> {
     launcher_data.progress_update(ProgressUpdate::set_max());
@@ -58,7 +58,7 @@ pub(crate) async fn retrieve_and_copy_mods(manifest: &ClientVersionManifest, tar
         }
     }
 
-    let max = target.mods.len() * 100;
+    let max = get_max(target.mods.len());
 
     for (mod_idx, current_mod) in target.mods.iter().enumerate() {
         // Skip mods that are not needed
@@ -77,7 +77,7 @@ pub(crate) async fn retrieve_and_copy_mods(manifest: &ClientVersionManifest, tar
 
             match &current_mod.source {
                 ModSource::SkipAd { artifact_name, url, extract } => {
-                    let retrieved_bytes = download_client(url, |a, b| progress.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLiquidBounceMods, mod_idx * 100 + (a * 100 / b.max(1)) as usize, max))).await?;
+                    let retrieved_bytes = download_client(url, |a, b| progress.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLiquidBounceMods, get_progress(mod_idx, a, b) as u64, max))).await?;
 
                     // Extract bytes
                     let final_file = if *extract {
@@ -103,7 +103,7 @@ pub(crate) async fn retrieve_and_copy_mods(manifest: &ClientVersionManifest, tar
                     let repository_url = manifest.repositories.get(repository).ok_or_else(|| LauncherError::InvalidVersionProfile(format!("There is no repository specified with the name {}", repository)))?;
 
                     let retrieved_bytes = download_file(&format!("{}{}", repository_url, get_maven_artifact_path(artifact)?), |a, b| {
-                        progress.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLiquidBounceMods, mod_idx * 100 + (a * 100 / b.max(1)) as usize, max));
+                        progress.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLiquidBounceMods, get_progress(mod_idx, a, b), max));
                     }).await?;
 
                     tokio::fs::write(&current_mod_path, retrieved_bytes).await?;

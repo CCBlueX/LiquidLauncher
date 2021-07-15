@@ -191,6 +191,6 @@ pub(crate) fn gui_main() {
 
     frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { version_manifest, client_version_manifest }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
 
-    frame.load_file("file://index.html");
+    frame.load_file("file://D:\\Projects\\Rust\\LiquidLauncher\\index.html");
     frame.run_app();
 }

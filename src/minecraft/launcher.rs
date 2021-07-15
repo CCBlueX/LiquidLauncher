@@ -18,40 +18,61 @@ use tokio::time::Duration;
 use std::process::Stdio;
 use tokio::io::AsyncReadExt;
 use std::io::Write as OtherWrite;
+use crate::utils::download_file;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 pub enum ProgressUpdateSteps {
-    DownloadLiquidBounceMods
+    DownloadLiquidBounceMods,
+    DownloadClientJar,
+    DownloadAssets,
+    DownloadLibraries,
+}
+
+pub(crate) fn get_progress(idx: usize, curr: u64, max: u64) -> u64 {
+    return idx as u64 * 100 + (curr * 100 / max.max(1));
+}
+
+pub(crate) fn get_max(len: usize) -> u64 {
+    return len as u64 * 100;
 }
 
 impl ProgressUpdateSteps {
     fn len() -> usize {
-        return 1;
+        return 4;
     }
 
     fn step_idx(&self) -> usize {
         match self {
-            ProgressUpdateSteps::DownloadLiquidBounceMods => 0
+            ProgressUpdateSteps::DownloadLiquidBounceMods => 0,
+            ProgressUpdateSteps::DownloadClientJar => 1,
+            ProgressUpdateSteps::DownloadAssets => 2,
+            ProgressUpdateSteps::DownloadLibraries => 3,
         }
     }
 }
 
 pub enum ProgressUpdate {
-    SetMax(usize),
-    SetProgress(usize),
+    SetMax(u64),
+    SetProgress(u64),
     SetLabel(String),
 }
 
-impl ProgressUpdate {
-    pub fn set_for_step(step: ProgressUpdateSteps, progress: usize, max: usize) -> Self {
-        let per_step = 1024;
+const PER_STEP: u64 = 1024;
 
-        return Self::SetProgress(step.step_idx() * per_step + (progress * per_step / max));
+impl ProgressUpdate {
+    pub fn set_for_step(step: ProgressUpdateSteps, progress: u64, max: u64) -> Self {
+        println!("{}", step.step_idx());
+
+        return Self::SetProgress(step.step_idx() as u64 * PER_STEP + (progress * PER_STEP / max));
+    }
+    pub fn set_to_max() -> Self {
+        return Self::SetProgress(ProgressUpdateSteps::len() as u64 * PER_STEP);
     }
     pub fn set_max() -> Self {
-        let max = ProgressUpdateSteps::len();
-        let per_step = 1024;
+        let max = ProgressUpdateSteps::len() as u64;
 
-        return Self::SetMax(max * per_step);
+        return Self::SetMax(max * PER_STEP);
     }
     pub fn set_label<S: AsRef<str>>(str: S) -> Self {
         return Self::SetLabel(str.as_ref().to_owned());
@@ -79,6 +100,8 @@ impl<D: Send + Sync> ProgressReceiver for LauncherData<D> {
 const CONCURRENT_DOWNLOADS: usize = 10;
 
 pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launcher_data: LauncherData<D>) -> Result<()> {
+    let launcher_data_arc = Arc::new(launcher_data);
+
     let features: HashSet<String> = HashSet::new();
     let os_info = os_info::get();
 
@@ -101,7 +124,13 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launcher_da
 
         // Download client jar
         if !client_jar.exists() {
-            client_download.download(&client_jar).await?;
+            launcher_data_arc.progress_update(ProgressUpdate::set_label("Downloading loader"));
+
+            let retrieved_bytes = download_file(&client_download.url, |a, b| {
+                launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadClientJar, get_progress(0, a, b), get_max(1)));
+            }).await?;
+
+            tokio::fs::write(&client_jar, retrieved_bytes).await?;
         }
     } else {
         return Err(LauncherError::InvalidVersionProfile("No client JAR downloads were specified.".to_string()).into());
@@ -121,8 +150,35 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launcher_da
 
     let asset_objects_to_download = asset_index.objects.values().map(|x| x.to_owned()).collect::<Vec<_>>();
 
+    let assets_downloaded = Arc::new(AtomicU64::new(0));
+
+    let asset_max = asset_objects_to_download.len() as u64;
+
     let _: Vec<Result<()>> = stream::iter(
-        asset_objects_to_download.into_iter().map(|asset_object| asset_object.download_destructing(&objects_folder))
+        asset_objects_to_download.into_iter().map(|asset_object| {
+            let download_count = assets_downloaded.clone();
+            let data_clone = launcher_data_arc.clone();
+            let folder_clone = objects_folder.clone();
+
+            async move {
+                let curr = download_count.fetch_add(1, Ordering::Relaxed);
+
+                data_clone.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadAssets, curr, asset_max));
+
+                let hash = asset_object.hash.clone();
+
+                let res = asset_object.download_destructing(folder_clone, data_clone.clone()).await;
+
+                match &res {
+                    Ok(a) => if *a {
+                        data_clone.progress_update(ProgressUpdate::set_label(format!("Downloaded asset {}", hash)));
+                    },
+                    Err(e) => {}
+                }
+
+                res.map(|_| ())
+            }
+        })
     ).buffer_unordered(CONCURRENT_DOWNLOADS).collect().await;
 
     // Libraries
@@ -132,10 +188,13 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launcher_da
 
     // todo: make library downloader compact and async
 
-    for library in &version_profile.libraries {
+    for (lib_idx, library) in version_profile.libraries.iter().enumerate() {
         if !crate::minecraft::rule_interpreter::check_condition(&library.rules, &features, &os_info)? {
             continue;
         }
+
+        launcher_data_arc.progress_update(ProgressUpdate::set_label(format!("Downloading library {}", library.name)));
+        launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLibraries, lib_idx as u64, version_profile.libraries.len() as u64));
 
         if let Some(natives) = &library.natives {
             if let Some(required_natives) = natives.get(&format!("{}", &OS)) {
@@ -223,6 +282,10 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launcher_da
         );
     }
 
+
+    launcher_data_arc.progress_update(ProgressUpdate::set_label("Launching..."));
+    launcher_data_arc.progress_update(ProgressUpdate::set_to_max());
+
     debug!("MC-Arguments: {:?}", &mapped);
     command.args(mapped);
 
@@ -239,6 +302,8 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launcher_da
 
     let mut stdout_buf = vec![0; 1024];
     let mut stderr_buf = vec![0; 1024];
+
+    let launcher_data = Arc::try_unwrap(launcher_data_arc).unwrap_or_else(|_| panic!());
 
     let terminator = launcher_data.terminator;
 
