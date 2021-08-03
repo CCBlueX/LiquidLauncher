@@ -4,6 +4,7 @@ use serde::{Deserialize};
 use crate::utils::get_maven_artifact_path;
 
 pub const LAUNCHER_CLOUD: &str = "https://cloud.liquidbounce.net/LiquidLauncher/";
+pub const LAUNCHER_API: &str = "https://api.liquidbounce.net/";
 
 pub const SUPPORTED_CLOUD_FILE_VERSION: u32 = 1;
 
@@ -17,7 +18,7 @@ pub struct ClientVersionManifest {
 
 impl ClientVersionManifest {
     pub(crate) async fn load_version_manifest() -> Result<Self> {
-        Ok(reqwest::get(format!("{}{}", LAUNCHER_CLOUD, "version_manifest.json")).await?.error_for_status()?.json::<ClientVersionManifest>().await?)
+        Ok(reqwest::get(format!("{}{}", LAUNCHER_API, "versions")).await?.error_for_status()?.json::<ClientVersionManifest>().await?)
     }
 }
 
