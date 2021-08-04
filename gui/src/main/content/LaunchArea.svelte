@@ -1,8 +1,8 @@
 <script>
     import { fetchNews } from "../../utils/news";
 
-    export let mcVersion;
-    export let lbVersion;
+    let mcVersion;
+    let lbVersion;
 
     let title;
     let date;
@@ -17,6 +17,96 @@
         text = news.text;
         previewImage = news.banner.image;
     })();
+
+    
+
+    // Get all versions as struct
+    const versionsHolder = {};
+    Window.this.xcall("get_versions", versionsHolder);
+
+    const versions = versionsHolder.versions;
+
+    /* content of version:
+        val.set_item("idx", idx as i32);
+        val.set_item("liquidBounceVersion", &x.name);
+        val.set_item("minecraftVersion", &x.mc_version);
+        val.set_item("loaderName", &x.loader_version);
+    */
+    const latestVersion = versions[versions.length - 1];
+
+    mcVersion = latestVersion.minecraftVersion;
+
+    const versionContext = latestVersion.liquidBounceVersion.split("-");
+
+    lbVersion = versionContext[0];
+    const furtherVersionInfo = versionContext[1].split("+");
+
+    const releaseType = furtherVersionInfo[0]; // nightly or release
+    const commit = furtherVersionInfo[1]; // git commit of build
+
+    console.log(furtherVersionInfo);
+
+    // Handle play button to start client
+    function handlePlay() {
+        console.log("button clicked");
+
+        // const label = document.getElementById('statusLabel');
+        // const progressBar = document.getElementById('progress');
+
+        function onProgress(action, value) {
+            if (action === 'max') {
+                // progressBar.max = value;
+            } else if (action === 'progress') {
+                // progressBar.value = value;
+                console.log(progressBar.value + "/" + progressBar.max);
+            } else if (action === 'label') {
+                // label.textContent = value;
+
+                console.log(value);
+            }
+
+            console.log(action + "/" + value);
+        }
+
+        function onOutput(type, value) {
+            // let logArea = document.getElementById('log-area');
+
+            // logArea.innerText += value;
+            // logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function onDone() {
+            // label.textContent = "Idle...";
+
+            // startButton.disabled = false;
+            // terminateButton.disabled = true;
+        }
+        function onError(error) {
+            console.log("Error: " + error);
+
+            // label.textContent = "Error: " + error;
+        }
+
+        // label.textContent = "Running...";
+
+        Window.this.xcall("run_client", latestVersion.idx, onProgress, onOutput, onDone, onError);
+
+        // startButton.disabled = true;
+        // terminateButton.disabled = false;
+    }
+
+    // TODO: Implement version selection
+    /*
+    const versionSel = document.getElementById("select-div");
+
+    let html = '';
+
+    for (const x of asdf.versions) {
+        html += '<option value="' + x.idx + '">' + x.minecraftVersion + " - " + x.liquidBounceVersion + '</option>';
+    }
+
+    versionSel.innerHTML = '<select id="version-selection">' + html + '</select>';
+    */
 </script>
 
 <div class="wrapper">
@@ -47,7 +137,7 @@
         <div class="version">
             <img class="icon" src="img/icon/icon-version-lb.png" alt="liquidbounce">
             <div class="name">{lbVersion}</div>
-            <div class="date">2021-05-07</div>
+            <div class="date">{releaseType}</div>
         </div>
 
         <div class="version">
@@ -57,7 +147,7 @@
         </div>
     </div>
 
-    <button class="launch">Play</button>
+    <button class="launch" on:click={handlePlay}>Play</button>
 </div>
 
 <style>
