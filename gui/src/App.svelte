@@ -39,7 +39,7 @@
         </TitleBar>
 
         <Content>
-            <LaunchArea mcVersion="1.8.9" lbVersion="b72" />
+            <LaunchArea />
             <NewsContainer />
         </Content>
     {/if}
