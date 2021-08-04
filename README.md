@@ -8,9 +8,9 @@ YouTube: https://youtube.com/CCBlueX \
 Twitter: https://twitter.com/CCBlueX
 
 ## Screenshots
-![Login](assets/screenshot-1.png)
+![Login](gh_assets/screenshot-1.png)
 
-![Main](assets/screenshot-2.png)
+![Main](gh_assets/screenshot-2.png)
 
 ## Issues
 If you notice any bugs or missing features, you can let us know by opening an issue [here](https://github.com/CCBlueX/LiquidLauncher/issues).
