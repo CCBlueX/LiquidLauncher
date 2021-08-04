@@ -1,11 +1,16 @@
 # LiquidLauncher
-A minecraft launcher for our hacked-client LiquidBounce.
+The official launcher for LiquidBounce.
 
 Website: https://liquidbounce.net \
 Forum: https://forums.ccbluex.net \
 Guilded: https://guilded.gg/CCBlueX \
 YouTube: https://youtube.com/CCBlueX \
-Twitter: https://twitter.com/CCBlueX 
+Twitter: https://twitter.com/CCBlueX
+
+## Screenshots
+![Login](assets/screenshot-1.png)
+
+![Main](assets/screenshot-2.png)
 
 ## Issues
 If you notice any bugs or missing features, you can let us know by opening an issue [here](https://github.com/CCBlueX/LiquidLauncher/issues).
