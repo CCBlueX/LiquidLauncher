@@ -1,0 +1,73 @@
+@font-face {
+    font-family: "Gilroy";
+    font-weight: 800;
+    src: url("font/Gilroy-Bold.ttf");
+}
+
+@font-face {
+    font-family: "Gilroy";
+    font-weight: 500;
+    src: url("font/Gilroy-Medium.ttf");
+}
+
+@font-face {
+    font-family: "Gilroy";
+    font-weight: 400;
+    src: url("font/Gilroy-SemiBold.ttf");
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-rendering-mode: sub-pixel;
+}
+
+html,
+body {
+    background-color: transparent;
+    font-family: "Gilroy";
+    font-weight: 400;
+    vertical-scrollbar: sscrollbar;
+    horizontal-scrollbar: sscrollbar;
+}
+
+@set sscrollbar {  
+    .next,
+    .prev { 
+        height: 0;
+        display: none;
+    }
+  
+    .base,
+    .next-page, 
+    .prev-page {
+        background-color: transparent;
+    }
+
+    .slider { 
+        background-color: #4677FF;
+        border-radius: 4px;
+    }
+  
+    .next:disabled, .slider:disabled, .prev:disabled  { 
+        height: 0; 
+        border: none; 
+    }
+    
+    .next:hover, .slider:hover, .prev:hover { 
+        background-color: #4677FF; 
+    }
+  
+    .next:active, .slider:active, .prev:active { 
+        background-color: #4677FF; 
+    }
+  
+    .base { 
+        width: 4px; 
+    }
+
+    .corner { 
+        background-color: transparent; 
+    }
+}
