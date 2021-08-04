@@ -1,6 +1,9 @@
+use path_absolutize::Absolutize;
 use sciter::Value;
 use sciter::window::Options;
+use std::env;
 use std::option::Option::Some;
+use std::path::PathBuf;
 use sciter::dom::event::{default_events, EVENT_GROUPS};
 use std::iter::FromIterator;
 use crate::cloud::{ClientVersionManifest, SUPPORTED_CLOUD_FILE_VERSION};
@@ -10,7 +13,7 @@ use tokio::runtime::Runtime;
 use tokio::task;
 use crate::minecraft::version::VersionManifest;
 use crate::minecraft::launcher::{LauncherData, ProgressUpdate};
-use anyhow::Error;
+use anyhow::{Error, Result};
 use std::borrow::Borrow;
 
 struct RunnerInstance {
@@ -183,6 +186,8 @@ pub(crate) fn gui_main() {
 
     let version_manifest = rt.block_on(VersionManifest::download()).expect("Failed to download version manifest");
 
+    let gui_index = get_gui_index().expect("unable to find gui index");
+
     let mut frame = sciter::WindowBuilder::main_window()
         .fixed()
         .debug()
@@ -191,6 +196,15 @@ pub(crate) fn gui_main() {
 
     frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { version_manifest, client_version_manifest }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
 
-    frame.load_file("file://D:\\Projects\\Rust\\LiquidLauncher\\index.html");
+
+    frame.load_file(&gui_index);
     frame.run_app();
+}
+
+fn get_gui_index() -> Result<String> {
+    let path = env::current_dir()?;
+    let absolut_path = path.absolutize()?;
+    let str_path = absolut_path.to_str().expect("no path");
+
+    return Ok(format!("file://{}/gui/public/index.html", str_path));
 }
