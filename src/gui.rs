@@ -189,13 +189,14 @@ pub(crate) fn gui_main() {
     let gui_index = get_gui_index().expect("unable to find gui index");
 
     let mut frame = sciter::WindowBuilder::main_window()
+        .glassy()
+        .alpha()
         .fixed()
         .debug()
         .with_size((1000, 600))
         .create();
 
     frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { version_manifest, client_version_manifest }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
-
 
     frame.load_file(&gui_index);
     frame.run_app();
