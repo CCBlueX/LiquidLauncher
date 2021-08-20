@@ -14,7 +14,22 @@
     let login = true;
 
     function handleLogin() {
-        login = false;
+        function onDone(account) {
+            console.log(account.username);
+            console.log(account.accessToken);
+
+            login = false;
+        }
+        function onError(error) {
+            console.log("Error: " + error);
+
+            // label.textContent = "Error: " + error;
+        }
+
+        const username = "";
+        const password = "";
+
+        Window.this.xcall("login_mojang", username, password, onDone, onError);
     }
 </script>
 

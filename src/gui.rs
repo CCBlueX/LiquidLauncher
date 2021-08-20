@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use sciter::dom::event::{default_events, EVENT_GROUPS};
 use std::iter::FromIterator;
 use crate::cloud::{ClientVersionManifest, SUPPORTED_CLOUD_FILE_VERSION};
+use crate::minecraft::service::{Account, AuthService};
 use std::sync::Arc;
 use futures::lock::{Mutex, MutexGuard};
 use tokio::runtime::Runtime;
@@ -157,6 +158,31 @@ impl EventHandler {
 
         true
     }
+
+    fn login_mojang(&self, username: String, password: String, on_error: Value, on_response: Value) -> bool {
+        self.async_runtime.spawn(async move {
+            match AuthService::authenticate(AuthService::MOJANG, username, password).await {
+                Ok(acc) => {
+                    let mut val = Value::new();
+
+                    val.set_item("username", acc.username);
+                    val.set_item("accessToken", acc.access_token);
+    
+                    on_response.call(None, &make_args!(val), None).unwrap()
+                },
+                Err(err) => {
+                    println!("{:?}", err);
+
+                    on_error.call(None, &make_args!(err.to_string()), None).unwrap()
+                }
+            };
+
+            ()
+        });
+
+        true
+    }
+
 }
 
 impl sciter::EventHandler for EventHandler {
@@ -169,6 +195,7 @@ impl sciter::EventHandler for EventHandler {
 		fn run_client(i32, Value, Value, Value, Value);
 		fn terminate();
 		fn get_versions(Value);
+        fn login_mojang(String, String, Value, Value);
 	}
 }
 
