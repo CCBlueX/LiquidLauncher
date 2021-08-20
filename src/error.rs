@@ -13,3 +13,9 @@ pub enum LauncherError {
     #[error("Invalid java script: {0}")]
     InvalidJavaScript(String),
 }
+
+#[derive(Error, Debug)]
+pub enum AuthenticationError {
+    #[error("No {0} game license!")]
+    NoGameLicense(String),
+}
