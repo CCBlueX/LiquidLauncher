@@ -12,24 +12,24 @@
     import WelcomeMessage from "./main/title-bar/WelcomeMessage.svelte";
 
     let login = true;
+    let accountData;
 
-    function handleLogin() {
+    // todo: implement microsoft login ... soonTM
+    function handleLogin(username, password) {
+
         function onDone(account) {
-            console.log(account.username);
-            console.log(account.accessToken);
-
+            accountData = account;
             login = false;
         }
+
         function onError(error) {
             console.log("Error: " + error);
 
+            // todo: handle login error
             // label.textContent = "Error: " + error;
         }
 
-        const username = "";
-        const password = "";
-
-        Window.this.xcall("login_mojang", username, password, onDone, onError);
+        Window.this.xcall("login_mojang", username, password, onError, onDone);
     }
 </script>
 
@@ -48,8 +48,8 @@
     {:else}
         <TitleBar>
             <Logo />
-            <WelcomeMessage message="Welcome Kuqs, try out our new version!" />
-            <Account />
+            <WelcomeMessage message="Welcome {accountData.username}, try out our new version!" />
+            <Account accountName={accountData.username} accountType="Premium" avatarUrl="https://visage.surgeplay.com/face/{accountData.id}" />
             <ButtonClose />
         </TitleBar>
 
