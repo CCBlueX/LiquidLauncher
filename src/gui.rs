@@ -13,7 +13,7 @@ use futures::lock::{Mutex, MutexGuard};
 use tokio::runtime::Runtime;
 use tokio::task;
 use crate::minecraft::version::VersionManifest;
-use crate::minecraft::launcher::{LauncherData, ProgressUpdate};
+use crate::minecraft::launcher::{LauncherData, LaunchingParameter, ProgressUpdate};
 use anyhow::{Error, Result};
 use std::borrow::Borrow;
 
@@ -64,7 +64,7 @@ fn handle_progress(value: &Arc<std::sync::Mutex<EventFunctions>>, progress_updat
 
 impl EventHandler {
     // script handler
-    fn run_client(&self, version_id: i32, on_progress: Value, on_output: Value, on_finalization: Value, on_error: Value) -> bool {
+    fn run_client(&self, version_id: i32, account_data: Value, on_progress: Value, on_output: Value, on_finalization: Value, on_error: Value) -> bool {
         let runner_instance_clone = self.runner_instance.clone();
         let constant_data_clone = self.constant_data.clone();
 
@@ -77,6 +77,13 @@ impl EventHandler {
 
         let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
 
+        let launchingParameter = LaunchingParameter {
+            auth_player_name: account_data.get_item("username").as_string().unwrap_or_else(|| "unexpected".to_string()),
+            auth_uuid: account_data.get_item("id").as_string().unwrap_or_else(|| "069a79f4-44e9-4726-a5be-fca90e38aaf5".to_string()),
+            auth_access_token: account_data.get_item("accessToken").as_string().unwrap_or_else(|| "-".to_string()),
+            user_type: account_data.get_item("type").as_string().unwrap_or_else(|| "legacy".to_string()),
+        };
+
         let jh = self.async_runtime.spawn(async move {
             let client_version_manifest = &constant_data_clone.client_version_manifest;
 
@@ -87,6 +94,7 @@ impl EventHandler {
                 &constant_data_clone.version_manifest,
                 target,
                 client_version_manifest.loader_versions.get(&target.loader_version).unwrap(),
+                launchingParameter,
                 LauncherData {
                     on_stdout: handle_stdout,
                     on_stderr: handle_stderr,
@@ -168,6 +176,7 @@ impl EventHandler {
                     val.set_item("username", acc.username);
                     val.set_item("accessToken", acc.access_token);
                     val.set_item("id", acc.id.to_string());
+                    val.set_item("type", acc.account_type);
     
                     on_response.call(None, &make_args!(val), None).unwrap()
                 },
@@ -193,7 +202,7 @@ impl sciter::EventHandler for EventHandler {
 
     // route script calls to our handler
     dispatch_script_call! {
-		fn run_client(i32, Value, Value, Value, Value);
+		fn run_client(i32, Value, Value, Value, Value, Value);
 		fn terminate();
 		fn get_versions(Value);
         fn login_mojang(String, String, Value, Value);

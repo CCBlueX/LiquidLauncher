@@ -54,7 +54,7 @@
         </TitleBar>
 
         <Content>
-            <LaunchArea />
+            <LaunchArea accountData={accountData} />
             <NewsContainer />
         </Content>
     {/if}

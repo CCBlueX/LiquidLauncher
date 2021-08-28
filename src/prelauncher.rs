@@ -8,9 +8,9 @@ use crate::utils::{download_file, get_maven_artifact_path};
 use crate::webview_utils::download_client;
 use std::io::{Cursor, BufReader, Read};
 use std::fs;
-use crate::minecraft::launcher::{LauncherData, ProgressUpdate, ProgressReceiver, ProgressUpdateSteps, get_progress, get_max};
+use crate::minecraft::launcher::{LauncherData, LaunchingParameter, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps, get_max, get_progress};
 
-pub(crate) async fn launch<D: Send + Sync>(client_version_manifest: &ClientVersionManifest, version_manifest: &VersionManifest, target: &LaunchTarget, loader_version: &LoaderVersion, launcher_data: LauncherData<D>) -> Result<()> {
+pub(crate) async fn launch<D: Send + Sync>(client_version_manifest: &ClientVersionManifest, version_manifest: &VersionManifest, target: &LaunchTarget, loader_version: &LoaderVersion, lauchingParameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
     launcher_data.progress_update(ProgressUpdate::set_max());
     launcher_data.progress_update(ProgressUpdate::SetProgress(0));
 
@@ -37,7 +37,7 @@ pub(crate) async fn launch<D: Send + Sync>(client_version_manifest: &ClientVersi
 
     info!("Launching {}...", target.name);
 
-    crate::minecraft::launcher::launch(version, launcher_data).await?;
+    crate::minecraft::launcher::launch(version, lauchingParameter, launcher_data).await?;
 
     Ok(())
 }
