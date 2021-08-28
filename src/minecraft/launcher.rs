@@ -2,7 +2,7 @@ use std::{path::{Path, PathBuf}, str::FromStr};
 use futures::stream::{self, StreamExt};
 use log::*;
 use tokio::{fs, process::Command};
-use crate::os::OS;
+use crate::{LAUNCHER_VERSION, os::OS};
 use path_absolutize::*;
 
 use anyhow::{Result, bail, Error};
@@ -99,7 +99,7 @@ impl<D: Send + Sync> ProgressReceiver for LauncherData<D> {
 
 const CONCURRENT_DOWNLOADS: usize = 10;
 
-pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launcher_data: LauncherData<D>) -> Result<()> {
+pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launchingParameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
     let launcher_data_arc = Arc::new(launcher_data);
 
     let features: HashSet<String> = HashSet::new();
@@ -260,18 +260,18 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launcher_da
         mapped.push(
             process_templates(x, |output, param| {
                 match param {
-                    "auth_player_name" => output.push_str("1zuna"),
-                    "version_name" => output.push_str("0.0.1"),
+                    "auth_player_name" => output.push_str(&launchingParameter.auth_player_name),
+                    "version_name" => output.push_str(&version_profile.id),
                     "game_directory" => output.push_str(&game_dir.absolutize().unwrap().to_str().unwrap()),
                     "assets_root" => output.push_str(&assets_folder.absolutize().unwrap().to_str().unwrap()),
                     "assets_index_name" => output.push_str(&asset_index_location.id),
-                    "auth_uuid" => output.push_str("2fc2c1dd-0234-48f6-94bb-4cb5812393ab"),
-                    "auth_access_token" => output.push_str("-"),
-                    "user_type" => output.push_str("legacy"),
+                    "auth_uuid" => output.push_str(&launchingParameter.auth_uuid),
+                    "auth_access_token" => output.push_str(&launchingParameter.auth_access_token),
+                    "user_type" => output.push_str(&launchingParameter.user_type),
                     "version_type" => output.push_str(&version_profile.version_type),
                     "natives_directory" => output.push_str(&natives_folder.absolutize().unwrap().to_str().unwrap()),
-                    "launcher_name" => output.push_str("liquidlauncher"),
-                    "launcher_version" => output.push_str("1.0.0"),
+                    "launcher_name" => output.push_str("LiquidLauncher"),
+                    "launcher_version" => output.push_str(LAUNCHER_VERSION),
                     "classpath" => output.push_str(&class_path[..class_path.len() - 1]),
                     "user_properties" => output.push_str("{}"),
                     _ => return Err(LauncherError::UnknownTemplateParameter(param.to_owned()).into())
@@ -325,6 +325,13 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launcher_da
     }
 
     Ok(())
+}
+
+pub struct LaunchingParameter {
+    pub auth_player_name: String,
+    pub auth_uuid: String,
+    pub auth_access_token: String,
+    pub user_type: String
 }
 
 fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(input: &String, retriever: F) -> Result<String> {

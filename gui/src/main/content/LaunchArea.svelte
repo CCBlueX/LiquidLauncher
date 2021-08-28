@@ -1,6 +1,8 @@
 <script>
     import { fetchNews } from "../../utils/news";
 
+    export let accountData;
+
     let mcVersion;
     let lbVersion;
 
@@ -89,7 +91,7 @@
 
         // label.textContent = "Running...";
 
-        Window.this.xcall("run_client", latestVersion.idx, onProgress, onOutput, onDone, onError);
+        Window.this.xcall("run_client", latestVersion.idx, accountData, onProgress, onOutput, onDone, onError);
 
         // startButton.disabled = true;
         // terminateButton.disabled = false;

@@ -73,7 +73,8 @@ impl AuthService {
         Ok(Account {
             username: profile.name,
             access_token: serialized_response.access_token,
-            id: profile.id
+            id: profile.id,
+            account_type: "mojang".to_string()
         })
     }
     
@@ -83,7 +84,8 @@ impl AuthService {
 pub struct Account {
     pub username: String,
     pub access_token: String,
-    pub id: Uuid
+    pub id: Uuid,
+    pub account_type: String
 }
 
 impl Account {
