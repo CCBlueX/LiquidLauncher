@@ -167,6 +167,7 @@ impl EventHandler {
 
                     val.set_item("username", acc.username);
                     val.set_item("accessToken", acc.access_token);
+                    val.set_item("id", acc.id.to_string());
     
                     on_response.call(None, &make_args!(val), None).unwrap()
                 },

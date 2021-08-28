@@ -1,10 +1,17 @@
 <script>
     export let handleLogin;
 
+    let username = ""
+    let password = ""
+
     let passwordShown = false;
 
     function handleRevealPassword() {
         passwordShown = !passwordShown;
+    }
+
+    function handleInternalLogin() {
+        handleLogin(username, password);
     }
 </script>
 
@@ -15,16 +22,17 @@
         <div class="icon">
             <img src="img/icon/icon-person.svg" alt="icon">
         </div>
-        <input class="input-text" type="text" placeholder="Username or e-mail address">
+        <input class="input-text" type="text" bind:value={username} placeholder="Username or e-mail address">
     </div>
     <div class="input-wrapper">
         <div class="icon">
             <img src="img/icon/icon-lock.svg" alt="icon">
         </div>
-        <input class="input-text" type="{passwordShown ? "text" : "password"}" placeholder="Password">
+        <!-- type="{passwordShown ? "text" : "password"}" senkus pls fix -->
+        <input class="input-text" bind:value={password} placeholder="Password">
         <img class="button-reveal-password" on:click={handleRevealPassword} src="img/icon/icon-eye.svg" alt="reveal">
     </div>
-    <div class="button-large primary" on:click={handleLogin}>Login</div>
+    <div class="button-large primary" on:click={handleInternalLogin}>Login</div>
     <div class="button-large">Microsoft Login</div>
     <div class="button-large">Use as Offline Account</div>
 </div>

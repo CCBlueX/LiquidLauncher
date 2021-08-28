@@ -2,6 +2,7 @@ use anyhow::Result;
 use reqwest::Client;
 use serde_json::json;
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::error::AuthenticationError;
 
@@ -44,7 +45,7 @@ impl AuthService {
         #[derive(Deserialize)]
         struct AuthenticateProfile {
             name: String,
-            id: String
+            id: Uuid
         }
         
         #[derive(Deserialize)]
@@ -71,7 +72,8 @@ impl AuthService {
 
         Ok(Account {
             username: profile.name,
-            access_token: serialized_response.access_token
+            access_token: serialized_response.access_token,
+            id: profile.id
         })
     }
     
@@ -80,7 +82,8 @@ impl AuthService {
 
 pub struct Account {
     pub username: String,
-    pub access_token: String
+    pub access_token: String,
+    pub id: Uuid
 }
 
 impl Account {

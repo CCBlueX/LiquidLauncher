@@ -1,8 +1,14 @@
+<script>
+    export let accountName;
+    export let accountType;
+    export let avatarUrl;
+</script>
+
 <div class="account">
-    <img class="avatar" src="https://crafatar.com/avatars/3aa1c8378f4948e9ab4d7a7c36679748" alt="avatar">
+    <img class="avatar" src={avatarUrl} alt="avatar">
     <div class="details">
-        <div class="account-name">heafie</div>
-        <div class="account-type">Premium</div>
+        <div class="account-name">{accountName}</div>
+        <div class="account-type">{accountType}</div>
     </div>
     <img class="change-account" src="img/icon/icon-cog.svg" alt="settings">
 </div>
