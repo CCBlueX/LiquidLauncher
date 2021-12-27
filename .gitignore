@@ -6,3 +6,7 @@
 /natives
 /logs
 /mod_cache
+/.mixin.out
+
+sciter-*.dll
+sciter.dll
