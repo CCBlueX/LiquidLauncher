@@ -64,6 +64,10 @@
         // see microsoft_login branch
         // Window.this.xcall("login_microsoft");
     }
+
+    function exitApp() {
+        Window.this.xcall("exit_app");
+    }
 </script>
 
 <main>
@@ -71,7 +75,7 @@
         <TitleBar>
             <Logo />
             <Spacer />
-            <ButtonClose />
+            <ButtonClose exit={exitApp} />
         </TitleBar>
 
         <Content>
@@ -83,7 +87,7 @@
             <Logo />
             <WelcomeMessage message="Welcome {accountData.username}, try out our new version!" />
             <Account accountName={accountData.username} accountType="Premium" avatarUrl="https://visage.surgeplay.com/face/{accountData.id}" />
-            <ButtonClose />
+            <ButtonClose exit={exitApp} />
         </TitleBar>
 
         <Content>

@@ -1,4 +1,8 @@
-<button class="button" role="window-close"></button>
+<script>
+    export let exit;
+</script>
+
+<button class="button" role="window-close" on:click={exit}></button>
 
 <style>
     .button {
