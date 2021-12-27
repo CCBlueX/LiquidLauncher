@@ -90,7 +90,7 @@ impl EventHandler {
 
             let target = &client_version_manifest.versions[version_id as usize];
 
-            let res = crate::prelauncher::launch(
+            let res = crate::minecraft::prelauncher::launch(
                 client_version_manifest,
                 &constant_data_clone.version_manifest,
                 target,

@@ -1,13 +1,12 @@
 use anyhow::Result;
 use crate::cloud::{LaunchTarget, LoaderVersion, ClientVersionManifest, ModSource};
+use crate::interface::webviews::download_client;
 use crate::minecraft::version::{VersionManifest, VersionProfile};
 use log::*;
 use crate::error::LauncherError;
 use std::path::Path;
 use crate::utils::{download_file, get_maven_artifact_path};
-use crate::webview_utils::download_client;
-use std::io::{Cursor, BufReader, Read};
-use std::fs;
+use std::io::{Cursor, Read};
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps, get_max, get_progress};
 
 pub(crate) async fn launch<D: Send + Sync>(client_version_manifest: &ClientVersionManifest, version_manifest: &VersionManifest, target: &LaunchTarget, loader_version: &LoaderVersion, lauchingParameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {

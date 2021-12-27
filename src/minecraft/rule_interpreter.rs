@@ -1,7 +1,7 @@
 use crate::minecraft::version::{Rule, RuleAction};
 use std::collections::HashSet;
 use anyhow::Result;
-use crate::os::OS;
+use crate::utils::os::OS;
 use regex::Regex;
 use os_info::Info;
 

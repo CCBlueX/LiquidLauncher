@@ -5,8 +5,7 @@ use std::io::{stdin, Write};
 use crate::minecraft::version::VersionManifest;
 use env_logger::Env;
 use log::*;
-use crate::webview_utils;
-use crate::prelauncher::retrieve_and_copy_mods;
+
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter, ProgressUpdate};
 
 pub(crate) fn cli_main(mc_version: String, lb_version: String) {
@@ -55,7 +54,7 @@ async fn run(version_manifest: ClientVersionManifest, launch_target_index: usize
 
     let (tx, rx) = tokio::sync::oneshot::channel();
 
-    crate::prelauncher::launch(&version_manifest, &mc_version_manifest, launch_target, version_manifest.loader_versions.get(&launch_target.loader_version).ok_or_else(|| anyhow!("Loader was not found"))?,
+    crate::minecraft::prelauncher::launch(&version_manifest, &mc_version_manifest, launch_target, version_manifest.loader_versions.get(&launch_target.loader_version).ok_or_else(|| anyhow!("Loader was not found"))?,
     LaunchingParameter { auth_player_name: "Test".to_string(), auth_uuid: "069a79f4-44e9-4726-a5be-fca90e38aaf5".to_string(), auth_access_token: "-".to_string(), user_type: "legacy".to_string() },
     LauncherData {
         on_stdout: handle_stdout,
