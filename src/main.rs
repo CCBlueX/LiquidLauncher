@@ -2,23 +2,13 @@
 #[macro_use]
 extern crate sciter;
 
-use anyhow::Result;
-use env_logger::Env;
-use log::*;
-use minecraft::{launcher::launch, version::{VersionManifest, VersionProfile}};
-use os::OS;
-use web_view::Content;
+use crate::interface::{cli, gui};
 
 pub mod minecraft;
 pub mod cloud;
-pub mod os;
-mod prelauncher;
-#[cfg(feature = "gui")]
-mod gui;
-#[cfg(feature = "cli")]
-mod cli;
+
+mod interface;
 mod error;
-mod webview_utils;
 mod utils;
 
 const LAUNCHER_VERSION: &str = env!("CARGO_PKG_VERSION");

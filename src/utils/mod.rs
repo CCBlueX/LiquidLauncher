@@ -1,3 +1,5 @@
+pub mod os;
+
 use crate::error::LauncherError;
 
 pub(crate) fn get_maven_artifact_path(artifact_id: &String) -> anyhow::Result<String> {

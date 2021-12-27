@@ -2,7 +2,7 @@ use std::{path::{Path, PathBuf}, str::FromStr};
 use futures::stream::{self, StreamExt};
 use log::*;
 use tokio::{fs, process::Command};
-use crate::{LAUNCHER_VERSION, os::OS};
+use crate::{LAUNCHER_VERSION, utils::os::OS};
 use path_absolutize::*;
 
 use anyhow::{Result, bail, Error};

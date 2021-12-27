@@ -1,7 +1,7 @@
 [package]
 name = "liquidlauncher"
 version = "0.1.0"
-authors = ["kawaiinekololis <marco@ccbluex.net>", "superblaubeere27"]
+authors = ["1zuna <marco@ccbluex.net>", "superblaubeere27"]
 edition = "2018"
 
 # Smaller size
