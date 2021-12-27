@@ -1,5 +1,7 @@
 <script>
-    export let handleLogin;
+    export let handleMojangLogin;
+    export let handleMicrosoftLogin;
+    export let handleOfflineLogin;
 
     let username = ""
     let password = ""
@@ -10,8 +12,16 @@
         passwordShown = !passwordShown;
     }
 
-    function handleInternalLogin() {
-        handleLogin(username, password);
+    function clickMojangLogin() {
+        handleMojangLogin(username, password);
+    }
+
+    function clickMicrosoftLogin() {
+        handleMicrosoftLogin();
+    }
+
+    function clickOfflineLogin() {
+        handleOfflineLogin(username);
     }
 </script>
 
@@ -32,9 +42,9 @@
         <input class="input-text" bind:value={password} placeholder="Password">
         <img class="button-reveal-password" on:click={handleRevealPassword} src="img/icon/icon-eye.svg" alt="reveal">
     </div>
-    <div class="button-large primary" on:click={handleInternalLogin}>Login</div>
-    <div class="button-large">Microsoft Login</div>
-    <div class="button-large">Use as Offline Account</div>
+    <div class="button-large primary" on:click={clickMojangLogin}>Login</div>
+    <div class="button-large" on:click={clickMicrosoftLogin}>Microsoft Login</div>
+    <div class="button-large" on:click={clickOfflineLogin} >Use as Offline Account</div>
 </div>
 
 <style>

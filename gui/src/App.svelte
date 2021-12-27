@@ -12,10 +12,21 @@
     import WelcomeMessage from "./main/title-bar/WelcomeMessage.svelte";
 
     let login = true;
-    let accountData;
+    let accountData; // username, accessToken, id, type
 
-    // todo: implement microsoft login ... soonTM
-    function handleLogin(username, password) {
+    restoreAppData();
+
+    function restoreAppData() {
+        
+    }
+
+    function storeAppData() {
+
+    }
+
+    // Logins
+
+    function loginIntoMojang(username, password) {
 
         function onDone(account) {
             accountData = account;
@@ -31,6 +42,28 @@
 
         Window.this.xcall("login_mojang", username, password, onError, onDone);
     }
+
+    function loginIntoOffline(username) {
+        if (username.length <= 0 || username.length > 16) {
+            // Username is too long
+            // todo: handle error
+            console.log("Not valid username.");
+            return;
+        }
+
+        accountData = {
+            "username": username,
+            "accessToken": "-",
+            "id": "", // todo: get uuid from username
+            "type": "legacy"
+        };
+        login = false;
+    }
+
+    function loginIntoMicrosoft() {
+        // see microsoft_login branch
+        // Window.this.xcall("login_microsoft");
+    }
 </script>
 
 <main>
@@ -43,7 +76,7 @@
 
         <Content>
             <About />
-            <Login {handleLogin} />
+            <Login handleMojangLogin={loginIntoMojang} handleMicrosoftLogin={loginIntoMicrosoft} handleOfflineLogin={loginIntoOffline} />
         </Content>
     {:else}
         <TitleBar>
