@@ -4,6 +4,7 @@ use sciter::window::Options;
 use std::env;
 use std::option::Option::Some;
 use std::path::PathBuf;
+use std::process::exit;
 use sciter::dom::event::{default_events, EVENT_GROUPS};
 use std::iter::FromIterator;
 use crate::cloud::{ClientVersionManifest, SUPPORTED_CLOUD_FILE_VERSION};
@@ -193,6 +194,10 @@ impl EventHandler {
         true
     }
 
+    fn exit_app(&self) {
+        exit(0);
+    } 
+
 }
 
 impl sciter::EventHandler for EventHandler {
@@ -206,6 +211,7 @@ impl sciter::EventHandler for EventHandler {
 		fn terminate();
 		fn get_versions(Value);
         fn login_mojang(String, String, Value, Value);
+        fn exit_app();
 	}
 }
 
