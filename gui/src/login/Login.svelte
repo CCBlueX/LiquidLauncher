@@ -4,7 +4,6 @@
     export let handleOfflineLogin;
 
     let username = ""
-    let password = ""
 
     let passwordShown = false;
 
@@ -13,7 +12,7 @@
     }
 
     function clickMojangLogin() {
-        handleMojangLogin(username, password);
+        handleMojangLogin(username, document.getElementById("password").value);
     }
 
     function clickMicrosoftLogin() {
@@ -38,8 +37,7 @@
         <div class="icon">
             <img src="img/icon/icon-lock.svg" alt="icon">
         </div>
-        <!-- type="{passwordShown ? "text" : "password"}" senkus pls fix -->
-        <input class="input-text" bind:value={password} placeholder="Password">
+        <input id="password" class="input-text" type="{passwordShown ? "text" : "password"}" placeholder="Password">
         <img class="button-reveal-password" on:click={handleRevealPassword} src="img/icon/icon-eye.svg" alt="reveal">
     </div>
     <div class="button-large primary" on:click={clickMojangLogin}>Login</div>
