@@ -1,25 +1,54 @@
-use std::collections::{HashMap, BTreeMap};
+use std::collections::BTreeMap;
+
 use anyhow::Result;
-use serde::{Deserialize};
+use serde::Deserialize;
+
 use crate::utils::get_maven_artifact_path;
 
-pub const LAUNCHER_CLOUD: &str = "https://cloud.liquidbounce.net/LiquidLauncher/";
-pub const LAUNCHER_API: &str = "https://api.liquidbounce.net/";
+pub const LAUNCHER_API: &str = "https://api.liquidbounce.net";
 
-pub const SUPPORTED_CLOUD_FILE_VERSION: u32 = 1;
+pub struct LauncherApi;
 
-#[derive(Deserialize, Debug)]
-pub struct ClientVersionManifest {
-    pub file_version: u32,
-    pub versions: Vec<LaunchTarget>,
-    pub loader_versions: HashMap<String, LoaderVersion>,
-    pub repositories: BTreeMap<String, String>,
+impl LauncherApi {
+    pub(crate) async fn load_branches() -> Result<Vec<String>> {
+        Ok(reqwest::get(format!("{}/api/v1/version/branches", LAUNCHER_API)).await?.error_for_status()?.json::<Vec<String>>().await?)
+    }
+
+    pub(crate) async fn load_all_builds() -> Result<Vec<Build>> {
+        Ok(reqwest::get(format!("{}/api/v1/version/builds", LAUNCHER_API)).await?.error_for_status()?.json::<Vec<Build>>().await?)
+    }
+
+    pub(crate) async fn load_builds(branch: String) -> Result<Vec<Build>> {
+        Ok(reqwest::get(format!("{}/api/v1/version/builds/{}", LAUNCHER_API, branch)).await?.error_for_status()?.json::<Vec<Build>>().await?)
+    }
+
+    pub(crate) async fn load_version_manifest(build_id: u32) -> Result<LaunchManifest> {
+        Ok(reqwest::get(format!("{}/api/v1/version/launch/{}", LAUNCHER_API, build_id)).await?.error_for_status()?.json::<LaunchManifest>().await?)
+    }
 }
 
-impl ClientVersionManifest {
-    pub(crate) async fn load_version_manifest() -> Result<Self> {
-        Ok(reqwest::get(format!("{}{}", LAUNCHER_API, "versions")).await?.error_for_status()?.json::<ClientVersionManifest>().await?)
-    }
+#[derive(Debug, Deserialize)]
+pub struct Build {
+    pub build_id: u32,
+    pub commit_id: String,
+    pub branch: String,
+    pub lb_version: String,
+    pub mc_version: String,
+    // pub date: DateTime<Local>,
+    pub message: String,
+    pub url: String,
+    pub fabric_api_version: String,
+    pub fabric_loader_version: String,
+    pub kotlin_version: String,
+    pub kotlin_mod_version: String
+}
+
+#[derive(Deserialize, Debug)]
+pub struct LaunchManifest {
+    pub build: Build,
+    pub loader: LoaderVersion,
+    pub mods: Vec<LoaderMod>,
+    pub repositories: BTreeMap<String, String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -52,14 +81,6 @@ pub struct LoaderMod {
     pub default: bool,
     pub name: String,
     pub source: ModSource,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct LaunchTarget {
-    pub name: String,
-    pub mc_version: String,
-    pub loader_version: String,
-    pub mods: Vec<LoaderMod>,
 }
 
 

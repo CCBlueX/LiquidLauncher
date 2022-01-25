@@ -1,5 +1,5 @@
 <script>
-    import { fetchNews } from "../../utils/news";
+    import {fetchNews} from "../../utils/news";
 
     export let accountData;
 
@@ -20,37 +20,60 @@
         previewImage = news.banner.image;
     })();
 
-    
+    function updateBranches() {
 
-    // Get all versions as struct
-    const versionsHolder = {};
-    Window.this.xcall("get_versions", versionsHolder);
+        function onResponse(branches) {
+            let branchSelection = document.getElementById("branches");
 
-    const versions = versionsHolder.versions;
+            branches.forEach(branch => {
+                let opt = document.createElement("option");
+                opt.value = branch;
+                opt.innerHTML = branch;
+                branchSelection.appendChild(opt);
+            });
+            branchSelection.value = branches.first;
 
-    /* content of version:
-        val.set_item("idx", idx as i32);
-        val.set_item("liquidBounceVersion", &x.name);
-        val.set_item("minecraftVersion", &x.mc_version);
-        val.set_item("loaderName", &x.loader_version);
-    */
-    const latestVersion = versions[versions.length - 1];
+            updateBuilds();
+        }
 
-    mcVersion = latestVersion.minecraftVersion;
+        function onError(e) {
+            console.log("Internal rust error on updating branches: " + e);
+        }
 
-    const versionContext = latestVersion.liquidBounceVersion.split("-");
+        Window.this.xcall("get_branches", onResponse, onError);
+    }
 
-    lbVersion = versionContext[0];
-    const furtherVersionInfo = versionContext[1].split("+");
+    function updateBuilds() {
+        console.log("update");
 
-    const releaseType = furtherVersionInfo[0]; // nightly or release
-    const commit = furtherVersionInfo[1]; // git commit of build
+        let branchSelection = document.getElementById("branches");
+        let branch = branchSelection.value;
 
-    console.log(furtherVersionInfo);
+        let buildsSelection = document.getElementById("builds");
+        buildsSelection.innerHTML = "";
+
+        function onResponse(builds) {
+            builds.forEach(build => {
+                let opt = document.createElement("option");
+                opt.value = build.buildId;
+                opt.innerHTML = build.commitId.substring(0, 7) + ": " + build.lbVersion + " (" + build.mcVersion + ")";
+                buildsSelection.appendChild(opt);
+            });
+            // buildsSelection.value = builds.last.buildId; // last is latest version
+        }
+
+        function onError(e) {
+            console.log("Internal rust error on updating builds: " + e);
+        }
+
+        Window.this.xcall("get_builds", branch, onResponse, onError);
+    }
+
+
 
     // Handle play button to start client
     function handlePlay() {
-        console.log("button clicked");
+        let buildsSelection = document.getElementById("builds");
 
         // const label = document.getElementById('statusLabel');
         // const progressBar = document.getElementById('progress');
@@ -60,7 +83,7 @@
                 // progressBar.max = value;
             } else if (action === 'progress') {
                 // progressBar.value = value;
-                console.log(progressBar.value + "/" + progressBar.max);
+                // console.log(progressBar.value + "/" + progressBar.max);
             } else if (action === 'label') {
                 // label.textContent = value;
 
@@ -91,24 +114,14 @@
 
         // label.textContent = "Running...";
 
-        Window.this.xcall("run_client", latestVersion.idx, accountData, onProgress, onOutput, onDone, onError);
+        Window.this.xcall("run_client", parseInt(buildsSelection.value), accountData, onProgress, onOutput, onDone, onError);
 
         // startButton.disabled = true;
         // terminateButton.disabled = false;
     }
 
-    // TODO: Implement version selection
-    /*
-    const versionSel = document.getElementById("select-div");
-
-    let html = '';
-
-    for (const x of asdf.versions) {
-        html += '<option value="' + x.idx + '">' + x.minecraftVersion + " - " + x.liquidBounceVersion + '</option>';
-    }
-
-    versionSel.innerHTML = '<select id="version-selection">' + html + '</select>';
-    */
+    // Update branches
+    updateBranches();
 </script>
 
 <div class="wrapper">
@@ -136,15 +149,18 @@
     </div>
 
     <div class="version-select">
+        <select name="branches" id="branches" on:change={updateBuilds}></select>
+        <select name="builds" id="builds"></select>
+
         <div class="version">
             <img class="icon" src="img/icon/icon-version-lb.png" alt="liquidbounce">
-            <div class="name">{lbVersion}</div>
-            <div class="date">{releaseType}</div>
+            <div class="name"></div>
+            <div class="date"></div>
         </div>
 
         <div class="version">
             <img class="icon" src="img/icon/icon-version-mc.png" alt="minecraft">
-            <div class="name">{mcVersion}</div>
+            <div class="name"></div>
             <div class="date">2021-05-07</div>
         </div>
     </div>

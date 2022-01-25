@@ -1,12 +1,12 @@
 /target
-/versions
+/run/versions
 /assets
-/gameDir
-/libraries
-/natives
-/logs
-/mod_cache
+/run/gameDir
+/run/libraries
+/run/natives
+/run/logs
+/run/mod_cache
 /.mixin.out
 
-sciter-*.dll
-sciter.dll
+run/sciter-*.dll
+run/sciter.dll

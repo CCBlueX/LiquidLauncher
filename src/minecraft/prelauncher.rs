@@ -1,26 +1,45 @@
-use anyhow::Result;
-use crate::cloud::{LaunchTarget, LoaderVersion, ClientVersionManifest, ModSource};
-use crate::interface::webviews::download_client;
-use crate::minecraft::version::{VersionManifest, VersionProfile};
-use log::*;
-use crate::error::LauncherError;
-use std::path::Path;
-use crate::utils::{download_file, get_maven_artifact_path};
 use std::io::{Cursor, Read};
-use crate::minecraft::launcher::{LauncherData, LaunchingParameter, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps, get_max, get_progress};
+use std::path::Path;
 
-pub(crate) async fn launch<D: Send + Sync>(client_version_manifest: &ClientVersionManifest, version_manifest: &VersionManifest, target: &LaunchTarget, loader_version: &LoaderVersion, lauchingParameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
+use anyhow::Result;
+use log::*;
+
+use crate::cloud::{Build, LauncherApi, LaunchManifest, LoaderSubsystem, LoaderVersion, ModSource};
+use crate::error::LauncherError;
+use crate::interface::webviews::download_client;
+use crate::minecraft::launcher;
+use crate::minecraft::launcher::{get_max, get_progress, LauncherData, LaunchingParameter, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
+use crate::minecraft::version::{VersionManifest, VersionProfile};
+use crate::utils::{download_file, get_maven_artifact_path};
+
+///
+/// Prelaunching client
+///
+pub(crate) async fn launch<D: Send + Sync>(build: &Build, lauchingParameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
+    info!("Loading minecraft version manifest...");
+    let mc_version_manifest = VersionManifest::download().await?;
+
+    info!("Loading launch manifest...");
+    let launch_manifest = LauncherApi::load_version_manifest(build.build_id).await?;
+    let loader = &launch_manifest.loader;
+
     launcher_data.progress_update(ProgressUpdate::set_max());
     launcher_data.progress_update(ProgressUpdate::SetProgress(0));
 
-    retrieve_and_copy_mods(client_version_manifest, target, &launcher_data).await?;
+    // Copy retrieve and copy mods from manifest
+    retrieve_and_copy_mods(&launch_manifest, &launcher_data).await?;
 
     info!("Loading version profile...");
-
-    let mut version = VersionProfile::load(&loader_version.launcher_manifest).await?;
+    let manifest_url = match loader.subsystem {
+        LoaderSubsystem::Fabric => loader.launcher_manifest
+            .replace("{MINECRAFT_VERSION}", &*build.mc_version)
+            .replace("{FABRIC_LOADER_VERSION}", &*build.fabric_loader_version),
+        LoaderSubsystem::Forge => loader.launcher_manifest.clone()
+    };
+    let mut version = VersionProfile::load(&manifest_url).await?;
 
     if let Some(inherited_version) = &version.inherits_from {
-        let url = version_manifest.versions
+        let url = mc_version_manifest.versions
             .iter()
             .find(|x| &x.id == inherited_version)
             .map(|x| &x.url)
@@ -34,16 +53,15 @@ pub(crate) async fn launch<D: Send + Sync>(client_version_manifest: &ClientVersi
         version.merge(parent_version)?;
     }
 
-    info!("Launching {}...", target.name);
+    info!("Launching {}...", launch_manifest.build.commit_id);
 
-    crate::minecraft::launcher::launch(version, lauchingParameter, launcher_data).await?;
-
+    launcher::launch(version, lauchingParameter, launcher_data).await?;
     Ok(())
 }
 
-pub(crate) async fn retrieve_and_copy_mods(manifest: &ClientVersionManifest, target: &LaunchTarget, progress: &impl ProgressReceiver) -> anyhow::Result<()> {
-    let mod_cache_path = Path::new("mod_cache");
-    let mods_path = Path::new("gameDir").join("mods");
+pub(crate) async fn retrieve_and_copy_mods(manifest: &LaunchManifest, progress: &impl ProgressReceiver) -> anyhow::Result<()> {
+    let mod_cache_path = Path::new("../../run/mod_cache");
+    let mods_path = Path::new("../../run/gameDir").join("mods");
 
     tokio::fs::create_dir_all(&mod_cache_path).await?;
     tokio::fs::create_dir_all(&mods_path).await?;
@@ -57,9 +75,9 @@ pub(crate) async fn retrieve_and_copy_mods(manifest: &ClientVersionManifest, tar
         }
     }
 
-    let max = get_max(target.mods.len());
+    let max = get_max(manifest.mods.len());
 
-    for (mod_idx, current_mod) in target.mods.iter().enumerate() {
+    for (mod_idx, current_mod) in manifest.mods.iter().enumerate() {
         // Skip mods that are not needed
         if !current_mod.required && !current_mod.default {
             continue;

@@ -1,30 +1,32 @@
-use path_absolutize::Absolutize;
-use sciter::Value;
-use sciter::window::Options;
+use std::borrow::Borrow;
 use std::env;
+use std::iter::FromIterator;
 use std::option::Option::Some;
 use std::path::PathBuf;
 use std::process::exit;
-use sciter::dom::event::{default_events, EVENT_GROUPS};
-use std::iter::FromIterator;
-use crate::cloud::{ClientVersionManifest, SUPPORTED_CLOUD_FILE_VERSION};
-use crate::minecraft::service::{Account, AuthService};
 use std::sync::Arc;
+
+use anyhow::{Error, Result};
 use futures::lock::{Mutex, MutexGuard};
+use log::error;
+use path_absolutize::Absolutize;
+use sciter::dom::event::{default_events, EVENT_GROUPS};
+use sciter::Value;
+use sciter::window::Options;
 use tokio::runtime::Runtime;
 use tokio::task;
-use crate::minecraft::version::VersionManifest;
+
+use crate::cloud::{LauncherApi, LaunchManifest};
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter, ProgressUpdate};
-use anyhow::{Error, Result};
-use std::borrow::Borrow;
+use crate::minecraft::prelauncher;
+use crate::minecraft::service::{Account, AuthService};
+use crate::minecraft::version::VersionManifest;
 
 struct RunnerInstance {
     terminator: tokio::sync::oneshot::Sender<()>,
 }
 
 struct ConstantLauncherData {
-    version_manifest: VersionManifest,
-    client_version_manifest: ClientVersionManifest,
 }
 
 struct EventHandler {
@@ -65,7 +67,7 @@ fn handle_progress(value: &Arc<std::sync::Mutex<EventFunctions>>, progress_updat
 
 impl EventHandler {
     // script handler
-    fn run_client(&self, version_id: i32, account_data: Value, on_progress: Value, on_output: Value, on_finalization: Value, on_error: Value) -> bool {
+    fn run_client(&self, build_id: i32, account_data: Value, on_progress: Value, on_output: Value, on_finalization: Value, on_error: Value) -> bool {
         let runner_instance_clone = self.runner_instance.clone();
         let constant_data_clone = self.constant_data.clone();
 
@@ -78,24 +80,35 @@ impl EventHandler {
 
         let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
 
-        let launchingParameter = LaunchingParameter {
+        let launching_parameter = LaunchingParameter {
             auth_player_name: account_data.get_item("username").as_string().unwrap_or_else(|| "unexpected".to_string()),
             auth_uuid: account_data.get_item("id").as_string().unwrap_or_else(|| "069a79f4-44e9-4726-a5be-fca90e38aaf5".to_string()),
             auth_access_token: account_data.get_item("accessToken").as_string().unwrap_or_else(|| "-".to_string()),
+            auth_xuid: "x".to_string(),
+            clientid: "x".to_string(),
             user_type: account_data.get_item("type").as_string().unwrap_or_else(|| "legacy".to_string()),
         };
 
         let jh = self.async_runtime.spawn(async move {
-            let client_version_manifest = &constant_data_clone.client_version_manifest;
+            // todo: cache builds somewhere
+            let builds = match LauncherApi::load_all_builds().await {
+                Ok(build) => build,
+                Err(err) => {
+                    on_error.call(None, &make_args!(err.to_string()), None).unwrap();
+                    return;
+                }
+            };
+            let build = match builds.iter().find(|x| x.build_id == build_id as u32) {
+                Some(build) => build,
+                None => {
+                    on_error.call(None, &make_args!("unable to find build"), None).unwrap();
+                    return;
+                }
+            };
 
-            let target = &client_version_manifest.versions[version_id as usize];
-
-            let res = crate::minecraft::prelauncher::launch(
-                client_version_manifest,
-                &constant_data_clone.version_manifest,
-                target,
-                client_version_manifest.loader_versions.get(&target.loader_version).unwrap(),
-                launchingParameter,
+            if let Err(err) = prelauncher::launch(
+                build,
+                launching_parameter,
                 LauncherData {
                     on_stdout: handle_stdout,
                     on_stderr: handle_stderr,
@@ -103,24 +116,19 @@ impl EventHandler {
                     data: Box::new(Arc::new(std::sync::Mutex::new(EventFunctions { on_output, on_progress }))),
                     terminator: terminator_rx
                 }
-            ).await;
-
-            match res {
-                Err(err) => {on_error.call(None, &make_args!(err.to_string()), None).unwrap();},
-                _ => {}
+            ).await {
+                on_error.call(None, &make_args!(err.to_string()), None).unwrap();
             }
 
             { *runner_instance_clone.lock().await = None; }
 
             on_finalization.call(None, &make_args!(), None).unwrap();
-
-            ()
         });
 
         *runner_instance_content = Some(RunnerInstance { terminator: terminator_tx });
         *join_handle = Some(jh);
 
-        return true;
+        true
     }
 
     fn terminate(&self) -> bool {
@@ -131,39 +139,61 @@ impl EventHandler {
             {
                 let mut lck = runner_instance.lock().await;
 
-                match lck.take() {
-                    Some(inst) => {
-                        println!("Sending sigterm");
-                        inst.terminator.send(()).unwrap();
-                    },
-                    _ => {}
+                if let Some(inst) = lck.take() {
+                    println!("Sending sigterm");
+                    inst.terminator.send(()).unwrap();
                 }
             }
 
             join_handle.lock().await.take().unwrap().await.unwrap();
         });
 
-        return true;
+        true
     }
 
     // script handler
-    fn get_versions(&self, mut output: sciter::Value) -> bool {
-        let versions = self.constant_data.client_version_manifest.versions
-            .iter()
-            .enumerate()
-            .map(|(idx, x)| {
-                let mut val = Value::new();
+    fn get_branches(&self, on_response: Value, on_error: Value) -> bool {
+        self.async_runtime.spawn(async move {
+            match LauncherApi::load_branches().await {
+                Ok(branches) => {
+                    on_response.call(None, &make_args!(Value::from_iter(branches)), None).unwrap()
+                },
+                Err(err) => {
+                    error!("{:?}", err);
 
-                val.set_item("idx", idx as i32);
-                val.set_item("liquidBounceVersion", &x.name);
-                val.set_item("minecraftVersion", &x.mc_version);
-                val.set_item("loaderName", &x.loader_version);
+                    on_error.call(None, &make_args!(err.to_string()), None).unwrap()
+                }
+            };
+        });
 
-                val
-            })
-            .collect::<Vec<_>>();
+        true
+    }
 
-        output.set_item("versions", Value::from_iter(versions));
+    fn get_builds(&self, branch: String, on_response: Value, on_error: Value) -> bool {
+        self.async_runtime.spawn(async move {
+            match LauncherApi::load_builds(branch).await {
+                Ok(builds) => {
+                    let builds = Value::from_iter(builds.iter().map(|x| {
+                        let mut val = Value::new();
+
+                        val.set_item("buildId", Value::from(x.build_id as i32));
+                        val.set_item("commitId", &x.commit_id);
+                        val.set_item("branch", &x.branch);
+                        val.set_item("lbVersion", &x.lb_version);
+                        val.set_item("mcVersion", &x.mc_version);
+
+                        val
+                    }).collect::<Vec<Value>>());
+
+                    on_response.call(None, &make_args!(builds), None).unwrap()
+                },
+                Err(err) => {
+                    error!("{:?}", err);
+
+                    on_error.call(None, &make_args!(err.to_string()), None).unwrap()
+                }
+            };
+        });
 
         true
     }
@@ -187,8 +217,6 @@ impl EventHandler {
                     on_error.call(None, &make_args!(err.to_string()), None).unwrap()
                 }
             };
-
-            ()
         });
 
         true
@@ -209,7 +237,8 @@ impl sciter::EventHandler for EventHandler {
     dispatch_script_call! {
 		fn run_client(i32, Value, Value, Value, Value, Value);
 		fn terminate();
-		fn get_versions(Value);
+		fn get_branches(Value, Value);
+        fn get_builds(String, Value, Value);
         fn login_mojang(String, String, Value, Value);
         fn exit_app();
 	}
@@ -220,16 +249,7 @@ impl sciter::EventHandler for EventHandler {
 pub(crate) fn gui_main() {
     let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().expect("Failed to open runtime");
 
-    let client_version_manifest = rt.block_on(ClientVersionManifest::load_version_manifest()).expect("Failed to download version manifest");
-
-    if client_version_manifest.file_version > SUPPORTED_CLOUD_FILE_VERSION {
-        eprintln!("ERROR: Unsupported version manifest");
-        return;
-    }
-
-    let version_manifest = rt.block_on(VersionManifest::download()).expect("Failed to download version manifest");
-
-    let gui_index = get_gui_index().expect("unable to find gui index");
+    let gui_index = path_to_sciter_index().expect("unable to find gui index");
 
     let mut frame = sciter::WindowBuilder::main_window()
         .glassy()
@@ -239,16 +259,30 @@ pub(crate) fn gui_main() {
         .with_size((1000, 600))
         .create();
 
-    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { version_manifest, client_version_manifest }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
+    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
 
     frame.load_file(&gui_index);
     frame.run_app();
 }
 
-fn get_gui_index() -> Result<String> {
-    let path = env::current_dir()?;
-    let absolut_path = path.absolutize()?;
-    let str_path = absolut_path.to_str().expect("no path");
+fn path_to_sciter_index() -> Result<String> {
+    let current_dir = env::current_dir()?;
+    let path = {
+        // release env
+        let mut path = current_dir.clone();
+        path.push("/gui/public/index.html");
 
-    return Ok(format!("file://{}/gui/public/index.html", str_path));
+        if path.exists() {
+            path
+        } else {
+            // my dev env
+            let mut path = current_dir.clone();
+            path.push("../gui/public/index.html");
+
+            path
+        }
+    };
+
+    let absolut_path = path.absolutize()?;
+    return Ok(format!("file://{}", absolut_path.to_str().unwrap_or("index.html")));
 }
