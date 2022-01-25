@@ -1,26 +1,27 @@
 use std::{path::{Path, PathBuf}, str::FromStr};
-use futures::stream::{self, StreamExt};
-use log::*;
-use tokio::{fs, process::Command};
-use crate::{LAUNCHER_VERSION, utils::os::OS};
-use path_absolutize::*;
-
-use anyhow::{Result, bail, Error};
-
-use super::version::VersionProfile;
-use std::fmt::Write;
 use std::collections::HashSet;
+use std::fmt::Write;
+use std::io::Write as OtherWrite;
+use std::ops::Add;
+use std::process::Stdio;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+use anyhow::{bail, Error, Result};
+use futures::stream::{self, StreamExt};
+use futures::TryFutureExt;
+use log::*;
+use path_absolutize::*;
+use tokio::{fs, process::Command};
+use tokio::io::AsyncReadExt;
+use tokio::time::Duration;
+
+use crate::{LAUNCHER_VERSION, utils::os::OS};
 use crate::error::LauncherError;
 use crate::minecraft::version::LibraryDownloadInfo;
-use futures::TryFutureExt;
-use std::ops::Add;
-use tokio::time::Duration;
-use std::process::Stdio;
-use tokio::io::AsyncReadExt;
-use std::io::Write as OtherWrite;
 use crate::utils::download_file;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+
+use super::version::VersionProfile;
 
 pub enum ProgressUpdateSteps {
     DownloadLiquidBounceMods,
@@ -99,7 +100,7 @@ impl<D: Send + Sync> ProgressReceiver for LauncherData<D> {
 
 const CONCURRENT_DOWNLOADS: usize = 10;
 
-pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launchingParameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
+pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
     let launcher_data_arc = Arc::new(launcher_data);
 
     let features: HashSet<String> = HashSet::new();
@@ -110,7 +111,7 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launchingPa
     let mut class_path = String::new();
 
     // Client
-    let versions_folder = Path::new("versions");
+    let versions_folder = Path::new("../../run/versions");
 
     // Check if json has client download (or doesn't require one)
     if let Some(client_download) = version_profile.downloads.as_ref().and_then(|x| x.client.as_ref()) {
@@ -182,8 +183,8 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launchingPa
     ).buffer_unordered(CONCURRENT_DOWNLOADS).collect().await;
 
     // Libraries
-    let libraries_folder = Path::new("libraries");
-    let natives_folder = Path::new("natives");
+    let libraries_folder = Path::new("../../run/libraries");
+    let natives_folder = Path::new("../../run/natives");
     fs::create_dir_all(&natives_folder).await?;
 
     // todo: make library downloader compact and async
@@ -239,7 +240,7 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launchingPa
     // Game
     let mut command = Command::new("java");
 
-    let game_dir = Path::new("gameDir");
+    let game_dir = Path::new("../../run/gameDir");
 
     let mut command_arguments = Vec::new();
 
@@ -260,20 +261,22 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launchingPa
         mapped.push(
             process_templates(x, |output, param| {
                 match param {
-                    "auth_player_name" => output.push_str(&launchingParameter.auth_player_name),
+                    "auth_player_name" => output.push_str(&launching_parameter.auth_player_name),
                     "version_name" => output.push_str(&version_profile.id),
                     "game_directory" => output.push_str(&game_dir.absolutize().unwrap().to_str().unwrap()),
                     "assets_root" => output.push_str(&assets_folder.absolutize().unwrap().to_str().unwrap()),
                     "assets_index_name" => output.push_str(&asset_index_location.id),
-                    "auth_uuid" => output.push_str(&launchingParameter.auth_uuid),
-                    "auth_access_token" => output.push_str(&launchingParameter.auth_access_token),
-                    "user_type" => output.push_str(&launchingParameter.user_type),
+                    "auth_uuid" => output.push_str(&launching_parameter.auth_uuid),
+                    "auth_access_token" => output.push_str(&launching_parameter.auth_access_token),
+                    "user_type" => output.push_str(&launching_parameter.user_type),
                     "version_type" => output.push_str(&version_profile.version_type),
                     "natives_directory" => output.push_str(&natives_folder.absolutize().unwrap().to_str().unwrap()),
                     "launcher_name" => output.push_str("LiquidLauncher"),
                     "launcher_version" => output.push_str(LAUNCHER_VERSION),
                     "classpath" => output.push_str(&class_path[..class_path.len() - 1]),
                     "user_properties" => output.push_str("{}"),
+                    "clientid" => output.push_str(&launching_parameter.clientid),
+                    "auth_xuid" => output.push_str(&launching_parameter.auth_xuid),
                     _ => return Err(LauncherError::UnknownTemplateParameter(param.to_owned()).into())
                 };
 
@@ -286,7 +289,7 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launchingPa
     launcher_data_arc.progress_update(ProgressUpdate::set_label("Launching..."));
     launcher_data_arc.progress_update(ProgressUpdate::set_to_max());
 
-    debug!("MC-Arguments: {:?}", &mapped);
+    debug!("MC-Arguments: {}", &mapped.join(" "));
     command.args(mapped);
 
     command
@@ -314,7 +317,8 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launchingPa
             read_len = stdout.read(&mut stdout_buf) => (launcher_data.on_stdout)(&launcher_data.data, &stdout_buf[..read_len?]).unwrap(),
             read_len = stderr.read(&mut stderr_buf) => (launcher_data.on_stderr)(&launcher_data.data, &stderr_buf[..read_len?]).unwrap(),
             _ = &mut terminator => {
-                running_task.kill().await?;
+                // todo: might cause issues with fabric error panel
+                // running_task.kill().await?;
 
                 break;
             },
@@ -331,6 +335,8 @@ pub struct LaunchingParameter {
     pub auth_player_name: String,
     pub auth_uuid: String,
     pub auth_access_token: String,
+    pub auth_xuid: String,
+    pub clientid: String,
     pub user_type: String
 }
 

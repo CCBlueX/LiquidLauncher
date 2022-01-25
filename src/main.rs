@@ -2,7 +2,7 @@
 #[macro_use]
 extern crate sciter;
 
-use crate::interface::{cli, gui};
+use std::str::FromStr;
 
 pub mod minecraft;
 pub mod cloud;
@@ -15,13 +15,13 @@ const LAUNCHER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn main() {
     let args = std::env::args();
-
     let mut real_args = args.skip(1);
 
-    if let Some((mc_version, lb_version)) = real_args.next().zip(real_args.next()) {
+    if let Some(build_id) = real_args.next() {
         #[cfg(feature = "cli")]
             {
-                cli::cli_main(mc_version, lb_version);
+                let u_build_id = build_id.parse::<u32>().expect("build id not valid");
+                interface::cli::cli_main(u_build_id);
                 return;
             }
 
@@ -31,7 +31,7 @@ pub fn main() {
 
     #[cfg(feature = "gui")]
         {
-            gui::gui_main();
+            interface::gui::gui_main();
             return;
         }
 
