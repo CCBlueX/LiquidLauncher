@@ -4,7 +4,7 @@ use std::fmt::Write;
 use std::io::Write as OtherWrite;
 use std::ops::Add;
 use std::process::Stdio;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use anyhow::{bail, Error, Result};
@@ -13,76 +13,18 @@ use futures::TryFutureExt;
 use log::*;
 use path_absolutize::*;
 use tokio::{fs, process::Command};
-use tokio::io::AsyncReadExt;
+use tokio::{fs::File, io::AsyncReadExt};
+use async_zip::read::seek::ZipFileReader;
+use tokio::fs::OpenOptions;
 
 use crate::{LAUNCHER_VERSION, utils::os::OS};
 use crate::error::LauncherError;
+use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
+use crate::minecraft::rule_interpreter;
 use crate::minecraft::version::LibraryDownloadInfo;
-use crate::utils::download_file;
+use crate::utils::{download_file, zip_extract};
 
 use super::version::VersionProfile;
-
-#[derive(Debug)]
-pub enum ProgressUpdateSteps {
-    DownloadLiquidBounceMods,
-    DownloadClientJar,
-    DownloadAssets,
-    DownloadLibraries,
-}
-
-pub(crate) fn get_progress(idx: usize, curr: u64, max: u64) -> u64 {
-    idx as u64 * 100 + (curr * 100 / max.max(1))
-}
-
-pub(crate) fn get_max(len: usize) -> u64 {
-    len as u64 * 100
-}
-
-impl ProgressUpdateSteps {
-    fn len() -> usize {
-        4
-    }
-
-    fn step_idx(&self) -> usize {
-        match self {
-            ProgressUpdateSteps::DownloadLiquidBounceMods => 0,
-            ProgressUpdateSteps::DownloadClientJar => 1,
-            ProgressUpdateSteps::DownloadAssets => 2,
-            ProgressUpdateSteps::DownloadLibraries => 3,
-        }
-    }
-}
-
-pub enum ProgressUpdate {
-    SetMax(u64),
-    SetProgress(u64),
-    SetLabel(String),
-}
-
-const PER_STEP: u64 = 1024;
-
-impl ProgressUpdate {
-    pub fn set_for_step(step: ProgressUpdateSteps, progress: u64, max: u64) -> Self {
-        println!("{:?}", step);
-
-        Self::SetProgress(step.step_idx() as u64 * PER_STEP + (progress * PER_STEP / max))
-    }
-    pub fn set_to_max() -> Self {
-        Self::SetProgress(ProgressUpdateSteps::len() as u64 * PER_STEP)
-    }
-    pub fn set_max() -> Self {
-        let max = ProgressUpdateSteps::len() as u64;
-
-        Self::SetMax(max * PER_STEP)
-    }
-    pub fn set_label<S: AsRef<str>>(str: S) -> Self {
-        return Self::SetLabel(str.as_ref().to_owned());
-    }
-}
-
-pub trait ProgressReceiver {
-    fn progress_update(&self, update: ProgressUpdate);
-}
 
 pub struct LauncherData<D: Send + Sync> {
     pub(crate) on_stdout: fn(&D, &[u8]) -> Result<()>,
@@ -94,11 +36,14 @@ pub struct LauncherData<D: Send + Sync> {
 
 impl<D: Send + Sync> ProgressReceiver for LauncherData<D> {
     fn progress_update(&self, progress_update: ProgressUpdate) {
-        (self.on_progress)(&self.data, progress_update);
+        info!("{:?}", progress_update);
+        let _ = (self.on_progress)(&self.data, progress_update);
     }
 }
 
-const CONCURRENT_DOWNLOADS: usize = 10;
+// Sorry if I burn your cpu and connection
+const CONCURRENT_LIBRARIES_DOWNLOADS: usize = 10;
+const CONCURRENT_ASSETS_DOWNLOADS: usize = 100;
 
 pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
     let launcher_data_arc = Arc::new(launcher_data);
@@ -138,6 +83,68 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
         return Err(LauncherError::InvalidVersionProfile("No client JAR downloads were specified.".to_string()).into());
     }
 
+    // Libraries
+    let libraries_folder = Path::new("libraries");
+    let natives_folder = Path::new("natives");
+    fs::create_dir_all(&natives_folder).await?;
+
+    let libraries_to_download = version_profile.libraries.iter().map(|x| x.to_owned()).collect::<Vec<_>>();
+    // let libraries_downloaded = Arc::new(AtomicU64::new(0));
+    let libraries_max = libraries_to_download.len() as u64;
+
+    launcher_data_arc.progress_update(ProgressUpdate::set_label("Checking libraries..."));
+    launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLibraries, 0, libraries_max));
+
+    let class_paths: Vec<Result<Option<String>>> = stream::iter(
+        libraries_to_download.into_iter().filter_map(|library| {
+            // let download_count = libraries_downloaded.clone();
+            let data_clone = launcher_data_arc.clone();
+            let folder_clone = libraries_folder.to_path_buf();
+
+            if !rule_interpreter::check_condition(&library.rules, &features, &os_info).unwrap_or(false) {
+                return None;
+            }
+
+            Some(async move {
+                if let Some(natives) = &library.natives {
+                    if let Some(required_natives) = natives.get(OS.get_simple_name()) {
+                        if let Some(classifiers) = library.downloads.as_ref().and_then(|x| x.classifiers.as_ref()) {
+                            if let Some(artifact) = classifiers.get(required_natives).map(LibraryDownloadInfo::from) {
+                                let path = artifact.download(library.name, folder_clone.as_path(), data_clone).await?;
+
+                                info!("Natives zip extract: {:?}", path);
+                                let file = OpenOptions::new().read(true).open(path).await?;
+                                zip_extract(file, natives_folder).await?;
+                            }
+                        } else {
+                            return Err(LauncherError::InvalidVersionProfile("missing classifiers, but natives required.".to_string()).into());
+                        }
+                    }
+
+                    return Ok(None);
+                }
+
+                // Download regular artifact
+                let artifact = library.get_library_download()?;
+                let path = artifact.download(library.name, folder_clone.as_path(), data_clone).await?;
+
+                // Natives are not included in the classpath
+                return if library.natives.is_none() {
+                    return Ok(path.absolutize().unwrap().to_str().map(|x| x.to_string()))
+                } else {
+                    Ok(None)
+                };
+            })
+        })
+    ).buffer_unordered(CONCURRENT_LIBRARIES_DOWNLOADS).collect().await;
+    for x in class_paths {
+        if let Some(library_path) = x? {
+            write!(class_path, "{}{}", &library_path, OS.get_path_separator())?;
+        }
+    }
+
+    launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLibraries, libraries_max, libraries_max));
+
     // Assets
     let assets_folder = Path::new("assets");
     let indexes_folder: PathBuf = assets_folder.join("indexes");
@@ -152,7 +159,8 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
     let assets_downloaded = Arc::new(AtomicU64::new(0));
     let asset_max = asset_objects_to_download.len() as u64;
 
-    ProgressUpdate::set_label("Checking assets...");
+    launcher_data_arc.progress_update(ProgressUpdate::set_label("Checking assets..."));
+    launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadAssets, 0, asset_max));
 
     let _: Vec<Result<()>> = stream::iter(
         asset_objects_to_download.into_iter().map(|asset_object| {
@@ -161,79 +169,26 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
             let folder_clone = objects_folder.clone();
 
             async move {
-                // let curr = download_count.fetch_add(1, Ordering::Relaxed);
-
-                // todo: fix calls to sciter are very slow which makes the checking of assets slow
-                // data_clone.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadAssets, curr, asset_max));
-
                 let hash = asset_object.hash.clone();
-                let res = asset_object.download_destructing(folder_clone, data_clone.clone()).await;
-                match &res {
-                    Ok(downloaded) => if *downloaded {
-                        data_clone.progress_update(ProgressUpdate::set_label(format!("Downloaded asset {}", hash)));
+                match asset_object.download_destructing(folder_clone, data_clone.clone()).await {
+                    Ok(downloaded) => {
+                        let curr = download_count.fetch_add(1, Ordering::Relaxed);
+
+                        if downloaded {
+                            // the progress bar is only being updated when a asset has been downloaded to improve speeds
+                            data_clone.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadAssets, curr, asset_max));
+                            data_clone.progress_update(ProgressUpdate::set_label(format!("Downloaded asset {}", hash)));
+                        }
                     },
                     Err(err) => error!("Unable to download asset {}: {:?}", hash, err)
                 }
 
-                res.map(|_| ())
+                Ok(())
             }
         })
-    ).buffer_unordered(CONCURRENT_DOWNLOADS).collect().await;
+    ).buffer_unordered(CONCURRENT_ASSETS_DOWNLOADS).collect().await;
 
-    // Libraries
-    let libraries_folder = Path::new("libraries");
-    let natives_folder = Path::new("natives");
-    fs::create_dir_all(&natives_folder).await?;
-
-    // todo: make library downloader compact and async
-
-    for (lib_idx, library) in version_profile.libraries.iter().enumerate() {
-        if !crate::minecraft::rule_interpreter::check_condition(&library.rules, &features, &os_info)? {
-            continue;
-        }
-
-        launcher_data_arc.progress_update(ProgressUpdate::set_label(format!("Downloading library {}", library.name)));
-        launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLibraries, lib_idx as u64, version_profile.libraries.len() as u64));
-
-        if let Some(natives) = &library.natives {
-            if let Some(required_natives) = natives.get(&format!("{}", &OS)) {
-                if let Some(classifiers) = library.downloads.as_ref().and_then(|x| x.classifiers.as_ref()) {
-                    if let Some(artifact) = classifiers.get(required_natives).map(LibraryDownloadInfo::from) {
-                        let library_path = libraries_folder.join(&artifact.path);
-
-                        if !library_path.exists() {
-                            fs::create_dir_all(&library_path.parent().unwrap()).await?;
-                            artifact.download(&library_path).await?;
-                        }
-
-                        // todo: find async and safe alternative for zip extraction
-                        // try https://github.com/zacps/zip-rs/tree/async-attempt2
-                        let mut archive = zip::ZipArchive::new(std::fs::File::open(library_path).unwrap()).unwrap();
-
-                        // todo: check for extract options in JSON
-                        archive.extract(&natives_folder).unwrap();
-                    }
-                } else {
-                    return Err(LauncherError::InvalidVersionProfile("missing classifiers, but natives required.".to_string()).into());
-                }
-            }
-
-            continue;
-        }
-
-        let artifact = library.get_library_download()?;
-        let library_path = libraries_folder.join(&artifact.path);
-
-        if !library_path.exists() {
-            fs::create_dir_all(&library_path.parent().unwrap()).await?;
-            artifact.download(&library_path).await?;
-        }
-
-        // Natives are not included in the classpath
-        if library.natives.is_none() {
-            write!(class_path, "{}{}", &library_path.absolutize().unwrap().to_str().unwrap(), OS.get_path_separator())?;
-        }
-    }
+    launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadAssets, asset_max, asset_max));
 
     // Game
     let mut command = Command::new("java");

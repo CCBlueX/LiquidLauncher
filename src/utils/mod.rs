@@ -1,5 +1,12 @@
 pub mod os;
 
+use std::path::{Path, PathBuf};
+use anyhow::Error;
+use async_zip::read::seek::ZipFileReader;
+use log::info;
+use path_absolutize::Absolutize;
+use tokio::fs;
+use tokio::fs::File;
 use crate::error::LauncherError;
 
 pub(crate) fn get_maven_artifact_path(artifact_id: &String) -> anyhow::Result<String> {
@@ -31,5 +38,40 @@ pub(crate) async fn download_file<F>(url: &str, on_progress: F) -> anyhow::Resul
         on_progress(curr_len as u64, max_len);
     }
 
-    return Ok(output);
+    Ok(output)
+}
+
+pub async fn zip_extract(mut file: File, folder: &Path) -> anyhow::Result<()> {
+    let mut archive = ZipFileReader::new(&mut file).await
+        .unwrap();
+
+    for i in 0..archive.entries().len() {
+        let reader = archive.entry_reader(i).await
+            .unwrap();
+
+        if reader.entry().dir() {
+            continue;
+        }
+
+        // Get path for file
+        let mut path = folder.to_path_buf();
+        path.push(reader.entry().name());
+
+        // Create new parent folder
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent).await?;
+            }
+        }
+
+        // Continue when file already exists
+        if path.exists() {
+            continue;
+        }
+
+        let mut output = File::create(path).await?;
+        reader.copy_to_end_crc(&mut output, 65536).await
+            .unwrap();
+    }
+    Ok(())
 }

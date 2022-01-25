@@ -99,12 +99,9 @@
                 }
                 case "progress": {
                     progressBar.value = value;
-                    console.log(progressBar.value + "/" + progressBar.max);
                     break;
                 }
                 case "label": {
-                    console.log(value);
-
                     label.textContent = value;
                     log(value);
                     break;
