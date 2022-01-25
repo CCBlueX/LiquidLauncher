@@ -14,7 +14,6 @@ use log::*;
 use path_absolutize::*;
 use tokio::{fs, process::Command};
 use tokio::io::AsyncReadExt;
-use tokio::time::Duration;
 
 use crate::{LAUNCHER_VERSION, utils::os::OS};
 use crate::error::LauncherError;
@@ -23,6 +22,7 @@ use crate::utils::download_file;
 
 use super::version::VersionProfile;
 
+#[derive(Debug)]
 pub enum ProgressUpdateSteps {
     DownloadLiquidBounceMods,
     DownloadClientJar,
@@ -31,16 +31,16 @@ pub enum ProgressUpdateSteps {
 }
 
 pub(crate) fn get_progress(idx: usize, curr: u64, max: u64) -> u64 {
-    return idx as u64 * 100 + (curr * 100 / max.max(1));
+    idx as u64 * 100 + (curr * 100 / max.max(1))
 }
 
 pub(crate) fn get_max(len: usize) -> u64 {
-    return len as u64 * 100;
+    len as u64 * 100
 }
 
 impl ProgressUpdateSteps {
     fn len() -> usize {
-        return 4;
+        4
     }
 
     fn step_idx(&self) -> usize {
@@ -63,17 +63,17 @@ const PER_STEP: u64 = 1024;
 
 impl ProgressUpdate {
     pub fn set_for_step(step: ProgressUpdateSteps, progress: u64, max: u64) -> Self {
-        println!("{}", step.step_idx());
+        println!("{:?}", step);
 
-        return Self::SetProgress(step.step_idx() as u64 * PER_STEP + (progress * PER_STEP / max));
+        Self::SetProgress(step.step_idx() as u64 * PER_STEP + (progress * PER_STEP / max))
     }
     pub fn set_to_max() -> Self {
-        return Self::SetProgress(ProgressUpdateSteps::len() as u64 * PER_STEP);
+        Self::SetProgress(ProgressUpdateSteps::len() as u64 * PER_STEP)
     }
     pub fn set_max() -> Self {
         let max = ProgressUpdateSteps::len() as u64;
 
-        return Self::SetMax(max * PER_STEP);
+        Self::SetMax(max * PER_STEP)
     }
     pub fn set_label<S: AsRef<str>>(str: S) -> Self {
         return Self::SetLabel(str.as_ref().to_owned());
@@ -118,14 +118,15 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
         let client_folder = versions_folder.join(&version_profile.id);
         fs::create_dir_all(&client_folder).await?;
 
-        let mut client_jar = client_folder.join(format!("{}.jar", &version_profile.id));
+        let client_jar = client_folder.join(format!("{}.jar", &version_profile.id));
 
         // Add client jar to class path
         write!(class_path, "{}{}", &client_jar.absolutize().unwrap().to_str().unwrap(), OS.get_path_separator())?;
 
         // Download client jar
         if !client_jar.exists() {
-            launcher_data_arc.progress_update(ProgressUpdate::set_label("Downloading loader"));
+            info!("Downloading client jar...");
+            launcher_data_arc.progress_update(ProgressUpdate::set_label("Downloading client..."));
 
             let retrieved_bytes = download_file(&client_download.url, |a, b| {
                 launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadClientJar, get_progress(0, a, b), get_max(1)));
@@ -146,14 +147,12 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
     fs::create_dir_all(&objects_folder).await?;
 
     let asset_index_location = version_profile.asset_index_location.as_ref().ok_or_else(|| LauncherError::InvalidVersionProfile("Asset index unspecified".to_string()))?;
-
     let asset_index = asset_index_location.load_asset_index(&indexes_folder).await?;
-
     let asset_objects_to_download = asset_index.objects.values().map(|x| x.to_owned()).collect::<Vec<_>>();
-
     let assets_downloaded = Arc::new(AtomicU64::new(0));
-
     let asset_max = asset_objects_to_download.len() as u64;
+
+    ProgressUpdate::set_label("Checking assets...");
 
     let _: Vec<Result<()>> = stream::iter(
         asset_objects_to_download.into_iter().map(|asset_object| {
@@ -162,19 +161,18 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
             let folder_clone = objects_folder.clone();
 
             async move {
-                let curr = download_count.fetch_add(1, Ordering::Relaxed);
+                // let curr = download_count.fetch_add(1, Ordering::Relaxed);
 
-                data_clone.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadAssets, curr, asset_max));
+                // todo: fix calls to sciter are very slow which makes the checking of assets slow
+                // data_clone.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadAssets, curr, asset_max));
 
                 let hash = asset_object.hash.clone();
-
                 let res = asset_object.download_destructing(folder_clone, data_clone.clone()).await;
-
                 match &res {
-                    Ok(a) => if *a {
+                    Ok(downloaded) => if *downloaded {
                         data_clone.progress_update(ProgressUpdate::set_label(format!("Downloaded asset {}", hash)));
                     },
-                    Err(e) => {}
+                    Err(err) => error!("Unable to download asset {}: {:?}", hash, err)
                 }
 
                 res.map(|_| ())
@@ -200,7 +198,7 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
         if let Some(natives) = &library.natives {
             if let Some(required_natives) = natives.get(&format!("{}", &OS)) {
                 if let Some(classifiers) = library.downloads.as_ref().and_then(|x| x.classifiers.as_ref()) {
-                    if let Some(artifact) = classifiers.get(required_natives).map(|x| LibraryDownloadInfo::from(x)) {
+                    if let Some(artifact) = classifiers.get(required_natives).map(LibraryDownloadInfo::from) {
                         let library_path = libraries_folder.join(&artifact.path);
 
                         if !library_path.exists() {

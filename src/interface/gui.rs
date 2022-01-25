@@ -7,6 +7,7 @@ use std::process::exit;
 use std::sync::Arc;
 
 use anyhow::{Error, Result};
+use env_logger::Env;
 use futures::lock::{Mutex, MutexGuard};
 use log::error;
 use path_absolutize::Absolutize;
@@ -247,7 +248,7 @@ impl sciter::EventHandler for EventHandler {
 
 /// Runs the GUI and returns when the window is closed.
 pub(crate) fn gui_main() {
-    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().expect("Failed to open runtime");
+    env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
     let gui_index = path_to_sciter_index().expect("unable to find gui index");
 

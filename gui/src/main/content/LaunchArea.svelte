@@ -41,8 +41,6 @@
     }
 
     function updateBuilds() {
-        console.log("update");
-
         let branchSelection = document.getElementById("branches");
         let branch = branchSelection.value;
 
