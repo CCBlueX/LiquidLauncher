@@ -185,7 +185,7 @@
 
     <div id="launch" style="display: none;">
         <textarea cols="100" readonly id="log-area" style="width: 85%; max-width: 85%"></textarea><br>
-        <progress value="19" min="0" max="4906" id="progress" style="width: 85%; max-width: 85%">...</progress><br>
+        <progress value="19" min="0" max="4096" id="progress" style="width: 85%; max-width: 85%">...</progress><br>
         <span id="statusLabel" style="width: 80%; max-width: 85%"></span>
 
         <button id="stop" class="stop" on:click={stopClient}>Stop</button>
