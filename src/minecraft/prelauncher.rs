@@ -60,8 +60,8 @@ pub(crate) async fn launch<D: Send + Sync>(build: &Build, lauchingParameter: Lau
 }
 
 pub(crate) async fn retrieve_and_copy_mods(manifest: &LaunchManifest, progress: &impl ProgressReceiver) -> anyhow::Result<()> {
-    let mod_cache_path = Path::new("../../run/mod_cache");
-    let mods_path = Path::new("../../run/gameDir").join("mods");
+    let mod_cache_path = Path::new("mod_cache");
+    let mods_path = Path::new("gameDir").join("mods");
 
     tokio::fs::create_dir_all(&mod_cache_path).await?;
     tokio::fs::create_dir_all(&mods_path).await?;
