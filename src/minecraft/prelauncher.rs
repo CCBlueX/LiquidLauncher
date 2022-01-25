@@ -15,7 +15,7 @@ use crate::utils::{download_file, get_maven_artifact_path};
 ///
 /// Prelaunching client
 ///
-pub(crate) async fn launch<D: Send + Sync>(build: &Build, lauchingParameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
+pub(crate) async fn launch<D: Send + Sync>(build: &Build, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
     info!("Loading minecraft version manifest...");
     let mc_version_manifest = VersionManifest::download().await?;
 
@@ -48,14 +48,14 @@ pub(crate) async fn launch<D: Send + Sync>(build: &Build, lauchingParameter: Lau
         debug!("Determined {}'s download url to be {}", inherited_version, url);
         info!("Downloading inherited version {}...", inherited_version);
 
-        let parent_version = VersionProfile::load(&url).await?;
+        let parent_version = VersionProfile::load(url).await?;
 
         version.merge(parent_version)?;
     }
 
     info!("Launching {}...", launch_manifest.build.commit_id);
 
-    launcher::launch(version, lauchingParameter, launcher_data).await?;
+    launcher::launch(version, launching_parameter, launcher_data).await?;
     Ok(())
 }
 

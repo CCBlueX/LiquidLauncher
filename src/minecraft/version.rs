@@ -314,24 +314,24 @@ impl AssetObject {
         let assets_objects_folder = assets_objects_folder.as_ref().to_owned();
         let asset_folder = assets_objects_folder.join(&self.hash[0..2]);
 
-        if let Ok(_) = fs::create_dir(&asset_folder).await {
-            // created folder
+        if !asset_folder.exists() {
+            fs::create_dir(&asset_folder).await?;
         }
 
         let asset_path = asset_folder.join(&self.hash);
-        
-        if !asset_path.exists() {
+
+        return if !asset_path.exists() {
             progress.progress_update(ProgressUpdate::set_label(format!("Downloading asset object {}", self.hash)));
 
-            info!("downloading {}", self.hash);
+            info!("Downloading {}", self.hash);
             let os = reqwest::get(&*format!("http://resources.download.minecraft.net/{}/{}", &self.hash[0..2], &self.hash)).await?.error_for_status()?.bytes().await?;
             fs::write(asset_path, os).await?;
-            info!("downloaded {}", self.hash);
+            info!("Downloaded {}", self.hash);
 
-            return Ok(true);
+            Ok(true)
+        } else {
+            Ok(false)
         }
-
-        Ok(false)
     }
 
     pub async fn download_destructing(self, assets_objects_folder: impl AsRef<Path>, progress: Arc<impl ProgressReceiver>) -> Result<bool> {
