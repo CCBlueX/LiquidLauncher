@@ -7,10 +7,11 @@ use serde::{Deserialize, Deserializer, de::{self, MapAccess, Visitor}};
 use void::Void;
 use os_info::{Bitness, Info};
 use std::collections::HashSet;
+use std::ops::Deref;
 use crate::error::LauncherError;
 use crate::utils::get_maven_artifact_path;
-use crate::minecraft::launcher::{ProgressReceiver, ProgressUpdate};
 use std::sync::Arc;
+use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
 
 // https://launchermeta.mojang.com/mc/game/version_manifest.json
 
@@ -369,7 +370,7 @@ impl Download {
 
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Library {
     pub name: String,
     pub downloads: Option<LibraryDownloads>,
@@ -380,13 +381,14 @@ pub struct Library {
 }
 
 impl Library  {
-    pub(crate) fn get_library_download(&self) -> anyhow::Result<LibraryDownloadInfo> {
+
+    pub fn get_library_download(&self) -> anyhow::Result<LibraryDownloadInfo> {
         if let Some(artifact) = self.downloads.as_ref().and_then(|x| x.artifact.as_ref()) {
             return Ok(artifact.into());
         }
 
         let path = get_maven_artifact_path(&self.name)?;
-        let url = self.url.as_ref().map(|x| x.as_str()).unwrap_or("https://libraries.minecraft.net/");
+        let url = self.url.as_deref().unwrap_or("https://libraries.minecraft.net/");
 
         return Ok(
             LibraryDownloadInfo {
@@ -399,21 +401,21 @@ impl Library  {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Rule {
     pub action: RuleAction,
     pub os: Option<OsRule>,
     pub features: Option<HashMap<String, bool>>
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct OsRule {
     pub name: Option<String>,
     pub version: Option<String>,
     pub arch: Option<OSArch>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub enum RuleAction {
     #[serde(rename = "allow")]
     Allow,
@@ -421,7 +423,7 @@ pub enum RuleAction {
     Disallow
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub enum OSArch {
     #[serde(rename = "x86")]
     X32,
@@ -439,13 +441,13 @@ impl OSArch {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct LibraryDownloads {
     pub artifact: Option<LibraryArtifact>,
     pub classifiers: Option<HashMap<String, LibraryArtifact>>
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct LibraryArtifact {
     pub path: String,
     pub sha1: String,
@@ -453,7 +455,7 @@ pub struct LibraryArtifact {
     pub url: String
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct LibraryDownloadInfo {
     pub path: String,
     pub sha1: Option<String>,
@@ -463,24 +465,33 @@ pub struct LibraryDownloadInfo {
 
 impl From<&LibraryArtifact> for LibraryDownloadInfo {
     fn from(artifact: &LibraryArtifact) -> Self {
-        return LibraryDownloadInfo {
+        LibraryDownloadInfo {
             path: artifact.path.to_owned(),
             sha1: Some(artifact.sha1.to_owned()),
             size: Some(artifact.size),
             url: artifact.url.to_owned()
-        };
+        }
     }
 }
 
 impl LibraryDownloadInfo {
 
-    pub async fn download(&self, path: impl AsRef<Path>) -> Result<()> {
-        let path = path.as_ref().to_owned();
-        info!("downloading {}", self.url);
+    pub async fn download(&self, name: String, libraries_folder: &Path, progress: Arc<impl ProgressReceiver>) -> Result<PathBuf> {
+        let path = libraries_folder.to_path_buf();
+        let library_path = path.join(&self.path);
+        if library_path.exists() {
+            return Ok(library_path);
+        }
+
+        fs::create_dir_all(&library_path.parent().unwrap()).await?;
+
+        progress.progress_update(ProgressUpdate::set_label(format!("Downloading library {}", name)));
+
+        info!("Downloading {}", self.url);
         let os = reqwest::get(&self.url).await?.error_for_status()?.bytes().await?;
-        fs::write(path, os).await?;
-        info!("downloaded {}", self.url);
-        Ok(())
+        fs::write(&library_path, os).await?;
+        info!("Downloaded {}", self.url);
+        Ok(library_path)
     }
 
 }

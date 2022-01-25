@@ -18,8 +18,9 @@ use tokio::runtime::Runtime;
 use tokio::task;
 
 use crate::cloud::{LauncherApi, LaunchManifest};
-use crate::minecraft::launcher::{LauncherData, LaunchingParameter, ProgressUpdate};
+use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::prelauncher;
+use crate::minecraft::progress::ProgressUpdate;
 use crate::minecraft::service::{Account, AuthService};
 use crate::minecraft::version::VersionManifest;
 

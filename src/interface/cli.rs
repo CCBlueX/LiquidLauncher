@@ -7,8 +7,9 @@ use log::*;
 use uuid::Uuid;
 
 use crate::cloud::{Build, LauncherApi, LaunchManifest};
-use crate::minecraft::launcher::{LauncherData, LaunchingParameter, ProgressUpdate};
+use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::prelauncher;
+use crate::minecraft::progress::ProgressUpdate;
 use crate::minecraft::version::VersionManifest;
 
 pub(crate) fn cli_main(build_id: u32) {

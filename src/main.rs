@@ -2,8 +2,6 @@
 #[macro_use]
 extern crate sciter;
 
-use std::str::FromStr;
-
 pub mod minecraft;
 pub mod cloud;
 

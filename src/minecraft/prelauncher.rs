@@ -8,7 +8,8 @@ use crate::cloud::{Build, LauncherApi, LaunchManifest, LoaderSubsystem, LoaderVe
 use crate::error::LauncherError;
 use crate::interface::webviews::download_client;
 use crate::minecraft::launcher;
-use crate::minecraft::launcher::{get_max, get_progress, LauncherData, LaunchingParameter, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
+use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
+use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
 use crate::minecraft::version::{VersionManifest, VersionProfile};
 use crate::utils::{download_file, get_maven_artifact_path};
 
