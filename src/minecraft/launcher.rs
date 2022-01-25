@@ -111,7 +111,7 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
     let mut class_path = String::new();
 
     // Client
-    let versions_folder = Path::new("../../run/versions");
+    let versions_folder = Path::new("versions");
 
     // Check if json has client download (or doesn't require one)
     if let Some(client_download) = version_profile.downloads.as_ref().and_then(|x| x.client.as_ref()) {
@@ -183,8 +183,8 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
     ).buffer_unordered(CONCURRENT_DOWNLOADS).collect().await;
 
     // Libraries
-    let libraries_folder = Path::new("../../run/libraries");
-    let natives_folder = Path::new("../../run/natives");
+    let libraries_folder = Path::new("libraries");
+    let natives_folder = Path::new("natives");
     fs::create_dir_all(&natives_folder).await?;
 
     // todo: make library downloader compact and async
@@ -240,7 +240,7 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
     // Game
     let mut command = Command::new("java");
 
-    let game_dir = Path::new("../../run/gameDir");
+    let game_dir = Path::new("gameDir");
 
     let mut command_arguments = Vec::new();
 
