@@ -3,9 +3,6 @@
 
     export let accountData;
 
-    let mcVersion;
-    let lbVersion;
-
     let title;
     let date;
     let text;
@@ -53,13 +50,18 @@
         buildsSelection.innerHTML = "";
 
         function onResponse(builds) {
-            builds.forEach(build => {
+            // List builds from new to old (up to down)
+            let sorted_builds = builds.sort((a, b) => b.buildId-a.buildId);
+
+            sorted_builds.forEach(build => {
                 let opt = document.createElement("option");
                 opt.value = build.buildId;
                 opt.innerHTML = build.commitId.substring(0, 7) + ": " + build.lbVersion + " (" + build.mcVersion + ")";
                 buildsSelection.appendChild(opt);
             });
-            // buildsSelection.value = builds.last.buildId; // last is latest version
+
+            // Select newest version
+            buildsSelection.value = sorted_builds[0].buildId;
         }
 
         function onError(e) {
@@ -69,55 +71,75 @@
         Window.this.xcall("get_builds", branch, onResponse, onError);
     }
 
+    function launching(status) {
+        document.getElementById("launch").style.display = status ? 'block' : 'none';
+        document.getElementById("version-select").style.display = status ? 'none' : 'block';
+        document.getElementById("play").style.display = status ? 'none' : 'block';
+    }
 
-
-    // Handle play button to start client
-    function handlePlay() {
+    function startClient() {
         let buildsSelection = document.getElementById("builds");
+        let playButton = document.getElementById("play");
 
-        // const label = document.getElementById('statusLabel');
-        // const progressBar = document.getElementById('progress');
+        let label = document.getElementById("statusLabel");
+        let progressBar = document.getElementById("progress");
+
+        // Clear log area for this run
+        let logArea = document.getElementById('log-area');
+        logArea.innerText = "";
+
+        function log(text) {
+            logArea.innerText += text + "\n";
+            logArea.scrollTop = logArea.scrollHeight;
+        }
 
         function onProgress(action, value) {
-            if (action === 'max') {
-                // progressBar.max = value;
-            } else if (action === 'progress') {
-                // progressBar.value = value;
-                // console.log(progressBar.value + "/" + progressBar.max);
-            } else if (action === 'label') {
-                // label.textContent = value;
+            switch (action) {
+                case "max": {
+                    progressBar.max = value;
+                    break;
+                }
+                case "progress": {
+                    progressBar.value = value;
+                    console.log(progressBar.value + "/" + progressBar.max);
+                    break;
+                }
+                case "label": {
+                    console.log(value);
 
-                console.log(value);
+                    label.textContent = value;
+                    log(value);
+                    break;
+                }
             }
-
-            console.log(action + "/" + value);
         }
 
         function onOutput(type, value) {
-            // let logArea = document.getElementById('log-area');
-
-            // logArea.innerText += value;
-            // logArea.scrollTop = logArea.scrollHeight;
+            log(value);
         }
 
         function onDone() {
-            // label.textContent = "Idle...";
+            label.textContent = "Idle...";
+            launching(false);
 
-            // startButton.disabled = false;
-            // terminateButton.disabled = true;
+            playButton.disabled = false;
         }
+
         function onError(error) {
-            console.log("Error: " + error);
-
-            // label.textContent = "Error: " + error;
+            console.log("Error on launching client: " + error);
+            label.textContent = "Error: " + error;
         }
-
-        // label.textContent = "Running...";
 
         Window.this.xcall("run_client", parseInt(buildsSelection.value), accountData, onProgress, onOutput, onDone, onError);
 
-        // startButton.disabled = true;
-        // terminateButton.disabled = false;
+        label.textContent = "Running...";
+        launching(true);
+        playButton.disabled = true;
+    }
+
+    function stopClient() {
+        Window.this.xcall("terminate");
+        launching(false);
     }
 
     // Update branches
@@ -148,27 +170,40 @@
         est Lorem ipsum dolor sit amet.</p>
     </div>
 
-    <div class="version-select">
-        <select name="branches" id="branches" on:change={updateBuilds}></select>
-        <select name="builds" id="builds"></select>
-
+    <div id="version-select" class="version-select" style="display: block;">
         <div class="version">
             <img class="icon" src="img/icon/icon-version-lb.png" alt="liquidbounce">
-            <div class="name"></div>
-            <div class="date"></div>
+            <div class="name">Branch</div>
+<!--            <div class="date"></div>-->
+
+            <select name="branches" id="branches" on:change={updateBuilds}></select>
         </div>
 
         <div class="version">
             <img class="icon" src="img/icon/icon-version-mc.png" alt="minecraft">
-            <div class="name"></div>
-            <div class="date">2021-05-07</div>
+            <div class="name">Build</div>
+<!--            <div class="date">2021-05-07</div>-->
+
+            <select name="builds" id="builds"></select>
         </div>
     </div>
 
-    <button class="launch" on:click={handlePlay}>Play</button>
+    <div id="launch" style="display: none;">
+        <textarea cols="100" readonly id="log-area" style="width: 85%; max-width: 85%"></textarea><br>
+        <progress value="19" min="0" max="4906" id="progress" style="width: 85%; max-width: 85%">...</progress><br>
+        <span id="statusLabel" style="width: 80%; max-width: 85%"></span>
+
+        <button id="stop" class="stop" on:click={stopClient}>Stop</button>
+    </div>
+    <button id="play" class="play" on:click={startClient}>Play</button>
 </div>
 
 <style>
+    span textarea {
+        color: white;
+        font-family: "Gilroy",serif;
+    }
+
     .wrapper {
         width: 293px;
         height: 1*;
@@ -263,7 +298,11 @@
         color: rgba(255, 255, 255, .5);
     }
 
-    .launch {
+    .version-select select {
+        max-width: 7rem;
+    }
+
+    .play {
         background: unset;
         border: none;
         background-color: #4677FF;
@@ -274,10 +313,28 @@
         display: block;
         height: 50px;
         transition: background-color ease .2s;
-        font-family: "Gilroy";
+        font-family: "Gilroy",serif;
     }
 
-    .launch:hover {
+    .play:hover {
         background-color: #3E69E2;
+    }
+
+    .stop {
+        background: unset;
+        border: none;
+        background-color: #f83939;
+        color: white;
+        font-size: 14px;
+        border-radius: 6px;
+        width: 1*;
+        display: block;
+        height: 50px;
+        transition: background-color ease .2s;
+        font-family: "Gilroy",serif;
+    }
+
+    .stop:hover {
+        background-color: #e23e4c;
     }
 </style>
