@@ -1128,9 +1128,9 @@ dependencies = [
 
 [[package]]
 name = "sciter-rs"
-version = "0.5.57"
+version = "0.5.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c9d569d04261b789933daf3c9ed7cfdae0fe4992fe370a5803ec234b08a6651"
+checksum = "5cdb1443364559d670a1b190bea5cdd1064cd9347e7e18150f18737bbc3c2234"
 dependencies = [
  "lazy_static",
  "libc",
