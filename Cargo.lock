@@ -41,14 +41,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "async_zip"
-version = "0.0.5"
+name = "async_io_utilities"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52d4c8b7b7a28ff3aea038418cc44a59a301e2d6e00e26708fb82dfbd9ea718e"
+checksum = "0bfd9688a6454a2df6e4f352850ff09b81c2e920d2f52908fb2cdd9c5ab204de"
+dependencies = [
+ "tokio",
+]
+
+[[package]]
+name = "async_zip"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "998dba685506ca6f05f5a54ece5938eb50ce047c7badd9d0e65327f33426b3aa"
 dependencies = [
  "async-compression",
+ "async_io_utilities",
  "chrono",
  "crc32fast",
+ "thiserror",
  "tokio",
 ]
 
