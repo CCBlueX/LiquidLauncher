@@ -25,7 +25,7 @@ void = "1"
 zip = "0.5.13"
 async_zip = "0.0.5"
 path-absolutize = "3.0.12"
-os_info = "3.0"
+os_info = "3.2"
 regex = "1.5.5"
 sciter-rs = { version = "0.5.56", optional = true }
 web-view = { version = "0.7", features = ["edge"] }
