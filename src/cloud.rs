@@ -37,6 +37,7 @@ pub struct Build {
     // pub date: DateTime<Local>,
     pub message: String,
     pub url: String,
+    pub jre_version: u32,
     pub fabric_api_version: String,
     pub fabric_loader_version: String,
     pub kotlin_version: String,
