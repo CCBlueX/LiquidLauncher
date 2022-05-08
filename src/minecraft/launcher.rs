@@ -8,16 +8,17 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use anyhow::{bail, Error, Result};
+use async_zip::read::seek::ZipFileReader;
 use futures::stream::{self, StreamExt};
 use futures::TryFutureExt;
 use log::*;
 use path_absolutize::*;
 use tokio::{fs, process::Command};
 use tokio::{fs::File, io::AsyncReadExt};
-use async_zip::read::seek::ZipFileReader;
 use tokio::fs::OpenOptions;
 
 use crate::{LAUNCHER_VERSION, utils::os::OS};
+use crate::cloud::LaunchManifest;
 use crate::error::LauncherError;
 use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
 use crate::minecraft::rule_interpreter;
@@ -42,10 +43,10 @@ impl<D: Send + Sync> ProgressReceiver for LauncherData<D> {
 }
 
 // Sorry if I burn your cpu and connection
-const CONCURRENT_LIBRARIES_DOWNLOADS: usize = 10;
-const CONCURRENT_ASSETS_DOWNLOADS: usize = 100;
+const CONCURRENT_LIBRARY_DOWNLOADS: usize = 10;
+const CONCURRENT_ASSET_DOWNLOADS: usize = 100;
 
-pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
+pub async fn launch<D: Send + Sync>(manifest: LaunchManifest, version_profile: VersionProfile, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
     let launcher_data_arc = Arc::new(launcher_data);
 
     let features: HashSet<String> = HashSet::new();
@@ -53,6 +54,15 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
 
     info!("Determined OS to be {} {}", os_info.os_type(), os_info.version());
 
+    // JRE download
+    info!("Downloading JRE...");
+    launcher_data_arc.progress_update(ProgressUpdate::set_label("Downloading JRE..."));
+
+    let java_executable = crate::minecraft::jre_downloader::jre_download(manifest.build.jre_version, &os_info, |a, b| {
+        launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadClientJar, get_progress(0, a, b), get_max(1)));
+    }).await?;
+
+    // Launch class path for JRE
     let mut class_path = String::new();
 
     // Client
@@ -136,7 +146,7 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
                 };
             })
         })
-    ).buffer_unordered(CONCURRENT_LIBRARIES_DOWNLOADS).collect().await;
+    ).buffer_unordered(CONCURRENT_LIBRARY_DOWNLOADS).collect().await;
     for x in class_paths {
         if let Some(library_path) = x? {
             write!(class_path, "{}{}", &library_path, OS.get_path_separator())?;
@@ -186,12 +196,12 @@ pub async fn launch<D: Send + Sync>(version_profile: VersionProfile, launching_p
                 Ok(())
             }
         })
-    ).buffer_unordered(CONCURRENT_ASSETS_DOWNLOADS).collect().await;
+    ).buffer_unordered(CONCURRENT_ASSET_DOWNLOADS).collect().await;
 
     launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadAssets, asset_max, asset_max));
 
     // Game
-    let mut command = Command::new("java");
+    let mut command = Command::new(java_executable);
 
     let game_dir = Path::new("gameDir");
 
