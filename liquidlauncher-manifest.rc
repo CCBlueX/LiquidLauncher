@@ -1,2 +1,4 @@
 #define RT_MANIFEST 24
-1 RT_MANIFEST "dpi-aware.manifest"
+1 RT_MANIFEST "launcher.manifest"
+
+LiquidBounce ICON "icons/icon_64x64.ico"
