@@ -1,6 +1,8 @@
 use std::io::{Cursor, Read};
 use std::path::Path;
 
+use tokio::fs;
+
 use anyhow::Result;
 use log::*;
 
@@ -64,17 +66,18 @@ pub(crate) async fn retrieve_and_copy_mods(manifest: &LaunchManifest, progress: 
     let mod_cache_path = Path::new("mod_cache");
     let mods_path = Path::new("gameDir").join("mods");
 
-    tokio::fs::create_dir_all(&mod_cache_path).await?;
-    tokio::fs::create_dir_all(&mods_path).await?;
+    fs::create_dir_all(&mod_cache_path).await?;
+    fs::create_dir_all(&mods_path).await?;
 
     // Clear mods directory
-    for x in std::fs::read_dir(&mods_path)? {
-        let entry = x?;
-
-        if entry.file_type()?.is_file() {
-            std::fs::remove_file(entry.path())?;
+    let mut mods_read = fs::read_dir(&mods_path).await?;
+    while let Some(entry) = mods_read.next_entry().await? {
+        if entry.file_type().await?.is_file() {
+            fs::remove_file(entry.path()).await?;
         }
     }
+
+    // Download and copy mods
 
     let max = get_max(manifest.mods.len());
 
@@ -91,17 +94,17 @@ pub(crate) async fn retrieve_and_copy_mods(manifest: &LaunchManifest, progress: 
         // Do we need to download the mod?
         if !current_mod_path.exists() {
             // Make sure that the parent directory exists
-            tokio::fs::create_dir_all(&current_mod_path.parent().unwrap()).await?;
+            fs::create_dir_all(&current_mod_path.parent().unwrap()).await?;
 
             match &current_mod.source {
-                ModSource::SkipAd { artifact_name, url, extract } => {
+                ModSource::SkipAd { artifact_name: _, url, extract } => {
                     let retrieved_bytes = download_client(url, |a, b| progress.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLiquidBounceMods, get_progress(mod_idx, a, b) as u64, max))).await?;
 
                     // Extract bytes
                     let final_file = if *extract {
                         let mut archive = zip::ZipArchive::new(Cursor::new(retrieved_bytes)).unwrap();
 
-                        let file_name_to_extract = archive.file_names().find(|x| x.ends_with(".jar")).ok_or_else(|| LauncherError::InvalidVersionProfile(format!("There is no JAR in the downloaded archive")))?.to_owned();
+                        let file_name_to_extract = archive.file_names().find(|x| x.ends_with(".jar")).ok_or_else(|| LauncherError::InvalidVersionProfile("There is no JAR in the downloaded archive".to_string()))?.to_owned();
 
                         let mut file_to_extract = archive.by_name(&file_name_to_extract)?;
 
@@ -114,7 +117,7 @@ pub(crate) async fn retrieve_and_copy_mods(manifest: &LaunchManifest, progress: 
                         retrieved_bytes
                     };
 
-                    tokio::fs::write(&current_mod_path, final_file).await?;
+                    fs::write(&current_mod_path, final_file).await?;
                 },
                 ModSource::Repository { repository, artifact } => {
                     info!("downloading mod {} from {}", artifact, repository);
@@ -124,13 +127,13 @@ pub(crate) async fn retrieve_and_copy_mods(manifest: &LaunchManifest, progress: 
                         progress.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLiquidBounceMods, get_progress(mod_idx, a, b), max));
                     }).await?;
 
-                    tokio::fs::write(&current_mod_path, retrieved_bytes).await?;
+                    fs::write(&current_mod_path, retrieved_bytes).await?;
                 }
             }
         }
 
         // Copy the mod.
-        tokio::fs::copy(&current_mod_path, mods_path.join(format!("{}.jar", current_mod.name))).await?;
+        fs::copy(&current_mod_path, mods_path.join(format!("{}.jar", current_mod.name))).await?;
     }
 
     Ok(())
