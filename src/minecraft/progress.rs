@@ -6,6 +6,7 @@ use crate::minecraft::launcher::LauncherData;
 #[derive(Debug)]
 pub enum ProgressUpdateSteps {
     DownloadLiquidBounceMods,
+    DownloadJRE,
     DownloadClientJar,
     DownloadLibraries,
     DownloadAssets,
@@ -21,15 +22,16 @@ pub fn get_max(len: usize) -> u64 {
 
 impl ProgressUpdateSteps {
     fn len() -> usize {
-        4
+        5
     }
 
     fn step_idx(&self) -> usize {
         match self {
             ProgressUpdateSteps::DownloadLiquidBounceMods => 0,
-            ProgressUpdateSteps::DownloadClientJar => 1,
-            ProgressUpdateSteps::DownloadLibraries => 2,
-            ProgressUpdateSteps::DownloadAssets => 3,
+            ProgressUpdateSteps::DownloadJRE => 1,
+            ProgressUpdateSteps::DownloadClientJar => 2,
+            ProgressUpdateSteps::DownloadLibraries => 3,
+            ProgressUpdateSteps::DownloadAssets => 4,
         }
     }
 }

@@ -59,7 +59,7 @@ pub async fn launch<D: Send + Sync>(manifest: LaunchManifest, version_profile: V
     launcher_data_arc.progress_update(ProgressUpdate::set_label("Downloading JRE..."));
 
     let java_executable = crate::minecraft::jre_downloader::jre_download(manifest.build.jre_version, &os_info, |a, b| {
-        launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadClientJar, get_progress(0, a, b), get_max(1)));
+        launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadJRE, get_progress(0, a, b), get_max(1)));
     }).await?;
 
     // Launch class path for JRE
