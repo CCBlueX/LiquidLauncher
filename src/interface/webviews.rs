@@ -13,7 +13,7 @@ pub(crate) async fn download_client<F>(url: &str, on_progress: F) -> anyhow::Res
     let cloned_cell = download_link_cell.clone();
 
     {
-        let x = web_view::builder()
+        let mut webview = web_view::builder()
             .title("Download LiquidBounce")
             .content(Content::Url(format!("{}&liquidlauncher={}", url, 0)))
             .size(1000, 600)
@@ -21,7 +21,7 @@ pub(crate) async fn download_client<F>(url: &str, on_progress: F) -> anyhow::Res
             .debug(true)
             .user_data(())
             .invoke_handler(move |webview, arg| {
-                let mut split = arg.split("|");
+                let mut split = arg.split('|');
 
                 if let Some(cmd) = split.next() {
                     if cmd == "download" {
@@ -40,7 +40,9 @@ pub(crate) async fn download_client<F>(url: &str, on_progress: F) -> anyhow::Res
             .build()
             .unwrap();
 
-        x.run().unwrap();
+        webview.set_maximized(true);
+
+        webview.run().unwrap();
     }
 
     let url = {
