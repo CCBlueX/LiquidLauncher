@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use crate::utils::get_maven_artifact_path;
@@ -34,10 +35,13 @@ pub struct Build {
     pub branch: String,
     pub lb_version: String,
     pub mc_version: String,
-    // pub date: DateTime<Local>,
+    pub release: bool,
+    pub date: DateTime<Utc>,
     pub message: String,
     pub url: String,
     pub jre_version: u32,
+
+    // Additional data
     pub fabric_api_version: String,
     pub fabric_loader_version: String,
     pub kotlin_version: String,

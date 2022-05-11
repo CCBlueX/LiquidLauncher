@@ -40,26 +40,31 @@
         Window.this.xcall("get_branches", onResponse, onError);
     }
 
+    let builds = [];
+
     function updateBuilds() {
+        let showNightly = document.getElementById("nightly")
+
         let branchSelection = document.getElementById("branches");
         let branch = branchSelection.value;
 
         let buildsSelection = document.getElementById("builds");
         buildsSelection.innerHTML = "";
 
-        function onResponse(builds) {
-            // List builds from new to old (up to down)
-            let sorted_builds = builds.sort((a, b) => b.buildId-a.buildId);
+        function onResponse(newBuilds) {
+            builds = newBuilds;
 
-            sorted_builds.forEach(build => {
-                let opt = document.createElement("option");
-                opt.value = build.buildId;
-                opt.innerHTML = build.commitId.substring(0, 7) + ": " + build.lbVersion + " (" + build.mcVersion + ")";
-                buildsSelection.appendChild(opt);
+            builds.forEach(build => {
+                if (build.release || showNightly.checked) {
+                    let opt = document.createElement("option");
+                    opt.value = build.buildId;
+                    opt.innerHTML = "Commit: " + build.commitId.substring(0, 7) + "\nVersion: " + build.lbVersion + " (MC " + build.mcVersion + ")\n" + build.date;
+                    buildsSelection.appendChild(opt);
+                }
             });
 
             // Select newest version
-            buildsSelection.value = sorted_builds[0].buildId;
+            buildsSelection.value = builds[0].buildId;
         }
 
         function onError(e) {
@@ -123,6 +128,7 @@
         function onError(error) {
             console.log("Error on launching client: " + error);
             label.textContent = "Error: " + error;
+            log("Error on launching client: " + error);
         }
 
         Window.this.xcall("run_client", parseInt(buildsSelection.value), accountData, onProgress, onOutput, onDone, onError);
@@ -169,7 +175,7 @@
         <div class="version">
             <img class="icon" src="img/icon/icon-version-lb.png" alt="liquidbounce">
             <div class="name">Branch</div>
-<!--            <div class="date"></div>-->
+            <!--            <div class="date"></div>-->
 
             <select name="branches" id="branches" on:change={updateBuilds}></select>
         </div>
@@ -177,9 +183,11 @@
         <div class="version">
             <img class="icon" src="img/icon/icon-version-mc.png" alt="minecraft">
             <div class="name">Build</div>
-<!--            <div class="date">2021-05-07</div>-->
+            <!--            <div class="date">2021-05-07</div>-->
 
             <select name="builds" id="builds"></select>
+            <input type="checkbox" id="nightly" name="nightly"  on:change={updateBuilds}>
+            <label for="nightly">Nightly Builds</label>
         </div>
     </div>
 
@@ -194,7 +202,7 @@
 </div>
 
 <style>
-    span textarea {
+    span textarea label {
         color: white;
         font-family: "Gilroy",serif;
     }
