@@ -183,6 +183,8 @@ impl EventHandler {
                         val.set_item("branch", &x.branch);
                         val.set_item("lbVersion", &x.lb_version);
                         val.set_item("mcVersion", &x.mc_version);
+                        val.set_item("release", &x.release);
+                        val.set_item("date", &x.date.naive_local().format("%Y-%m-%d %H:%M:%S").to_string());
 
                         val
                     }).collect::<Vec<Value>>());
