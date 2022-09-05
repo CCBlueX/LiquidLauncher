@@ -812,7 +812,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "toml",
- "urlencoding 2.1.0",
+ "urlencoding 2.1.2",
  "uuid",
  "void",
  "web-view",
@@ -1738,9 +1738,9 @@ checksum = "5a1f0175e03a0973cf4afd476bef05c26e228520400eb1fd473ad417b1c00ffb"
 
 [[package]]
 name = "urlencoding"
-version = "2.1.0"
+version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68b90931029ab9b034b300b797048cf23723400aa757e8a2bfb9d748102f9821"
+checksum = "e8db7427f936968176eaa7cdf81b7f98b980b18495ec28f1b5791ac3bfe3eea9"
 
 [[package]]
 name = "uuid"
