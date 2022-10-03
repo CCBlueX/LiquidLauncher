@@ -1,9 +1,11 @@
-use crate::minecraft::version::{Rule, RuleAction};
 use std::collections::HashSet;
+
 use anyhow::Result;
-use crate::utils::os::OS;
-use regex::Regex;
 use os_info::Info;
+use regex::Regex;
+
+use crate::minecraft::version::{Rule, RuleAction};
+use crate::utils::os::OS;
 
 pub(crate) fn check_condition(rules: &Vec<Rule>, features: &HashSet<String>, os_info: &Info) -> Result<bool> {
     if rules.is_empty() {
@@ -46,5 +48,5 @@ pub(crate) fn check_condition(rules: &Vec<Rule>, features: &HashSet<String>, os_
         }
     }
 
-    return Ok(allow);
+    Ok(allow)
 }
