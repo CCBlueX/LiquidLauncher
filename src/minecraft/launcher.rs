@@ -37,7 +37,6 @@ pub struct LauncherData<D: Send + Sync> {
 
 impl<D: Send + Sync> ProgressReceiver for LauncherData<D> {
     fn progress_update(&self, progress_update: ProgressUpdate) {
-        info!("{:?}", progress_update);
         let _ = (self.on_progress)(&self.data, progress_update);
     }
 }
@@ -207,8 +206,6 @@ pub async fn launch<D: Send + Sync>(manifest: LaunchManifest, version_profile: V
 
     let mut command_arguments = Vec::new();
 
-    // todo: cleanup and make compact
-
     // JVM Args
     version_profile.arguments.add_jvm_args_to_vec(&mut command_arguments, &features, &os_info)?;
 
@@ -337,5 +334,5 @@ fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(input: &String, ret
         output.push(c);
     }
 
-    return Ok(output);
+    Ok(output)
 }
