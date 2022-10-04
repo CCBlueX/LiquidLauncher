@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 #[cfg(feature = "gui")]
 #[macro_use]
 extern crate sciter;
