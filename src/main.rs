@@ -2,6 +2,8 @@
 #[macro_use]
 extern crate sciter;
 
+use crate::interface::options::LauncherOptions;
+
 pub mod minecraft;
 pub mod cloud;
 
@@ -14,6 +16,11 @@ const LAUNCHER_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn main() {
     let args = std::env::args();
     let mut real_args = args.skip(1);
+
+    let mut options = LauncherOptions::load().unwrap_or_default();
+    if options.store().is_err() {
+        println!("Failed to store options");
+    }
 
     if let Some(build_id) = real_args.next() {
         #[cfg(feature = "cli")]
@@ -29,7 +36,7 @@ pub fn main() {
 
     #[cfg(feature = "gui")]
         {
-            interface::gui::gui_main();
+            interface::gui::gui_main(options);
             return;
         }
 

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::sync::Arc;
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use env_logger::Env;
 use futures::lock::{Mutex, MutexGuard};
 use log::error;
@@ -18,6 +18,7 @@ use tokio::runtime::Runtime;
 use tokio::task;
 
 use crate::cloud::{LauncherApi, LaunchManifest};
+use crate::LauncherOptions;
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::prelauncher;
 use crate::minecraft::progress::ProgressUpdate;
@@ -29,6 +30,7 @@ struct RunnerInstance {
 }
 
 struct ConstantLauncherData {
+    options: Arc<Mutex<LauncherOptions>>
 }
 
 struct EventHandler {
@@ -250,10 +252,10 @@ impl sciter::EventHandler for EventHandler {
 
 
 /// Runs the GUI and returns when the window is closed.
-pub(crate) fn gui_main() {
+pub(crate) fn gui_main(options: LauncherOptions) {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
-    let gui_index = path_to_sciter_index().expect("unable to find gui index");
+    let gui_index = get_path().expect("unable to find gui index");
 
     let mut frame = sciter::WindowBuilder::main_window()
         .glassy()
@@ -263,29 +265,21 @@ pub(crate) fn gui_main() {
         .with_size((1000, 600))
         .create();
 
-    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
+    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { options: Arc::new(Mutex::new(options)) }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
 
     frame.load_file(&gui_index);
     frame.run_app();
 }
 
-fn path_to_sciter_index() -> Result<String> {
-    let current_dir = env::current_dir()?;
-    let path = {
-        // release env
-        let mut path = current_dir.clone();
-        path.push("/gui/public/index.html");
+fn get_path() -> Result<String> {
+    let mut path = env::current_dir()?;
+    path.push("gui");
+    path.push("public");
+    path.push("index.html");
 
-        if path.exists() {
-            path
-        } else {
-            // my dev env
-            let mut path = current_dir.clone();
-            path.push("../gui/public/index.html");
-
-            path
-        }
-    };
+    if !path.exists() {
+        return Err(anyhow!("unable to find gui index"));
+    }
 
     let absolut_path = path.absolutize()?;
     return Ok(format!("file://{}", absolut_path.to_str().unwrap_or("index.html")));

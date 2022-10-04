@@ -4,3 +4,4 @@ pub mod gui;
 pub mod cli;
 
 pub mod webviews;
+pub mod options;
