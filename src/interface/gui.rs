@@ -1,29 +1,24 @@
-use std::borrow::Borrow;
 use std::env;
 use std::iter::FromIterator;
 use std::option::Option::Some;
-use std::path::PathBuf;
 use std::process::exit;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, Result};
 use env_logger::Env;
-use futures::lock::{Mutex, MutexGuard};
+use futures::lock::Mutex;
 use log::error;
 use path_absolutize::Absolutize;
-use sciter::dom::event::{default_events, EVENT_GROUPS};
 use sciter::Value;
-use sciter::window::Options;
 use tokio::runtime::Runtime;
 use tokio::task;
 
-use crate::cloud::{LauncherApi, LaunchManifest};
+use crate::cloud::LauncherApi;
 use crate::LauncherOptions;
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::prelauncher;
 use crate::minecraft::progress::ProgressUpdate;
-use crate::minecraft::service::{Account, AuthService};
-use crate::minecraft::version::VersionManifest;
+use crate::minecraft::service::AuthService;
 
 struct RunnerInstance {
     terminator: tokio::sync::oneshot::Sender<()>,
@@ -57,14 +52,14 @@ fn handle_stderr(value: &Arc<std::sync::Mutex<EventFunctions>>, data: &[u8]) -> 
     Ok(())
 }
 
-fn handle_progress(value: &Arc<std::sync::Mutex<EventFunctions>>, progress_update: ProgressUpdate) -> anyhow::Result<()> {
+fn handle_progress(value: &Arc<std::sync::Mutex<EventFunctions>>, progress_update: ProgressUpdate) -> Result<()> {
     let funcs = value.lock().unwrap();
 
     match progress_update {
         ProgressUpdate::SetMax(max) => funcs.on_progress.call(None, &make_args!("max", max as i32), None),
         ProgressUpdate::SetProgress(progress) => funcs.on_progress.call(None, &make_args!("progress", progress as i32), None),
         ProgressUpdate::SetLabel(label) => funcs.on_progress.call(None, &make_args!("label", label), None)
-    };
+    }?;
 
     Ok(())
 }
@@ -255,7 +250,7 @@ impl sciter::EventHandler for EventHandler {
 pub(crate) fn gui_main(options: LauncherOptions) {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
-    let gui_index = get_path().expect("unable to find gui index");
+    let gui_index = get_path().unwrap();
 
     let mut frame = sciter::WindowBuilder::main_window()
         .glassy()

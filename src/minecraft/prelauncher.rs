@@ -1,12 +1,11 @@
 use std::io::{Cursor, Read};
 use std::path::Path;
 
-use tokio::fs;
-
 use anyhow::Result;
 use log::*;
+use tokio::fs;
 
-use crate::cloud::{Build, LauncherApi, LaunchManifest, LoaderSubsystem, LoaderVersion, ModSource};
+use crate::cloud::{Build, LauncherApi, LaunchManifest, LoaderSubsystem, ModSource};
 use crate::error::LauncherError;
 use crate::interface::webviews::download_client;
 use crate::minecraft::launcher;
