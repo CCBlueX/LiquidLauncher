@@ -1,6 +1,5 @@
-
 use core::convert::AsRef;
-use core::marker::{Send, Sync};
+
 use crate::minecraft::launcher::LauncherData;
 
 #[derive(Debug)]

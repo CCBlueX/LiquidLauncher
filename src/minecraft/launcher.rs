@@ -1,20 +1,18 @@
-use std::{path::{Path, PathBuf}, str::FromStr};
+use std::{path::{Path, PathBuf}};
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::io::Write as OtherWrite;
-use std::ops::Add;
 use std::process::Stdio;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use anyhow::{bail, Error, Result};
-use async_zip::read::seek::ZipFileReader;
+use anyhow::Result;
 use futures::stream::{self, StreamExt};
 use futures::TryFutureExt;
 use log::*;
 use path_absolutize::*;
 use tokio::{fs, process::Command};
-use tokio::{fs::File, io::AsyncReadExt};
+use tokio::io::AsyncReadExt;
 use tokio::fs::OpenOptions;
 
 use crate::{LAUNCHER_VERSION, utils::os::OS};
