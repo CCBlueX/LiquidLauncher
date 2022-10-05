@@ -38,7 +38,7 @@ fn main() -> Result<()> {
     // execute assigned executable
 
     let exit_status = Command::new(temporary_folder.path().join(EXECUTABLE_NAME))
-        .current_dir(temporary_folder)
+        .current_dir(&temporary_folder)
         .status()?;
     assert!(exit_status.success());
 
