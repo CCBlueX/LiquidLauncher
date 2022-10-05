@@ -1,8 +1,11 @@
 [package]
 name = "unpacker"
 version = "0.1.0"
+authors = ["1zuna <marco@ccbluex.net>"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.65"
+rust-embed = { version = "6.4.0", features = ["debug-embed", "compression"] }
