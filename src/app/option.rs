@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -16,14 +17,14 @@ pub(crate) struct LauncherOptions {
 
 impl LauncherOptions {
 
-    pub fn load() -> Result<Self> {
+    pub fn load(app_data: &Path) -> Result<Self> {
         // load the options from the file
-        Ok(serde_json::from_slice::<Self>(&*fs::read("options.json")?)?)
+        Ok(serde_json::from_slice::<Self>(&*fs::read(app_data.join("options.json"))?)?)
     }
-
-    pub fn store(&self) -> Result<()> {
+    
+    pub fn store(&self, app_data: &Path) -> Result<()> {
         // store the options in the file
-        fs::write("options.json", serde_json::to_string(&self)?)?;
+        fs::write(app_data.join("options.json"), serde_json::to_string(&self)?)?;
         Ok(())
     }
 

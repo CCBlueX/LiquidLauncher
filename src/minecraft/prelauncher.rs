@@ -2,6 +2,7 @@ use std::io::{Cursor, Read};
 use std::path::Path;
 
 use anyhow::Result;
+use directories::ProjectDirs;
 use log::*;
 use tokio::fs;
 
@@ -17,7 +18,7 @@ use crate::utils::{download_file, get_maven_artifact_path};
 ///
 /// Prelaunching client
 ///
-pub(crate) async fn launch<D: Send + Sync>(build: &Build, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
+pub(crate) async fn launch<D: Send + Sync>(app_data: ProjectDirs, build: &Build, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
     info!("Loading minecraft version manifest...");
     let mc_version_manifest = VersionManifest::download().await?;
 
@@ -29,7 +30,7 @@ pub(crate) async fn launch<D: Send + Sync>(build: &Build, launching_parameter: L
     launcher_data.progress_update(ProgressUpdate::SetProgress(0));
 
     // Copy retrieve and copy mods from manifest
-    retrieve_and_copy_mods(&launch_manifest, &launcher_data).await?;
+    retrieve_and_copy_mods(app_data.data_dir(), &launch_manifest, &launcher_data).await?;
 
     info!("Loading version profile...");
     let manifest_url = match loader.subsystem {
@@ -57,13 +58,13 @@ pub(crate) async fn launch<D: Send + Sync>(build: &Build, launching_parameter: L
 
     info!("Launching {}...", launch_manifest.build.commit_id);
 
-    launcher::launch(launch_manifest, version, launching_parameter, launcher_data).await?;
+    launcher::launch(app_data.data_dir(), launch_manifest, version, launching_parameter, launcher_data).await?;
     Ok(())
 }
 
-pub(crate) async fn retrieve_and_copy_mods(manifest: &LaunchManifest, progress: &impl ProgressReceiver) -> anyhow::Result<()> {
-    let mod_cache_path = Path::new("mod_cache");
-    let mods_path = Path::new("gameDir").join("mods");
+pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, progress: &impl ProgressReceiver) -> anyhow::Result<()> {
+    let mod_cache_path = data.join("mod_cache");
+    let mods_path = data.join("gameDir").join("mods");
 
     fs::create_dir_all(&mod_cache_path).await?;
     fs::create_dir_all(&mods_path).await?;

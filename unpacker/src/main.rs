@@ -38,18 +38,10 @@ fn main() -> Result<()> {
         }
     }
 
-    // application directory
-    let app_data = match ProjectDirs::from("net", "CCBlueX",  "LiquidLauncher") {
-        Some(proj_dirs) => proj_dirs,
-        None => return Err(anyhow!("no application directory"))
-    };
-
-    fs::create_dir_all(app_data.data_dir())?;
-
     // execute assigned executable
 
     let exit_status = Command::new(temporary_folder.path().join(EXECUTABLE_NAME))
-        .current_dir(app_data.data_dir())
+        .current_dir(temporary_folder)
         .status()?;
     assert!(exit_status.success());
 

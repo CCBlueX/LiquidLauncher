@@ -5,6 +5,7 @@ use std::process::exit;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
+use directories::ProjectDirs;
 use env_logger::Env;
 use futures::lock::Mutex;
 use log::error;
@@ -25,6 +26,7 @@ struct RunnerInstance {
 }
 
 struct ConstantLauncherData {
+    app_data: ProjectDirs,
     options: Arc<Mutex<LauncherOptions>>
 }
 
@@ -88,6 +90,8 @@ impl EventHandler {
             user_type: account_data.get_item("type").as_string().unwrap_or_else(|| "legacy".to_string()),
         };
 
+        let app_data = self.constant_data.app_data.clone();
+
         let jh = self.async_runtime.spawn(async move {
             // todo: cache builds somewhere
             let builds = match LauncherApi::load_all_builds().await {
@@ -106,6 +110,7 @@ impl EventHandler {
             };
 
             if let Err(err) = prelauncher::launch(
+                app_data,
                 build,
                 launching_parameter,
                 LauncherData {
@@ -247,7 +252,7 @@ impl sciter::EventHandler for EventHandler {
 
 
 /// Runs the GUI and returns when the window is closed.
-pub(crate) fn gui_main(options: LauncherOptions) {
+pub(crate) fn gui_main(app_data: ProjectDirs, options: LauncherOptions) {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
     let gui_index = get_path().unwrap();
@@ -260,7 +265,7 @@ pub(crate) fn gui_main(options: LauncherOptions) {
         .with_size((1000, 600))
         .create();
 
-    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { options: Arc::new(Mutex::new(options)) }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
+    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { app_data, options: Arc::new(Mutex::new(options)) }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
 
     frame.load_file(&gui_index);
     frame.run_app();

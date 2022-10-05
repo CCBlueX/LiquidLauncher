@@ -43,7 +43,7 @@ impl<D: Send + Sync> ProgressReceiver for LauncherData<D> {
 const CONCURRENT_LIBRARY_DOWNLOADS: usize = 10;
 const CONCURRENT_ASSET_DOWNLOADS: usize = 100;
 
-pub async fn launch<D: Send + Sync>(manifest: LaunchManifest, version_profile: VersionProfile, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
+pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, version_profile: VersionProfile, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
     let launcher_data_arc = Arc::new(launcher_data);
 
     let features: HashSet<String> = HashSet::new();
@@ -63,7 +63,7 @@ pub async fn launch<D: Send + Sync>(manifest: LaunchManifest, version_profile: V
     let mut class_path = String::new();
 
     // Client
-    let versions_folder = Path::new("versions");
+    let versions_folder = data.join("versions");
 
     // Check if json has client download (or doesn't require one)
     if let Some(client_download) = version_profile.downloads.as_ref().and_then(|x| x.client.as_ref()) {
@@ -91,8 +91,9 @@ pub async fn launch<D: Send + Sync>(manifest: LaunchManifest, version_profile: V
     }
 
     // Libraries
-    let libraries_folder = Path::new("libraries");
-    let natives_folder = Path::new("natives");
+    let libraries_folder = data.join("libraries");
+    let natives_folder = data.join("natives");
+    let natives_path = natives_folder.as_path();
     fs::create_dir_all(&natives_folder).await?;
 
     let libraries_to_download = version_profile.libraries.iter().map(|x| x.to_owned()).collect::<Vec<_>>();
@@ -121,7 +122,7 @@ pub async fn launch<D: Send + Sync>(manifest: LaunchManifest, version_profile: V
 
                                 info!("Natives zip extract: {:?}", path);
                                 let file = OpenOptions::new().read(true).open(path).await?;
-                                zip_extract(file, natives_folder).await?;
+                                zip_extract(file, natives_path).await?;
                             }
                         } else {
                             return Err(LauncherError::InvalidVersionProfile("missing classifiers, but natives required.".to_string()).into());
@@ -153,7 +154,7 @@ pub async fn launch<D: Send + Sync>(manifest: LaunchManifest, version_profile: V
     launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLibraries, libraries_max, libraries_max));
 
     // Assets
-    let assets_folder = Path::new("assets");
+    let assets_folder = data.join("assets");
     let indexes_folder: PathBuf = assets_folder.join("indexes");
     let objects_folder: PathBuf = assets_folder.join("objects");
 
@@ -200,7 +201,7 @@ pub async fn launch<D: Send + Sync>(manifest: LaunchManifest, version_profile: V
     // Game
     let mut command = Command::new(java_executable);
 
-    let game_dir = Path::new("gameDir");
+    let game_dir = data.join("gameDir");
 
     let mut command_arguments = Vec::new();
 
