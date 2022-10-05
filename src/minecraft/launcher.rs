@@ -55,7 +55,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     info!("Downloading JRE...");
     launcher_data_arc.progress_update(ProgressUpdate::set_label("Downloading JRE..."));
 
-    let java_executable = crate::minecraft::jre_downloader::jre_download(manifest.build.jre_version, &os_info, |a, b| {
+    let java_executable = crate::minecraft::jre_downloader::jre_download(data, manifest.build.jre_version, &os_info, |a, b| {
         launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadJRE, get_progress(0, a, b), get_max(1)));
     }).await?;
 
@@ -199,9 +199,10 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadAssets, asset_max, asset_max));
 
     // Game
-    let mut command = Command::new(java_executable);
-
     let game_dir = data.join("gameDir");
+
+    let mut command = Command::new(java_executable);
+    command.current_dir(&game_dir);
 
     let mut command_arguments = Vec::new();
 
