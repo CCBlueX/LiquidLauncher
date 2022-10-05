@@ -62,7 +62,7 @@ pub(crate) async fn launch<D: Send + Sync>(app_data: ProjectDirs, build: &Build,
     Ok(())
 }
 
-pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, progress: &impl ProgressReceiver) -> anyhow::Result<()> {
+pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, progress: &impl ProgressReceiver) -> Result<()> {
     let mod_cache_path = data.join("mod_cache");
     let mods_path = data.join("gameDir").join("mods");
 

@@ -42,13 +42,13 @@ struct EventFunctions {
     on_progress: Value,
 }
 
-fn handle_stdout(value: &Arc<std::sync::Mutex<EventFunctions>>, data: &[u8]) -> anyhow::Result<()> {
+fn handle_stdout(value: &Arc<std::sync::Mutex<EventFunctions>>, data: &[u8]) -> Result<()> {
     value.lock().unwrap().on_output.call(None, &make_args!("stdout", String::from_utf8(data.to_vec()).unwrap()), None)?;
 
     Ok(())
 }
 
-fn handle_stderr(value: &Arc<std::sync::Mutex<EventFunctions>>, data: &[u8]) -> anyhow::Result<()> {
+fn handle_stderr(value: &Arc<std::sync::Mutex<EventFunctions>>, data: &[u8]) -> Result<()> {
     value.lock().unwrap().on_output.call(None, &make_args!("stderr", String::from_utf8(data.to_vec()).unwrap()), None)?;
 
     Ok(())
