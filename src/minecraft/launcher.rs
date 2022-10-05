@@ -200,6 +200,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
 
     // Game
     let game_dir = data.join("gameDir").join(manifest.build.branch);
+    fs::create_dir_all(&game_dir).await?;
 
     let mut command = Command::new(java_bin);
     command.current_dir(&game_dir);
