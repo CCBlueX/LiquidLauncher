@@ -15,4 +15,4 @@ codegen-units = 1
 anyhow = "1.0.65"
 rust-embed = { version = "6.4.0", features = ["debug-embed", "compression"] }
 tempfile = "3.3.0"
-directories = "4.0.1"
+
