@@ -3,8 +3,6 @@
     export let handleMicrosoftLogin;
     export let handleOfflineLogin;
 
-    let username = ""
-
     let passwordShown = false;
 
     function handleRevealPassword() {
@@ -12,7 +10,7 @@
     }
 
     function clickMojangLogin() {
-        handleMojangLogin(username, document.getElementById("password").value);
+        handleMojangLogin(document.getElementById("username").value, document.getElementById("password").value);
     }
 
     function clickMicrosoftLogin() {
@@ -20,7 +18,7 @@
     }
 
     function clickOfflineLogin() {
-        handleOfflineLogin(username);
+        handleOfflineLogin(document.getElementById("username").value);
     }
 </script>
 
@@ -31,7 +29,7 @@
         <div class="icon">
             <img src="img/icon/icon-person.svg" alt="icon">
         </div>
-        <input class="input-text" type="text" bind:value={username} placeholder="Username or e-mail address">
+        <input id="username" class="input-text" type="text" placeholder="Username or e-mail address">
     </div>
     <div class="input-wrapper">
         <div class="icon">
