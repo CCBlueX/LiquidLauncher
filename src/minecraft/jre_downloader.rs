@@ -54,8 +54,8 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, os_info: &Info, on_p
         let mut path = jre_folder.path();
         path.push("bin");
         match os_info.os_type() {
-            Type::Windows => path.push("java.exe"),
-            _ => path.push("java")
+            Type::Windows => path.push("javaw.exe"),
+            _ => path.push("javaw")
         }
 
         return Ok(path.absolutize()?.to_string_lossy().to_string());
