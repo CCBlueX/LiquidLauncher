@@ -1,7 +1,5 @@
 use core::convert::AsRef;
 
-use crate::minecraft::launcher::LauncherData;
-
 #[derive(Debug)]
 pub enum ProgressUpdateSteps {
     DownloadLiquidBounceMods,

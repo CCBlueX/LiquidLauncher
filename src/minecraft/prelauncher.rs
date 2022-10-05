@@ -5,9 +5,9 @@ use anyhow::Result;
 use log::*;
 use tokio::fs;
 
-use crate::cloud::{Build, LauncherApi, LaunchManifest, LoaderSubsystem, ModSource};
+use crate::app::api::{Build, LauncherApi, LaunchManifest, LoaderSubsystem, ModSource};
 use crate::error::LauncherError;
-use crate::interface::webviews::download_client;
+use crate::app::webview::download_client;
 use crate::minecraft::launcher;
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};

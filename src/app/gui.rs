@@ -13,7 +13,7 @@ use sciter::Value;
 use tokio::runtime::Runtime;
 use tokio::task;
 
-use crate::cloud::LauncherApi;
+use crate::app::api::LauncherApi;
 use crate::LauncherOptions;
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::prelauncher;

@@ -7,7 +7,6 @@ use serde::{Deserialize, Deserializer, de::{self, MapAccess, Visitor}};
 use void::Void;
 use os_info::{Bitness, Info};
 use std::collections::HashSet;
-use std::ops::Deref;
 use crate::error::LauncherError;
 use crate::utils::get_maven_artifact_path;
 use std::sync::Arc;

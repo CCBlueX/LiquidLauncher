@@ -1,22 +1,19 @@
 pub mod os;
 
-use std::path::{Path, PathBuf};
-use anyhow::Error;
+use std::path::{Path};
 use async_zip::read::seek::ZipFileReader;
-use log::info;
-use path_absolutize::Absolutize;
 use tokio::fs;
 use tokio::fs::File;
 use crate::error::LauncherError;
 
 pub(crate) fn get_maven_artifact_path(artifact_id: &String) -> anyhow::Result<String> {
-    let split = artifact_id.split(":").collect::<Vec<_>>();
+    let split = artifact_id.split(':').collect::<Vec<_>>();
 
     if split.len() != 3 {
         return Err(LauncherError::InvalidVersionProfile(format!("Invalid artifact name: {}", artifact_id)).into());
     }
 
-    Ok(format!("{}/{name}/{ver}/{name}-{ver}.jar", split[0].replace(".", "/"), name = split[1], ver = split[2]))
+    Ok(format!("{}/{name}/{ver}/{name}-{ver}.jar", split[0].replace('.', "/"), name = split[1], ver = split[2]))
 }
 
 pub(crate) async fn download_file<F>(url: &str, on_progress: F) -> anyhow::Result<Vec<u8>> where F : Fn(u64, u64) {

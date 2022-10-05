@@ -4,12 +4,11 @@
 #[macro_use]
 extern crate sciter;
 
-use crate::interface::options::LauncherOptions;
+use crate::app::option::LauncherOptions;
 
+pub mod app;
 pub mod minecraft;
-pub mod cloud;
 
-mod interface;
 mod error;
 mod utils;
 
@@ -28,7 +27,7 @@ pub fn main() {
         #[cfg(feature = "cli")]
             {
                 let u_build_id = build_id.parse::<u32>().expect("build id not valid");
-                interface::cli::cli_main(u_build_id);
+                app::cli::cli_main(u_build_id);
                 return;
             }
 
@@ -38,7 +37,7 @@ pub fn main() {
 
     #[cfg(feature = "gui")]
         {
-            interface::gui::gui_main(options);
+            app::gui::gui_main(options);
             return;
         }
 
