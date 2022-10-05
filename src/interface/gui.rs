@@ -268,8 +268,7 @@ pub(crate) fn gui_main(options: LauncherOptions) {
 
 fn get_path() -> Result<String> {
     let mut path = env::current_dir()?;
-    path.push("gui");
-    path.push("public");
+    path.push("app");
     path.push("index.html");
 
     if !path.exists() {
