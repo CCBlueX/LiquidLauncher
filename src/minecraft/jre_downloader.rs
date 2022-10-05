@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use os_info::{Bitness, Info, Type};
@@ -9,7 +9,7 @@ use tokio::fs;
 use crate::utils::{download_file, zip_extract};
 
 /// Download specific JRE to runtimes
-pub async fn jre_download<F>(data: &Path, jre_version: u32, os_info: &Info, on_progress: F) -> Result<String> where F : Fn(u64, u64) {
+pub async fn jre_download<F>(data: &Path, jre_version: u32, os_info: &Info, on_progress: F) -> Result<PathBuf> where F : Fn(u64, u64) {
     // runtimes/version_number_of_jre/...
     let runtime_path = data.join("runtimes")
         .join(jre_version.to_string());
@@ -58,7 +58,7 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, os_info: &Info, on_p
             _ => path.push("javaw")
         }
 
-        return Ok(path.absolutize()?.to_string_lossy().to_string());
+        return Ok(path.absolutize()?.to_path_buf());
     }
 
     return Err(anyhow::anyhow!("Failed to find JRE"));
