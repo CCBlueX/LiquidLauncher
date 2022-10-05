@@ -68,7 +68,7 @@ pub enum ModSource {
 }
 
 impl ModSource {
-    pub fn get_path(&self) -> anyhow::Result<String> {
+    pub fn get_path(&self) -> Result<String> {
         Ok(
             match self {
                 ModSource::SkipAd { artifact_name, .. } => format!("{}.jar", artifact_name),

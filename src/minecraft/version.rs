@@ -62,7 +62,7 @@ pub struct VersionProfile {
 }
 
 impl VersionProfile {
-    pub(crate) fn merge(&mut self, mut parent: VersionProfile) -> anyhow::Result<()> {
+    pub(crate) fn merge(&mut self, mut parent: VersionProfile) -> Result<()> {
         Self::merge_options(&mut self.asset_index_location, parent.asset_index_location);
         Self::merge_options(&mut self.assets, parent.assets);
 
@@ -122,7 +122,7 @@ pub enum ArgumentDeclaration {
 }
 
 impl ArgumentDeclaration {
-    pub(crate) fn add_jvm_args_to_vec(&self, command_arguments: &mut Vec<String>, features: &HashSet<String>, os_info: &Info) -> anyhow::Result<()> {
+    pub(crate) fn add_jvm_args_to_vec(&self, command_arguments: &mut Vec<String>, features: &HashSet<String>, os_info: &Info) -> Result<()> {
         match self {
             ArgumentDeclaration::V14(_) => command_arguments.append(&mut vec!["-Djava.library.path=${natives_directory}".to_string(), "-cp".to_string(), "${classpath}".to_string()]),
             ArgumentDeclaration::V21(decl) => {
@@ -132,7 +132,7 @@ impl ArgumentDeclaration {
 
         Ok(())
     }
-    pub(crate) fn add_game_args_to_vec(&self, command_arguments: &mut Vec<String>, features: &HashSet<String>, os_info: &Info) -> anyhow::Result<()> {
+    pub(crate) fn add_game_args_to_vec(&self, command_arguments: &mut Vec<String>, features: &HashSet<String>, os_info: &Info) -> Result<()> {
         match self {
             ArgumentDeclaration::V14(decl) => {
                 command_arguments.extend(
@@ -151,7 +151,7 @@ impl ArgumentDeclaration {
         Ok(())
     }
 
-    fn check_rules_and_add(command_arguments: &mut Vec<String>, args: &Vec<Argument>, features: &HashSet<String>, os_info: &Info) -> anyhow::Result<()> {
+    fn check_rules_and_add(command_arguments: &mut Vec<String>, args: &Vec<Argument>, features: &HashSet<String>, os_info: &Info) -> Result<()> {
         for argument in args {
             if let Some(rules) = &argument.rules {
                 if !crate::minecraft::rule_interpreter::check_condition(rules, &features, &os_info)? {
@@ -160,8 +160,8 @@ impl ArgumentDeclaration {
             }
 
             match &argument.value {
-                super::version::ArgumentValue::SINGLE(value) => command_arguments.push(value.to_owned()),
-                super::version::ArgumentValue::VEC(vec) => command_arguments.append(&mut vec.clone())
+                ArgumentValue::SINGLE(value) => command_arguments.push(value.to_owned()),
+                ArgumentValue::VEC(vec) => command_arguments.append(&mut vec.clone())
             };
         }
 
@@ -381,7 +381,7 @@ pub struct Library {
 
 impl Library  {
 
-    pub fn get_library_download(&self) -> anyhow::Result<LibraryDownloadInfo> {
+    pub fn get_library_download(&self) -> Result<LibraryDownloadInfo> {
         if let Some(artifact) = self.downloads.as_ref().and_then(|x| x.artifact.as_ref()) {
             return Ok(artifact.into());
         }
