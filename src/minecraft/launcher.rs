@@ -1,14 +1,14 @@
 use std::{path::{Path, PathBuf}};
 use std::collections::HashSet;
 use std::fmt::Write;
-use std::io::Write as OtherWrite;
+
 use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use anyhow::Result;
 use futures::stream::{self, StreamExt};
-use futures::TryFutureExt;
+
 use log::*;
 use path_absolutize::*;
 use tokio::{fs, process::Command};
@@ -16,7 +16,7 @@ use tokio::io::AsyncReadExt;
 use tokio::fs::OpenOptions;
 
 use crate::{LAUNCHER_VERSION, utils::os::OS};
-use crate::cloud::LaunchManifest;
+use crate::app::api::LaunchManifest;
 use crate::error::LauncherError;
 use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
 use crate::minecraft::rule_interpreter;

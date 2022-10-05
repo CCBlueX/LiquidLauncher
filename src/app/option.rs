@@ -3,7 +3,7 @@ use std::fs;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::utils::os::Os;
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct LauncherOptions {

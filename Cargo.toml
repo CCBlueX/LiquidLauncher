@@ -29,6 +29,7 @@ thiserror = "1.0"
 
 # Generic
 void = "1"
+rand = "0.8.5"
 
 # FS libs
 zip = "0.6.2"

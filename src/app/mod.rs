@@ -3,5 +3,6 @@ pub mod gui;
 #[cfg(feature = "cli")]
 pub mod cli;
 
-pub mod webviews;
-pub mod options;
+pub mod api;
+pub mod webview;
+pub mod option;
