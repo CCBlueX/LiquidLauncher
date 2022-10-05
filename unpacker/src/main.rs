@@ -1,12 +1,9 @@
 #![windows_subsystem = "windows"]
 
-use std::{env, fs, thread};
-use std::path::Path;
+use std::{fs, thread};
 use std::process::Command;
-use std::time::Duration;
 use rust_embed::RustEmbed;
-use anyhow::{anyhow, Result};
-use directories::ProjectDirs;
+use anyhow::Result;
 use tempfile::tempdir;
 
 #[derive(RustEmbed)]
