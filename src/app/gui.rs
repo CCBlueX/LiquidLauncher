@@ -13,6 +13,7 @@ use path_absolutize::Absolutize;
 use sciter::Value;
 use tokio::runtime::Runtime;
 use tokio::task;
+use tokio::task::JoinHandle;
 
 use crate::app::api::LauncherApi;
 use crate::LauncherOptions;
@@ -27,13 +28,13 @@ struct RunnerInstance {
 
 struct ConstantLauncherData {
     app_data: ProjectDirs,
-    options: Arc<Mutex<LauncherOptions>>
+    options: LauncherOptions
 }
 
 struct EventHandler {
     constant_data: Arc<ConstantLauncherData>,
     runner_instance: Arc<Mutex<Option<RunnerInstance>>>,
-    join_handle: Arc<Mutex<Option<task::JoinHandle<()>>>>,
+    join_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
     async_runtime: Runtime,
 }
 
@@ -67,6 +68,7 @@ fn handle_progress(value: &Arc<std::sync::Mutex<EventFunctions>>, progress_updat
 }
 
 impl EventHandler {
+
     // script handler
     fn run_client(&self, build_id: i32, account_data: Value, on_progress: Value, on_output: Value, on_finalization: Value, on_error: Value) -> bool {
         let runner_instance_clone = self.runner_instance.clone();
@@ -178,17 +180,7 @@ impl EventHandler {
             match LauncherApi::load_builds(branch).await {
                 Ok(builds) => {
                     let builds = Value::from_iter(builds.iter().map(|x| {
-                        let mut val = Value::new();
-
-                        val.set_item("buildId", Value::from(x.build_id as i32));
-                        val.set_item("commitId", &x.commit_id);
-                        val.set_item("branch", &x.branch);
-                        val.set_item("lbVersion", &x.lb_version);
-                        val.set_item("mcVersion", &x.mc_version);
-                        val.set_item("release", &x.release);
-                        val.set_item("date", &x.date.naive_local().format("%Y-%m-%d %H:%M:%S").to_string());
-
-                        val
+                        Value::parse(&*serde_json::to_string(x).unwrap()).unwrap()
                     }).collect::<Vec<Value>>());
 
                     on_response.call(None, &make_args!(builds), None).unwrap()
@@ -208,14 +200,7 @@ impl EventHandler {
         self.async_runtime.spawn(async move {
             match AuthService::authenticate(AuthService::MOJANG, username, password).await {
                 Ok(acc) => {
-                    let mut val = Value::new();
-
-                    val.set_item("username", acc.username);
-                    val.set_item("accessToken", acc.access_token);
-                    val.set_item("id", acc.id.to_string());
-                    val.set_item("type", acc.account_type);
-    
-                    on_response.call(None, &make_args!(val), None).unwrap()
+                    on_response.call(None, &make_args!(Value::parse(&*serde_json::to_string(&acc).unwrap()).unwrap()), None).unwrap()
                 },
                 Err(err) => {
                     println!("{:?}", err);
@@ -228,7 +213,27 @@ impl EventHandler {
         true
     }
 
+    fn get_options(&self) -> Value {
+        let options = &self.constant_data.options;
+        let json_options = options.to_json().unwrap();
+
+        Value::parse(&*json_options).unwrap()
+    }
+
+    fn store_options(&self, options: Value) -> bool {
+        self.async_runtime.spawn(async move {
+            let x = LauncherOptions::from_json(options.to_string());
+            println!("{:?}", x);
+        });
+
+        true
+    }
+
     fn exit_app(&self) {
+        // store app configuration
+        LauncherOptions::store(&self.constant_data.options, self.constant_data.app_data.config_dir()).unwrap();
+
+        // exit app
         exit(0);
     } 
 
@@ -243,6 +248,8 @@ impl sciter::EventHandler for EventHandler {
     dispatch_script_call! {
 		fn run_client(i32, Value, Value, Value, Value, Value);
 		fn terminate();
+        fn get_options();
+        fn store_options(Value);
 		fn get_branches(Value, Value);
         fn get_builds(String, Value, Value);
         fn login_mojang(String, String, Value, Value);
@@ -265,7 +272,7 @@ pub(crate) fn gui_main(app_data: ProjectDirs, options: LauncherOptions) {
         .with_size((1000, 600))
         .create();
 
-    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { app_data, options: Arc::new(Mutex::new(options)) }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
+    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { app_data, options }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
 
     frame.load_file(&gui_index);
     frame.run_app();

@@ -7,7 +7,7 @@ extern crate sciter;
 use std::fs;
 use anyhow::{anyhow, Result};
 use directories::ProjectDirs;
-use crate::app::option::LauncherOptions;
+use crate::app::app_data::LauncherOptions;
 
 pub mod app;
 pub mod minecraft;

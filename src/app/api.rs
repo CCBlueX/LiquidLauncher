@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
 use crate::utils::get_maven_artifact_path;
 
@@ -28,23 +28,32 @@ impl LauncherApi {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Build {
+    #[serde(rename(serialize = "buildId"))]
     pub build_id: u32,
+    #[serde(rename(serialize = "commitId"))]
     pub commit_id: String,
     pub branch: String,
+    #[serde(rename(serialize = "lbVersion"))]
     pub lb_version: String,
+    #[serde(rename(serialize = "mcVersion"))]
     pub mc_version: String,
     pub release: bool,
     pub date: DateTime<Utc>,
     pub message: String,
     pub url: String,
+    #[serde(rename(serialize = "jreVersion"))]
     pub jre_version: u32,
 
     // Additional data
+    #[serde(rename(serialize = "fabricApiVersion"))]
     pub fabric_api_version: String,
+    #[serde(rename(serialize = "fabricLoaderVersion"))]
     pub fabric_loader_version: String,
+    #[serde(rename(serialize = "kotlinVersion"))]
     pub kotlin_version: String,
+    #[serde(rename(serialize = "kotlinModVersion"))]
     pub kotlin_mod_version: String
 }
 
