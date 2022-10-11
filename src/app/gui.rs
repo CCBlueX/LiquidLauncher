@@ -277,7 +277,7 @@ fn get_path() -> Result<String> {
     path.push("index.html");
 
     if !path.exists() {
-        return Err(anyhow!("unable to find gui index"));
+        return Err(anyhow!("unable to find app index"));
     }
 
     let absolut_path = path.absolutize()?;
