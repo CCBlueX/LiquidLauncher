@@ -1,0 +1,129 @@
+name: liquidlauncher
+
+on: [push]
+
+jobs:
+  build_launcher:
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      matrix:
+        config:
+          - os: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: liquidlauncher-barebone
+          path: target/release/liquidlauncher.exe
+
+  build_app:
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      matrix:
+        config:
+          - os: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+      - name: Build UI
+        run: |
+          cd app
+          npm install
+          npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: liquidlauncher-app
+          path: app/public
+
+  build_unpacker:
+    runs-on: ${{ matrix.config.os }}
+    needs: [build_launcher, build_app]
+    strategy:
+      matrix:
+        config:
+          - os: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: unpacker/.cargo/registry
+          key: unpacker-${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: unpacker/.cargo/git
+          key: unpacker-${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: unpacker/target
+          key: unpacker-${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: liquidlauncher-app
+          path: unpacker/data/app
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: liquidlauncher-barebone
+          path: unpacker/data
+
+      - name: Download and extract Sciter and copy into unpacker
+        run: |
+          curl https://gitlab.com/sciter-engine/sciter-js-sdk/-/archive/main/sciter-js-sdk-main.zip -o sciter-js-sdk-main.zip
+          7z x sciter-js-sdk-main.zip
+          cp sciter-js-sdk-main/bin/windows/x64/sciter.dll unpacker/data/
+
+      - name: Display structure of launcher data
+        run: ls -R unpacker/data
+
+      - name: Build unpacker
+        run: |
+          cd unpacker
+          cargo build --release
+
+      - name: Rename unpacker
+        run: mv unpacker/target/release/unpacker.exe unpacker/target/release/LiquidLauncher.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: liquidlauncher-installer
+          path: unpacker/target/release/LiquidLauncher.exe
