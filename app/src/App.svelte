@@ -10,19 +10,11 @@
     import Spacer from "./main/title-bar/Spacer.svelte";
     import TitleBar from "./main/title-bar/TitleBar.svelte";
     import WelcomeMessage from "./main/title-bar/WelcomeMessage.svelte";
+    import Options from "./main/content/Options.svelte";
 
     let login = true;
+    let optionsShown = false;
     let accountData; // username, accessToken, id, type
-
-    restoreAppData();
-
-    function restoreAppData() {
-        
-    }
-
-    function storeAppData() {
-
-    }
 
     // Logins
 
@@ -68,6 +60,10 @@
     function exitApp() {
         Window.this.xcall("exit_app");
     }
+
+    function switchOptions() {
+        optionsShown = !optionsShown;
+    }
 </script>
 
 <main>
@@ -86,13 +82,18 @@
         <TitleBar>
             <Logo />
             <WelcomeMessage message="Welcome {accountData.username}, try out our new version!" />
-            <Account accountName={accountData.username} accountType="Premium" avatarUrl="https://visage.surgeplay.com/face/{accountData.id}" />
+            <Account accountName={accountData.username} accountType="Premium" avatarUrl="https://visage.surgeplay.com/face/{accountData.id}" showOptions={switchOptions} />
             <ButtonClose exit={exitApp} />
         </TitleBar>
 
         <Content>
             <LaunchArea accountData={accountData} />
-            <NewsContainer />
+
+            {#if optionsShown}
+                <Options closeOptions={switchOptions} />
+            {:else}
+                <NewsContainer />
+            {/if}
         </Content>
     {/if}
 </main>

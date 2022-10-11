@@ -1,7 +1,7 @@
 use anyhow::Result;
 use reqwest::Client;
 use serde_json::json;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::AuthenticationError;
@@ -80,11 +80,15 @@ impl AuthService {
     
 }
 
-
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Account {
     pub username: String,
+    #[serde(rename(serialize = "accessToken"))]
+    #[serde(alias = "accessToken")]
     pub access_token: String,
     pub id: Uuid,
+    #[serde(rename(serialize = "accountType"))]
+    #[serde(alias = "accountType")]
     pub account_type: String
 }
 

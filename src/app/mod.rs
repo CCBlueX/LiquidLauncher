@@ -5,4 +5,4 @@ pub mod cli;
 
 pub mod api;
 pub mod webview;
-pub mod option;
+pub mod app_data;

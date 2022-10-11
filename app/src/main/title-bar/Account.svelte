@@ -2,6 +2,8 @@
     export let accountName;
     export let accountType;
     export let avatarUrl;
+
+    export let showOptions;
 </script>
 
 <div class="account">
@@ -10,7 +12,7 @@
         <div class="account-name">{accountName}</div>
         <div class="account-type">{accountType}</div>
     </div>
-    <img class="change-account" src="img/icon/icon-cog.svg" alt="settings">
+    <img class="change-account" src="img/icon/icon-cog.svg" alt="settings" on:click={showOptions}>
 </div>
 
 <style>
