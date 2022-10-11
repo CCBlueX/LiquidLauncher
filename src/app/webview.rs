@@ -1,11 +1,12 @@
 use crate::error::LauncherError;
 use web_view::Content;
 use std::sync::{Arc, Mutex};
+use anyhow::Result;
 
 use log::info;
 use crate::utils::download_file;
 
-pub(crate) async fn download_client<F>(url: &str, on_progress: F) -> anyhow::Result<Vec<u8>> where F : Fn(u64, u64) {
+pub(crate) async fn download_client<F>(url: &str, on_progress: F) -> Result<Vec<u8>> where F : Fn(u64, u64) {
     info!("Retrieving LiquidBounce download url from {}", url);
 
     let download_link_cell = Arc::new(Mutex::new(None));
@@ -37,12 +38,11 @@ pub(crate) async fn download_client<F>(url: &str, on_progress: F) -> anyhow::Res
 
                 Err(web_view::Error::Custom(Box::new(LauncherError::InvalidJavaScript("Invalid command".to_owned()))))
             })
-            .build()
-            .unwrap();
+            .build()?;
 
         webview.set_maximized(true);
 
-        webview.run().unwrap();
+        webview.run()?;
     }
 
     let url = {
