@@ -272,14 +272,19 @@ pub(crate) fn gui_main(app_data: ProjectDirs, options: LauncherOptions) {
 }
 
 fn get_path() -> Result<String> {
-    let mut path = env::current_dir()?;
-    path.push("app");
-    path.push("index.html");
+    let mut app_path = env::current_dir()?;
+    app_path.push("app");
 
-    if !path.exists() {
+    let local_index = if app_path.join("public").exists() { // useful for dev env
+        app_path.join("public")
+    } else {
+        app_path
+    }.join("index.html");
+
+    if !local_index.exists() {
         return Err(anyhow!("unable to find app index"));
     }
 
-    let absolut_path = path.absolutize()?;
+    let absolut_path = local_index.absolutize()?;
     return Ok(format!("file://{}", absolut_path.to_str().unwrap_or("index.html")));
 }
