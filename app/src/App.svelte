@@ -23,13 +23,11 @@
 
     // Account
     let accountData = options.currentAccount; // username, accessToken, id, type
-    let login = accountData == null;
 
     function loginIntoMojang(username, password) {
 
         function onDone(account) {
             accountData = account;
-            login = false;
         }
 
         function onError(error) {
@@ -56,7 +54,6 @@
             "id": "", // todo: get uuid from username
             "type": "legacy"
         };
-        login = false;
         options.currentAccount = accountData;
         Window.this.xcall("store_options", options);
     }
@@ -77,7 +74,6 @@
     function logout() {
         // todo: specific account types require actual logouts to prevent token leaking
 
-        login = true;
         accountData = null;
         options.currentAccount = accountData;
         Window.this.xcall("store_options", options);
@@ -99,7 +95,7 @@
 </script>
 
 <main>
-    {#if login}
+    {#if accountData == null}
         <TitleBar>
             <Logo />
             <Spacer />
