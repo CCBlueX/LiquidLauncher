@@ -1,4 +1,3 @@
-#![feature(exit_status_error)]
 #![windows_subsystem = "windows"]
 
 use std::{fs, thread};
@@ -38,10 +37,10 @@ fn main() -> Result<()> {
 
     // execute assigned executable
 
-    Command::new(temporary_folder.path().join(EXECUTABLE_NAME))
+    let exit_status = Command::new(temporary_folder.path().join(EXECUTABLE_NAME))
         .current_dir(&temporary_folder)
-        .status()?
-        .exit_ok()?;
+        .status();
+    println!("Exit status: {:?}", exit_status);
 
     Ok(())
 }
