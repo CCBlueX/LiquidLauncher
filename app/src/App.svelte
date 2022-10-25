@@ -64,6 +64,20 @@
     function switchOptions() {
         optionsShown = !optionsShown;
     }
+
+    function checkForUpdates() {
+        function newerVersionFound(data) {
+            // todo: prompt user about new version
+            console.log(data);
+            console.log(data.name);
+            console.log(data.url);
+        }
+
+        Window.this.xcall("check_for_updates", newerVersionFound);
+    }
+
+    // Check for updates at start-up
+    checkForUpdates();
 </script>
 
 <main>

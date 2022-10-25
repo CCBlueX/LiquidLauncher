@@ -229,6 +229,31 @@ impl EventHandler {
         true
     }
 
+    ///
+    /// This will run an update check in the background asynchronous to the sciter frame until it is
+    /// completed. If an update has been found the required arguments will be passed to the function.
+    /// If not or a error has appeared it will be logged to the console, but without any user notice.
+    /// A error is unlikely to be the users fault, so it is not something we won't them to know.
+    ///
+    fn check_for_updates(&self, found_newer_version: Value) -> bool {
+        self.async_runtime.spawn(async move {
+            match crate::updater::compare_versions().await {
+                Ok((is_it_newer_version, newest_version)) => {
+                    if !is_it_newer_version {
+                        // there is no newer version
+                        return
+                    }
+
+                    // Call out newer version found function to Sciter JS and pass github release data
+                    found_newer_version.call(None, &make_args!(Value::parse(&*serde_json::to_string(&newest_version).unwrap()).unwrap()), None).unwrap();
+                }
+                Err(e) => error!("Update check failed {}", e)
+            }
+        });
+
+        true
+    }
+
     fn exit_app(&self) {
         // store app configuration
         LauncherOptions::store(&self.constant_data.options, self.constant_data.app_data.config_dir()).unwrap();
@@ -253,6 +278,7 @@ impl sciter::EventHandler for EventHandler {
 		fn get_branches(Value, Value);
         fn get_builds(String, Value, Value);
         fn login_mojang(String, String, Value, Value);
+        fn check_for_updates(Value);
         fn exit_app();
 	}
 }

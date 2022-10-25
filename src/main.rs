@@ -15,6 +15,8 @@ pub mod minecraft;
 mod error;
 mod utils;
 
+pub mod updater;
+
 const LAUNCHER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn main() -> Result<()> {

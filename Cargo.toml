@@ -32,6 +32,8 @@ void = "1"
 rand = "0.8.5"
 directories = "4.0"
 
+version-compare = "0.1.0"
+
 # FS libs
 zip = "0.6.2"
 async_zip = "0.0.7"
