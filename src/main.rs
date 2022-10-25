@@ -34,9 +34,6 @@ pub fn main() -> Result<()> {
     let args = std::env::args();
     let mut real_args = args.skip(1);
 
-    let mut options = LauncherOptions::load(app_data.config_dir()).unwrap_or_default();
-    options.store(app_data.config_dir())?;
-
     if let Some(build_id) = real_args.next() {
         #[cfg(feature = "cli")]
             {
@@ -51,7 +48,7 @@ pub fn main() -> Result<()> {
 
     #[cfg(feature = "gui")]
         {
-            app::gui::gui_main(app_data, options);
+            app::gui::gui_main(app_data);
             return Ok(());
         }
 

@@ -27,8 +27,7 @@ struct RunnerInstance {
 }
 
 struct ConstantLauncherData {
-    app_data: ProjectDirs,
-    options: LauncherOptions
+    app_data: ProjectDirs
 }
 
 struct EventHandler {
@@ -214,17 +213,19 @@ impl EventHandler {
     }
 
     fn get_options(&self) -> Value {
-        let options = &self.constant_data.options;
+        let config_dir = self.constant_data.app_data.config_dir();
+        let options = LauncherOptions::load(config_dir).unwrap_or_default(); // default to basic options if unable to load
         let json_options = options.to_json().unwrap();
 
         Value::parse(&*json_options).unwrap()
     }
 
     fn store_options(&self, options: Value) -> bool {
-        self.async_runtime.spawn(async move {
-            let x = LauncherOptions::from_json(options.to_string());
-            println!("{:?}", x);
-        });
+        let config_dir = self.constant_data.app_data.config_dir();
+        match LauncherOptions::from_json(options.to_string()) {
+            Ok(launcher_options) => launcher_options.store(config_dir).unwrap(),
+            Err(e) => error!("Storing options failed due to {}", e)
+        };
 
         true
     }
@@ -255,9 +256,6 @@ impl EventHandler {
     }
 
     fn exit_app(&self) {
-        // store app configuration
-        LauncherOptions::store(&self.constant_data.options, self.constant_data.app_data.config_dir()).unwrap();
-
         // exit app
         exit(0);
     } 
@@ -285,7 +283,7 @@ impl sciter::EventHandler for EventHandler {
 
 
 /// Runs the GUI and returns when the window is closed.
-pub(crate) fn gui_main(app_data: ProjectDirs, options: LauncherOptions) {
+pub(crate) fn gui_main(app_data: ProjectDirs) {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
     let gui_index = get_path().unwrap();
@@ -298,7 +296,7 @@ pub(crate) fn gui_main(app_data: ProjectDirs, options: LauncherOptions) {
         .with_size((1000, 600))
         .create();
 
-    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { app_data, options }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
+    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { app_data }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
 
     frame.load_file(&gui_index);
     frame.run_app();

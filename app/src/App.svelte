@@ -16,6 +16,10 @@
     let optionsShown = false;
     let accountData; // username, accessToken, id, type
 
+    // Options Storage
+    let options = Window.this.xcall("get_options"); // read options from storage
+    Window.this.xcall("store_options", options); // store options again in case they might be new
+
     // Logins
 
     function loginIntoMojang(username, password) {
@@ -104,7 +108,7 @@
             <LaunchArea accountData={accountData} />
 
             {#if optionsShown}
-                <Options closeOptions={switchOptions} />
+                <Options options={options} closeOptions={switchOptions} />
             {:else}
                 <NewsContainer />
             {/if}
