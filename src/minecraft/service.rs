@@ -73,7 +73,7 @@ impl AuthService {
         Ok(Account {
             username: profile.name,
             access_token: serialized_response.access_token,
-            id: profile.id,
+            id: profile.id.to_string(),
             account_type: "mojang".to_string()
         })
     }
@@ -86,9 +86,9 @@ pub struct Account {
     #[serde(rename(serialize = "accessToken"))]
     #[serde(alias = "accessToken")]
     pub access_token: String,
-    pub id: Uuid,
-    #[serde(rename(serialize = "accountType"))]
-    #[serde(alias = "accountType")]
+    pub id: String,
+    #[serde(rename(serialize = "type"))]
+    #[serde(alias = "type")]
     pub account_type: String
 }
 

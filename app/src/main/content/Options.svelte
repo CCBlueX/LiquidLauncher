@@ -1,14 +1,12 @@
 <script>
     export let options;
     export let closeOptions;
+    export let logout;
 
     function storeOptions() {
         Window.this.xcall("store_options", options);
     }
 
-    function logout() {
-
-    }
 
     console.log(JSON.stringify(options));
 </script>
@@ -26,6 +24,9 @@
 </label>
 
 <br><br>
+
+
+<button on:click={logout}>Log out from account</button>
 
 <button class="button" on:click={closeOptions}>CLOSE</button>
 
