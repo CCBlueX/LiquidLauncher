@@ -859,6 +859,7 @@ dependencies = [
  "toml",
  "urlencoding 2.1.2",
  "uuid",
+ "version-compare 0.1.0",
  "void",
  "web-view",
  "zip",
@@ -1562,7 +1563,7 @@ dependencies = [
  "strum_macros",
  "thiserror",
  "toml",
- "version-compare",
+ "version-compare 0.0.10",
 ]
 
 [[package]]
@@ -1848,6 +1849,12 @@ name = "version-compare"
 version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d63556a25bae6ea31b52e640d7c41d1ab27faba4ccb600013837a3d0b3994ca1"
+
+[[package]]
+name = "version-compare"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe88247b92c1df6b6de80ddc290f3976dbdf2f5f5d3fd049a9fb598c6dd5ca73"
 
 [[package]]
 name = "version_check"
