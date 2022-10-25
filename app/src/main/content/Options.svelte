@@ -1,15 +1,15 @@
 <script>
+    export let options;
     export let closeOptions;
 
-    function getOptions() {
-        return Window.this.xcall("get_options")
-    }
-
     function storeOptions() {
+        Window.this.xcall("store_options", options);
+    }
+
+    function logout() {
 
     }
 
-    let options = getOptions();
     console.log(JSON.stringify(options));
 </script>
 
@@ -17,12 +17,12 @@
 
 <label>
     Keep Launcher Open
-    <input type=checkbox bind:checked={options.keepLauncherOpen} on:change={storeOptions()}>
+    <input type=checkbox bind:checked={options.keepLauncherOpen} on:change={storeOptions}>
 </label>
 <br>
 <label>
     Show nightly builds
-    <input type=checkbox bind:checked={options.showNightlyBuilds} on:change={storeOptions()}>
+    <input type=checkbox bind:checked={options.showNightlyBuilds} on:change={storeOptions}>
 </label>
 
 <br><br>
