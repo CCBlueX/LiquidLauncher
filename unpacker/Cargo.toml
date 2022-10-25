@@ -13,7 +13,7 @@ codegen-units = 1
 
 [dependencies]
 anyhow = "1.0.65"
-rust-embed = { version = "6.4.0", features = ["debug-embed", "compression"] }
+rust-embed = { version = "6.4.2", features = ["debug-embed", "compression"] }
 tempfile = "3.3.0"
 
 [build-dependencies]
