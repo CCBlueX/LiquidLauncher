@@ -12,15 +12,18 @@
     import WelcomeMessage from "./main/title-bar/WelcomeMessage.svelte";
     import Options from "./main/content/Options.svelte";
 
-    let login = true;
-    let optionsShown = false;
-    let accountData; // username, accessToken, id, type
-
     // Options Storage
+    let optionsShown = false;
+
     let options = Window.this.xcall("get_options"); // read options from storage
     Window.this.xcall("store_options", options); // store options again in case they might be new
 
-    // Logins
+    // debug out options
+    console.log(JSON.stringify(options));
+
+    // Account
+    let accountData = options.currentAccount; // username, accessToken, id, type
+    let login = accountData == null;
 
     function loginIntoMojang(username, password) {
 
@@ -54,6 +57,8 @@
             "type": "legacy"
         };
         login = false;
+        options.currentAccount = accountData;
+        Window.this.xcall("store_options", options);
     }
 
     function loginIntoMicrosoft() {
@@ -67,6 +72,15 @@
 
     function switchOptions() {
         optionsShown = !optionsShown;
+    }
+
+    function logout() {
+        // todo: specific account types require actual logouts to prevent token leaking
+
+        login = true;
+        accountData = null;
+        options.currentAccount = accountData;
+        Window.this.xcall("store_options", options);
     }
 
     function checkForUpdates() {
@@ -108,7 +122,7 @@
             <LaunchArea accountData={accountData} />
 
             {#if optionsShown}
-                <Options options={options} closeOptions={switchOptions} />
+                <Options options={options} closeOptions={switchOptions} logout={logout} />
             {:else}
                 <NewsContainer />
             {/if}
