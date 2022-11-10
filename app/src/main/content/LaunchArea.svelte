@@ -2,6 +2,7 @@
     import {fetchNews} from "../../utils/news";
 
     export let accountData;
+    export let options;
 
     let title;
     let date;
@@ -16,6 +17,10 @@
         text = news.text;
         previewImage = news.banner.image;
     })();
+
+    export const update = () => {
+        updateBuilds();
+    }
 
     function updateBranches() {
 
@@ -43,8 +48,6 @@
     let builds = [];
 
     function updateBuilds() {
-        let showNightly = document.getElementById("nightly")
-
         let branchSelection = document.getElementById("branches");
         let branch = branchSelection.value;
 
@@ -55,7 +58,7 @@
             builds = newBuilds;
 
             builds.forEach(build => {
-                if (build.release || showNightly.checked) {
+                if (build.release || options.showNightlyBuilds) {
                     let opt = document.createElement("option");
                     opt.value = build.buildId;
                     opt.innerHTML = "Commit: " + build.commitId.substring(0, 7) + "\nVersion: " + build.lbVersion + " (MC " + build.mcVersion + ")\n" + build.date;
@@ -186,8 +189,6 @@
             <!--            <div class="date">2021-05-07</div>-->
 
             <select name="builds" id="builds"></select>
-            <input type="checkbox" id="nightly" name="nightly"  on:change={updateBuilds}>
-            <label for="nightly">Nightly Builds</label>
         </div>
     </div>
 

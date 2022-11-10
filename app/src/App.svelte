@@ -90,6 +90,8 @@
         Window.this.xcall("check_for_updates", newerVersionFound);
     }
 
+    export let update;
+
     // Check for updates at start-up
     checkForUpdates();
 </script>
@@ -115,10 +117,10 @@
         </TitleBar>
 
         <Content>
-            <LaunchArea accountData={accountData} />
+            <LaunchArea accountData={accountData} options={options} bind:update={update} />
 
             {#if optionsShown}
-                <Options options={options} closeOptions={switchOptions} logout={logout} />
+                <Options options={options} update={update} closeOptions={switchOptions} logout={logout} />
             {:else}
                 <NewsContainer />
             {/if}
