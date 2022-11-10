@@ -1,12 +1,13 @@
 <script>
     export let options;
+    export let update;
     export let closeOptions;
     export let logout;
 
     function storeOptions() {
         Window.this.xcall("store_options", options);
+        update();
     }
-
 
     console.log(JSON.stringify(options));
 </script>
