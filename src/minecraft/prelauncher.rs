@@ -64,7 +64,7 @@ pub(crate) async fn launch<D: Send + Sync>(app_data: ProjectDirs, build: &Build,
 
 pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, progress: &impl ProgressReceiver) -> Result<()> {
     let mod_cache_path = data.join("mod_cache");
-    let mods_path = data.join("gameDir").join("mods");
+    let mods_path = data.join("gameDir").join(&manifest.build.branch).join("mods");
 
     fs::create_dir_all(&mod_cache_path).await?;
     fs::create_dir_all(&mods_path).await?;
