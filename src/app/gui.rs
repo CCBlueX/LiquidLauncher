@@ -135,7 +135,7 @@ impl EventHandler {
         let runner_instance = self.runner_instance.clone();
         let join_handle = self.join_handle.clone();
 
-        self.async_runtime.block_on(async move {
+        self.async_runtime.spawn(async move {
             {
                 let mut lck = runner_instance.lock().await;
 
