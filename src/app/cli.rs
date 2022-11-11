@@ -32,7 +32,8 @@ pub fn cli_main(build_id: u32) {
         auth_access_token: "-".to_string(),
         auth_xuid: "0".to_string(),
         clientid: Uuid::new_v4().to_string(),
-        user_type: "legacy".to_string()
+        user_type: "legacy".to_string(),
+        keep_launcher_open: true
     };
 
     let target_build = match builds.iter().find(|x| x.build_id == build_id) {

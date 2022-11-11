@@ -75,7 +75,7 @@
             log("Error on launching client: " + error);
         }
 
-        Window.this.xcall("run_client", versionData.buildId, accountData, onProgress, onOutput, onDone, onError);
+        Window.this.xcall("run_client", versionData.buildId, accountData, options, onProgress, onOutput, onDone, onError);
 
         label.textContent = "Running...";
         launching(true);

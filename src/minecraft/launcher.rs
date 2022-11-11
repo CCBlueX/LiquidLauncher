@@ -2,7 +2,7 @@ use std::{path::{Path, PathBuf}};
 use std::collections::HashSet;
 use std::fmt::Write;
 
-use std::process::Stdio;
+use std::process::{exit, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -261,6 +261,10 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
 
     let mut running_task = command.spawn()?;
 
+    if !launching_parameter.keep_launcher_open {
+        exit(0) // Close launcher after start
+    }
+
     let mut stdout = running_task.stdout.take().unwrap();
     let mut stderr = running_task.stderr.take().unwrap();
 
@@ -296,7 +300,8 @@ pub struct LaunchingParameter {
     pub auth_access_token: String,
     pub auth_xuid: String,
     pub clientid: String,
-    pub user_type: String
+    pub user_type: String,
+    pub keep_launcher_open: bool,
 }
 
 fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(input: &String, retriever: F) -> Result<String> {

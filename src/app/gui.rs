@@ -68,7 +68,16 @@ fn handle_progress(value: &Arc<std::sync::Mutex<EventFunctions>>, progress_updat
 impl EventHandler {
 
     // script handler
-    fn run_client(&self, build_id: i32, account_data: Value, on_progress: Value, on_output: Value, on_finalization: Value, on_error: Value) -> bool {
+    fn run_client(&self, build_id: i32, account_data: Value, options: Value, on_progress: Value, on_output: Value, on_finalization: Value, on_error: Value) -> bool {
+        let account = serde_json::from_str::<Account>(&account_data.to_string()).unwrap();
+        let options = LauncherOptions::from_json(options.to_string()).unwrap();
+
+        let (account_name, uuid, token, user_type) = match account {
+            Account::MsaAccount { auth, .. } => (auth.name, auth.uuid, auth.token, "msa".to_string()),
+            Account::MojangAccount { name, token, uuid } => (name, token, uuid, "mojang".to_string()),
+            Account::OfflineAccount { name, uuid } => (name, "-".to_string(), uuid, "legacy".to_string())
+        };
+
         let runner_instance_clone = self.runner_instance.clone();
 
         let mut runner_instance_content = self.async_runtime.block_on(self.runner_instance.lock());
@@ -81,12 +90,13 @@ impl EventHandler {
         let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
 
         let launching_parameter = LaunchingParameter {
-            auth_player_name: account_data.get_item("name").as_string().unwrap_or_else(|| "".to_string()),
-            auth_uuid: account_data.get_item("uuid").as_string().unwrap_or_else(|| "".to_string()),
-            auth_access_token: account_data.get_item("token").as_string().unwrap_or_else(|| "-".to_string()),
+            auth_player_name: account_name,
+            auth_uuid: uuid,
+            auth_access_token: token,
             auth_xuid: "x".to_string(),
             clientid: service::AZURE_CLIENT_ID.to_string(),
-            user_type: account_data.get_item("type").as_string().unwrap_or_else(|| "legacy".to_string()),
+            user_type,
+            keep_launcher_open: options.keep_launcher_open
         };
 
         let jh = self.async_runtime.spawn(async move {
@@ -309,7 +319,7 @@ impl sciter::EventHandler for EventHandler {
 
     // route script calls to our handler
     dispatch_script_call! {
-		fn run_client(i32, Value, Value, Value, Value, Value);
+		fn run_client(i32, Value, Value, Value, Value, Value, Value);
 		fn terminate();
         fn get_options();
         fn store_options(Value);

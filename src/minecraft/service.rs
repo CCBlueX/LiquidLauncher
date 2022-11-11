@@ -105,19 +105,19 @@ pub async fn authenticate_mojang(username: String, password: String) -> Result<A
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Account {
-    #[serde(rename = "msa")]
+    #[serde(rename = "Microsoft")]
     MsaAccount {
         #[serde(flatten)]
         auth: Auth,
         auth_file: String
     },
-    #[serde(rename = "mojang")]
+    #[serde(rename = "Mojang")]
     MojangAccount {
         name: String,
         token: String,
         uuid: String
     },
-    #[serde(rename = "legacy")]
+    #[serde(rename = "Offline")]
     OfflineAccount {
         name: String,
         uuid: String
