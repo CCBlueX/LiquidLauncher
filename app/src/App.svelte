@@ -107,8 +107,6 @@
     }
 
     function logout() {
-        // todo: specific account types require actual logouts to prevent token leaking
-
         Window.this.xcall("logout", accountData);
 
         accountData = null;
@@ -155,7 +153,7 @@
             <LaunchArea accountData={accountData} options={options} versionData={versionData} />
 
             {#if optionsShown}
-                <Options options={options} logout={logout} bind:versionData={versionData} branches={branches} builds={builds} updateBuilds={updateBuilds} />
+                <Options bind:options={options} logout={logout} bind:versionData={versionData} branches={branches} builds={builds} updateBuilds={updateBuilds} />
             {:else}
                 <NewsContainer />
             {/if}

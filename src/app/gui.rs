@@ -81,7 +81,7 @@ impl EventHandler {
         let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
 
         let launching_parameter = LaunchingParameter {
-            auth_player_name: account_data.get_item("username").as_string().unwrap_or_else(|| "".to_string()),
+            auth_player_name: account_data.get_item("name").as_string().unwrap_or_else(|| "".to_string()),
             auth_uuid: account_data.get_item("uuid").as_string().unwrap_or_else(|| "".to_string()),
             auth_access_token: account_data.get_item("token").as_string().unwrap_or_else(|| "-".to_string()),
             auth_xuid: "x".to_string(),
