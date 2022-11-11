@@ -19,17 +19,20 @@
     }
 
     function syncBuilds() {
-        updateBuilds(document.getElementById("branches").value);
+        let branch = document.getElementById("branches").value;
+
+        options.preferredBranch = branch;
+        updateBuilds(branch);
     }
 
     function syncVersionData() {
         let selectedBuild = parseInt(document.getElementById("builds").value);
-        console.log(selectedBuild);
+        options.preferredBuild = selectedBuild;
+
         let newVersionData = builds.find(el => selectedBuild === el.buildId);
-        console.log(JSON.stringify(newVersionData));
 
         if (newVersionData === undefined) {
-            console.log("nix gefunden");
+            console.error("failed to sync version data to user selection", selectedBuild);
             return;
         }
 

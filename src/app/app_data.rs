@@ -20,7 +20,7 @@ pub(crate) struct LauncherOptions {
     #[serde(rename = "preferredBranch")]
     pub preferred_branch: Option<String>,
     #[serde(rename = "preferredBuild")]
-    pub preferred_build: Option<String>,
+    pub preferred_build: Option<i32>,
     // todo: might move into it's own file when there is support for multiple accounts which might sync up with the used client
     #[serde(rename = "currentAccount")]
     pub current_account: Option<Account>,

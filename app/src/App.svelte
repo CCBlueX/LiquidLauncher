@@ -22,13 +22,7 @@
     console.log(JSON.stringify(options));
 
     // Versions
-    let versionData = {
-        "buildId": -1,
-        "branch": "LOADING...",
-        "lbVersion": "LOADING...",
-        "mcVersion": "LOADING...",
-        "date": "LOADING..."
-    };
+    let versionData;
 
     let branches = [];
     let builds = [];
@@ -155,7 +149,7 @@
         <TitleBar>
             <Logo />
             <WelcomeMessage message="Welcome {accountData.username}, try out our new version!" />
-            <Account accountName={accountData.username} accountType="Premium" avatarUrl="https://visage.surgeplay.com/face/{accountData.id}" showOptions={switchOptions} />
+            <Account accountName={accountData.username} accountType={accountData.type} avatarUrl="https://visage.surgeplay.com/face/{accountData.id}" showOptions={switchOptions} />
             <ButtonClose exit={exitApp} />
         </TitleBar>
 
