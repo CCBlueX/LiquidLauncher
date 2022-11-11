@@ -255,6 +255,12 @@ impl EventHandler {
         true
     }
 
+    fn open(&self, url: String) -> bool {
+        open::that(url).unwrap();
+
+        true
+    }
+
     fn exit_app(&self) {
         // exit app
         exit(0);
@@ -277,6 +283,7 @@ impl sciter::EventHandler for EventHandler {
         fn get_builds(String, Value, Value);
         fn login_mojang(String, String, Value, Value);
         fn check_for_updates(Value);
+        fn open(String);
         fn exit_app();
 	}
 }
