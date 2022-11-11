@@ -117,13 +117,13 @@
     <div id="version-select" class="version-select" style="display: block;">
         <div class="version">
             <img class="icon" src="img/icon/icon-version-lb.png" alt="liquidbounce">
-            <div class="name">{versionData.lbVersion}</div>
-            <div class="date">{versionData.date}</div>
+            <div class="name">{versionData ? versionData.lbVersion : "[waiting...]"}</div>
+            <div class="date">{versionData ? versionData.date : "[waiting...]"}</div>
         </div>
 
         <div class="version">
             <img class="icon" src="img/icon/icon-version-mc.png" alt="minecraft">
-            <div class="name">{versionData.mcVersion}</div>
+            <div class="name">{versionData ? versionData.mcVersion : "[waiting...]"}</div>
             <div class="date">TODO: Date of MC Version</div>
         </div>
     </div>
