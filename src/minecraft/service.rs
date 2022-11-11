@@ -1,3 +1,4 @@
+
 use std::fs::File;
 use std::path::Path;
 use anyhow::{anyhow, Result};
@@ -5,6 +6,7 @@ use minceraft::auth::Auth;
 use reqwest::Client;
 use serde_json::json;
 use serde::{Deserialize, Serialize};
+use tokio::fs;
 use uuid::Uuid;
 
 use crate::error::AuthenticationError;
@@ -120,6 +122,21 @@ pub enum Account {
         name: String,
         uuid: String
     }
+}
+
+impl Account {
+
+    pub async fn logout(&self) -> Result<()> {
+        match self {
+            Account::MsaAccount { auth_file, .. } => {
+                fs::remove_file(auth_file).await?;
+            }
+            Account::MojangAccount { .. } => {}
+            Account::OfflineAccount { .. } => {}
+        }
+        Ok(())
+    }
+
 }
 
 pub async fn name_to_uuid(name: &String) -> Result<String> {

@@ -20,7 +20,7 @@ use crate::{LAUNCHER_DIRECTORY, LauncherOptions};
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::{prelauncher, service};
 use crate::minecraft::progress::ProgressUpdate;
-use crate::minecraft::service::{auth_msa, auth_offline, authenticate_mojang};
+use crate::minecraft::service::{Account, auth_msa, auth_offline, authenticate_mojang};
 
 struct RunnerInstance {
     terminator: tokio::sync::oneshot::Sender<()>,
@@ -238,6 +238,14 @@ impl EventHandler {
         true
     }
 
+    fn logout(&self, account_data: Value) {
+        self.async_runtime.spawn(async move {
+            let acc = serde_json::from_str::<Account>(&*account_data.to_string()).unwrap();
+            let _ = acc.logout().await; // we don't care if logouts fails...
+        });
+
+    }
+
     fn get_options(&self) -> Value {
         let config_dir = LAUNCHER_DIRECTORY.config_dir();
         let options = LauncherOptions::load(config_dir).unwrap_or_default(); // default to basic options if unable to load
@@ -310,6 +318,7 @@ impl sciter::EventHandler for EventHandler {
         fn login_offline(String, Value);
         fn login_msa(Value, Value, Value);
         fn login_mojang(String, String, Value, Value);
+        fn logout(Value);
         fn check_for_updates(Value);
         fn open(String);
         fn exit_app();

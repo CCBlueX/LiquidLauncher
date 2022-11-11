@@ -24,6 +24,10 @@
         handleMicrosoftLogin(onCode);
     }
 
+    function cancelMicrosoftLogin() {
+        microsoftCode = null;
+    }
+
     function clickOfflineLogin() {
         handleOfflineLogin(document.getElementById("username").value);
     }
@@ -62,6 +66,7 @@
         </div>
 
         <div class="button-large primary" on:click={linkMicrosoft}>Link</div>
+        <div class="button-large" on:click={cancelMicrosoftLogin}>Cancel</div>
     {/if}
 </div>
 

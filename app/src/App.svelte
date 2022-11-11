@@ -109,6 +109,8 @@
     function logout() {
         // todo: specific account types require actual logouts to prevent token leaking
 
+        Window.this.xcall("logout", accountData);
+
         accountData = null;
         options.currentAccount = accountData;
         Window.this.xcall("store_options", options);
