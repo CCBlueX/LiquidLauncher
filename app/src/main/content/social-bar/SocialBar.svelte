@@ -4,12 +4,12 @@
 </script>
 
 <div class="social-bar">
-    <ButtonSocial icon="nodebb" text="Forum" />
-    <ButtonSocial icon="github" text="GitHub" />
-    <ButtonSocial icon="guilded" text="Guilded" />
-    <ButtonSocial icon="twitter" text="Twitter" />
-    <ButtonSocial icon="youtube" text="YouTube" />
-    <ButtonText icon="url" text="liquidbounce.net" />
+    <ButtonSocial icon="nodebb" text="Forum" url="https://forums.ccbluex.net/"/>
+    <ButtonSocial icon="github" text="GitHub" url="https://github.com/CCBlueX/"/>
+    <ButtonSocial icon="guilded" text="Guilded" url="https://github.com/ccbluex" />
+    <ButtonSocial icon="twitter" text="Twitter" url="https://twitter.com/ccbluex"/>
+    <ButtonSocial icon="youtube" text="YouTube" url="https://www.youtube.com/ccbluex" />
+    <ButtonText icon="url" text="liquidbounce.net" url="https://liquidbounce.net/" />
 </div>
 
 <style>
