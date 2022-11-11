@@ -90,7 +90,7 @@ impl EventHandler {
         let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
 
         let launching_parameter = LaunchingParameter {
-            custom_java_path: if options.custom_java_path.is_empty() { Some(options.custom_java_path) } else { None },
+            custom_java_path: if !options.custom_java_path.is_empty() { Some(options.custom_java_path) } else { None },
             auth_player_name: account_name,
             auth_uuid: uuid,
             auth_access_token: token,
