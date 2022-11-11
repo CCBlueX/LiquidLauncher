@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use crate::error::LauncherError;
 use crate::utils::get_maven_artifact_path;
 use std::sync::Arc;
+use crate::minecraft::launcher::LaunchingParameter;
 use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
 
 // https://launchermeta.mojang.com/mc/game/version_manifest.json
@@ -122,7 +123,16 @@ pub enum ArgumentDeclaration {
 }
 
 impl ArgumentDeclaration {
-    pub(crate) fn add_jvm_args_to_vec(&self, command_arguments: &mut Vec<String>, features: &HashSet<String>, os_info: &Info) -> Result<()> {
+
+    pub(crate) fn add_jvm_args_to_vec(&self, command_arguments: &mut Vec<String>, parameter: &LaunchingParameter, features: &HashSet<String>, os_info: &Info) -> Result<()> {
+        command_arguments.push(format!("-Xmx{}M", parameter.memory));
+        command_arguments.push("-XX:+UnlockExperimentalVMOptions".to_string());
+        command_arguments.push("-XX:+UseG1GC".to_string());
+        command_arguments.push("-XX:G1NewSizePercent=20".to_string());
+        command_arguments.push("-XX:G1ReservePercent=20".to_string());
+        command_arguments.push("-XX:MaxGCPauseMillis=50".to_string());
+        command_arguments.push("-XX:G1HeapRegionSize=32M".to_string());
+
         match self {
             ArgumentDeclaration::V14(_) => command_arguments.append(&mut vec!["-Djava.library.path=${natives_directory}".to_string(), "-cp".to_string(), "${classpath}".to_string()]),
             ArgumentDeclaration::V21(decl) => {

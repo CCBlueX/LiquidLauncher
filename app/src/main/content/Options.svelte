@@ -88,6 +88,11 @@
     <h2>Game options</h2>
 
     <label>
+        Memory Percentage (%)
+        <input type=text min=1 max=100 bind:value={options.memoryPercentage} on:change={storeOptions}>
+    </label>
+    <br>
+    <label>
         Custom JVM
         <input type=text bind:value={options.customJavaPath} on:change={storeOptions}>
     </label>

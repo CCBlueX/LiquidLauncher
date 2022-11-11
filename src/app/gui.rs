@@ -11,6 +11,7 @@ use futures::lock::Mutex;
 use log::error;
 use path_absolutize::Absolutize;
 use sciter::Value;
+use sysinfo::SystemExt;
 use tokio::runtime::Runtime;
 use tokio::task;
 use tokio::task::JoinHandle;
@@ -89,7 +90,9 @@ impl EventHandler {
 
         let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
 
-        let launching_parameter = LaunchingParameter {
+        let sys = sysinfo::System::new_all();
+        let parameters = LaunchingParameter {
+            memory: ((sys.total_memory() / 1000000) as f64 * (options.memory_percentage as f64 / 100.0)) as i64,
             custom_java_path: if !options.custom_java_path.is_empty() { Some(options.custom_java_path) } else { None },
             auth_player_name: account_name,
             auth_uuid: uuid,
@@ -119,7 +122,7 @@ impl EventHandler {
 
             if let Err(err) = prelauncher::launch(
                 build,
-                launching_parameter,
+                parameters,
                 LauncherData {
                     on_stdout: handle_stdout,
                     on_stderr: handle_stderr,

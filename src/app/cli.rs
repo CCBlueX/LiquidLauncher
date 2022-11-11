@@ -11,6 +11,7 @@ use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::prelauncher;
 use crate::minecraft::progress::ProgressUpdate;
 use rand::distributions::{Alphanumeric, DistString};
+use sysinfo::{RefreshKind, SystemExt};
 
 ///
 /// CLI of LiquidLauncher.
@@ -26,7 +27,10 @@ pub fn cli_main(build_id: u32) {
         .expect("Failed to download version manifest");
 
     let random_username = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
+
+    let sys = sysinfo::System::new_all();
     let parameters = LaunchingParameter {
+        memory: ((sys.total_memory() / 1000000) as f64 * 0.90) as i64,
         custom_java_path: None,
         auth_player_name: random_username,
         auth_uuid: Uuid::new_v4().to_string(),

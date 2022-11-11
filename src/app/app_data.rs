@@ -11,8 +11,8 @@ pub(crate) struct LauncherOptions {
     pub keep_launcher_open: bool,
     #[serde(rename = "showNightlyBuilds")]
     pub show_nightly_builds: bool,
-    #[serde(rename = "memorySize")]
-    pub memory_size: u32,
+    #[serde(rename = "memoryPercentage")]
+    pub memory_percentage: i32,
     #[serde(rename = "customJavaPath")]
     pub custom_java_path: String,
     #[serde(rename = "customJavaArgs")]
@@ -57,7 +57,7 @@ impl Default for LauncherOptions {
         Self {
             keep_launcher_open: false,
             show_nightly_builds: false,
-            memory_size: 1024,
+            memory_percentage: 90, // 90% memory of computer allocated to game
             custom_java_path: String::new(),
             custom_java_args: String::new(),
             preferred_branch: None,
