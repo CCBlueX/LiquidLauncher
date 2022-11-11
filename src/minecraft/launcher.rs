@@ -278,9 +278,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
             read_len = stdout.read(&mut stdout_buf) => (launcher_data.on_stdout)(&launcher_data.data, &stdout_buf[..read_len?]).unwrap(),
             read_len = stderr.read(&mut stderr_buf) => (launcher_data.on_stderr)(&launcher_data.data, &stderr_buf[..read_len?]).unwrap(),
             _ = &mut terminator => {
-                // todo: might cause issues with fabric error panel
-                // running_task.kill().await?;
-
+                running_task.kill().await?;
                 break;
             },
             _ = running_task.wait() => {
