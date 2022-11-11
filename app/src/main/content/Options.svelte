@@ -14,29 +14,39 @@
     let build = versionData.buildId;
 
     function storeOptions() {
-        Window.this.xcall("store_options", options);
         syncBuilds();
+
+        Window.this.xcall("store_options", options);
     }
 
     function syncBuilds() {
         let branch = document.getElementById("branches").value;
 
         options.preferredBranch = branch;
+        Window.this.xcall("store_options", options);
         updateBuilds(branch);
     }
 
     function syncVersionData() {
-        let selectedBuild = parseInt(document.getElementById("builds").value);
-        options.preferredBuild = selectedBuild;
+        let choosenBuild = document.getElementById("builds").value;
 
-        let newVersionData = builds.find(el => selectedBuild === el.buildId);
-
-        if (newVersionData === undefined) {
-            console.error("failed to sync version data to user selection", selectedBuild);
-            return;
+        let buildData;
+        if (choosenBuild === "latest") {
+            buildData = builds.find(x => x.release || options.showNightlyBuilds);
+            options.preferredBuild = null;
+        } else {
+            let buildId = parseInt(choosenBuild);
+            buildData = builds.find(x => buildId === x.buildId);
+            options.preferredBuild = buildId;
         }
 
-        versionData = newVersionData;
+        if (buildData === undefined) {
+            console.error("failed to sync version data to user selection", buildData);
+            return;
+        }
+        Window.this.xcall("store_options", options);
+
+        versionData = buildData;
     }
 </script>
 
@@ -52,7 +62,7 @@
         {/each}
     </select>
     <select name="builds" id="builds" on:change={syncVersionData}>
-        <option value={builds[0].buildId}>Latest</option>
+        <option value="latest">Latest</option>
 
         {#each builds as build}
             {#if build.release || options.showNightlyBuilds}
@@ -82,9 +92,7 @@
     <h2>Game options</h2>
 
     <label>
-
-        Keep Launcher Open
-        <input type=checkbox bind:checked={options.keepLauncherOpen} on:change={storeOptions}>
+        no game options
     </label>
 </div>
 </div>

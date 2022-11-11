@@ -32,8 +32,13 @@
         function onResponse(receivedBranches) {
             branches = receivedBranches;
 
-            // TODO: Select user preferred branch
-            updateBuilds(receivedBranches[0]);
+            let branch;
+            if (branches.includes(options.preferredBranch)) {
+                branch = options.preferredBranch;
+            } else {
+                branch = branches[0];
+            }
+            updateBuilds(branch);
         }
 
         function onError(e) {
@@ -47,8 +52,11 @@
         function onResponse(receivedBuilds) {
             builds = receivedBuilds;
 
-            // todo: add latest and user preferred version
-            versionData = builds[0]; // Choose newest version
+            let build = builds.find(x => x.buildId === options.preferredBuild);
+            if (build === undefined) {
+                build = builds.find(x => x.release || options.showNightlyBuilds); // Choose newest version
+            }
+            versionData = build;
         }
 
         function onError(e) {
