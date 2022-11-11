@@ -55,7 +55,9 @@
         <option value={builds[0].buildId}>Latest</option>
 
         {#each builds as build}
-            <option value={build.buildId}>{build.lbVersion + " git-" + build.commitId.substring(0, 7)}</option>
+            {#if build.release || options.showNightlyBuilds}
+                <option value={build.buildId}>{build.lbVersion + " git-" + build.commitId.substring(0, 7)}</option>
+            {/if}
         {/each}
     </select>
     <br>
