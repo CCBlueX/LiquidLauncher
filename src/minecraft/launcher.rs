@@ -214,7 +214,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     let mut command_arguments = Vec::new();
 
     // JVM Args
-    version_profile.arguments.add_jvm_args_to_vec(&mut command_arguments, &features, &os_info)?;
+    version_profile.arguments.add_jvm_args_to_vec(&mut command_arguments, &launching_parameter, &features, &os_info)?;
 
     // Main class
     command_arguments.push(version_profile.main_class.as_ref().ok_or_else(|| LauncherError::InvalidVersionProfile("Main class unspecified".to_string()))?.to_owned());
@@ -301,6 +301,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
 }
 
 pub struct LaunchingParameter {
+    pub memory: i64,
     pub custom_java_path: Option<String>,
     pub auth_player_name: String,
     pub auth_uuid: String,
