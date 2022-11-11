@@ -42,7 +42,7 @@
         }
 
         function onError(e) {
-            console.log("Internal rust error on updating branches: " + e);
+            console.log("unable to update branches", e);
         }
 
         Window.this.xcall("get_branches", onResponse, onError);
@@ -60,7 +60,7 @@
         }
 
         function onError(e) {
-            console.log("Internal rust error on updating builds: " + e);
+            console.error("unable to update builds ", e);
         }
 
         Window.this.xcall("get_builds", branch, onResponse, onError);

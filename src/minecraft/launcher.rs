@@ -52,12 +52,18 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     info!("Determined OS to be {} {}", os_info.os_type(), os_info.version());
 
     // JRE download
-    info!("Downloading JRE...");
-    launcher_data_arc.progress_update(ProgressUpdate::set_label("Downloading JRE..."));
+    let java_bin = match &launching_parameter.custom_java_path {
+        Some(path) => PathBuf::from(path),
+        None => {
+            info!("Downloading JRE...");
+            launcher_data_arc.progress_update(ProgressUpdate::set_label("Downloading JRE..."));
 
-    let java_bin = crate::minecraft::jre_downloader::jre_download(data, manifest.build.jre_version, &os_info, |a, b| {
-        launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadJRE, get_progress(0, a, b), get_max(1)));
-    }).await?;
+            crate::minecraft::jre_downloader::jre_download(data, manifest.build.jre_version, &os_info, |a, b| {
+                launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadJRE, get_progress(0, a, b), get_max(1)));
+            }).await?
+        }
+    };
+
 
     // Launch class path for JRE
     let mut class_path = String::new();
@@ -295,6 +301,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
 }
 
 pub struct LaunchingParameter {
+    pub custom_java_path: Option<String>,
     pub auth_player_name: String,
     pub auth_uuid: String,
     pub auth_access_token: String,

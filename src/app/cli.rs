@@ -27,6 +27,7 @@ pub fn cli_main(build_id: u32) {
 
     let random_username = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
     let parameters = LaunchingParameter {
+        custom_java_path: None,
         auth_player_name: random_username,
         auth_uuid: Uuid::new_v4().to_string(),
         auth_access_token: "-".to_string(),
