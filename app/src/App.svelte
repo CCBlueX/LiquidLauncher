@@ -21,6 +21,51 @@
     // debug out options
     console.log(JSON.stringify(options));
 
+    // Versions
+    let versionData = {
+        "buildId": -1,
+        "branch": "LOADING...",
+        "lbVersion": "LOADING...",
+        "mcVersion": "LOADING...",
+        "date": "LOADING..."
+    };
+
+    let branches = [];
+    let builds = [];
+
+    function updateBranches() {
+
+        function onResponse(receivedBranches) {
+            branches = receivedBranches;
+
+            // TODO: Select user preferred branch
+            updateBuilds(receivedBranches[0]);
+        }
+
+        function onError(e) {
+            console.log("Internal rust error on updating branches: " + e);
+        }
+
+        Window.this.xcall("get_branches", onResponse, onError);
+    }
+
+    function updateBuilds(branch) {
+        function onResponse(receivedBuilds) {
+            builds = receivedBuilds;
+
+            // todo: add latest and user preferred version
+            versionData = builds[0]; // Choose newest version
+        }
+
+        function onError(e) {
+            console.log("Internal rust error on updating builds: " + e);
+        }
+
+        Window.this.xcall("get_builds", branch, onResponse, onError);
+    }
+
+    updateBranches();
+
     // Account
     let accountData = options.currentAccount; // username, accessToken, id, type
 
@@ -90,8 +135,6 @@
         Window.this.xcall("check_for_updates", newerVersionFound);
     }
 
-    export let update;
-
     // Check for updates at start-up
     checkForUpdates();
 </script>
@@ -117,10 +160,10 @@
         </TitleBar>
 
         <Content>
-            <LaunchArea accountData={accountData} options={options} bind:update={update} />
+            <LaunchArea accountData={accountData} options={options} versionData={versionData} />
 
             {#if optionsShown}
-                <Options options={options} update={update} closeOptions={switchOptions} logout={logout} />
+                <Options options={options} logout={logout} bind:versionData={versionData} branches={branches} builds={builds} updateBuilds={updateBuilds} />
             {:else}
                 <NewsContainer />
             {/if}
