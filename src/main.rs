@@ -1,3 +1,4 @@
+#![feature(once_cell)]
 #![windows_subsystem = "windows"]
 
 #[cfg(feature = "gui")]
@@ -5,8 +6,11 @@
 extern crate sciter;
 
 use std::fs;
+use std::{sync::Mutex};
+use once_cell::sync::Lazy;
 use anyhow::{anyhow, Result};
 use directories::ProjectDirs;
+use minceraft::auth;
 use crate::app::app_data::LauncherOptions;
 
 pub mod app;
@@ -18,16 +22,17 @@ mod utils;
 pub mod updater;
 
 const LAUNCHER_VERSION: &str = env!("CARGO_PKG_VERSION");
+static LAUNCHER_DIRECTORY: Lazy<ProjectDirs> = Lazy::new(|| {
+    match ProjectDirs::from("net", "CCBlueX",  "LiquidLauncher") {
+        Some(proj_dirs) => proj_dirs,
+        None => panic!("no application directory")
+    }
+});
 
 pub fn main() -> Result<()> {
     // application directory
-    let app_data = match ProjectDirs::from("net", "CCBlueX",  "LiquidLauncher") {
-        Some(proj_dirs) => proj_dirs,
-        None => return Err(anyhow!("no application directory"))
-    };
-
-    fs::create_dir_all(app_data.data_dir())?;
-    fs::create_dir_all(app_data.config_dir())?;
+    fs::create_dir_all(LAUNCHER_DIRECTORY.data_dir())?;
+    fs::create_dir_all(LAUNCHER_DIRECTORY.config_dir())?;
 
     // app
 
@@ -38,7 +43,7 @@ pub fn main() -> Result<()> {
         #[cfg(feature = "cli")]
             {
                 let u_build_id = build_id.parse::<u32>().expect("build id not valid");
-                app::cli::cli_main(app_data, u_build_id);
+                app::cli::cli_main(u_build_id);
                 return Ok(());
             }
 
@@ -48,7 +53,7 @@ pub fn main() -> Result<()> {
 
     #[cfg(feature = "gui")]
         {
-            app::gui::gui_main(app_data);
+            app::gui::gui_main();
             return Ok(());
         }
 

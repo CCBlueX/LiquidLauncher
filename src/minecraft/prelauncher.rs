@@ -9,6 +9,7 @@ use tokio::fs;
 use crate::app::api::{Build, LauncherApi, LaunchManifest, LoaderSubsystem, ModSource};
 use crate::error::LauncherError;
 use crate::app::webview::download_client;
+use crate::LAUNCHER_DIRECTORY;
 use crate::minecraft::launcher;
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
@@ -18,7 +19,7 @@ use crate::utils::{download_file, get_maven_artifact_path};
 ///
 /// Prelaunching client
 ///
-pub(crate) async fn launch<D: Send + Sync>(app_data: ProjectDirs, build: &Build, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
+pub(crate) async fn launch<D: Send + Sync>(build: &Build, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
     info!("Loading minecraft version manifest...");
     let mc_version_manifest = VersionManifest::download().await?;
 
@@ -30,7 +31,7 @@ pub(crate) async fn launch<D: Send + Sync>(app_data: ProjectDirs, build: &Build,
     launcher_data.progress_update(ProgressUpdate::SetProgress(0));
 
     // Copy retrieve and copy mods from manifest
-    retrieve_and_copy_mods(app_data.data_dir(), &launch_manifest, &launcher_data).await?;
+    retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &launcher_data).await?;
 
     info!("Loading version profile...");
     let manifest_url = match loader.subsystem {
@@ -58,7 +59,7 @@ pub(crate) async fn launch<D: Send + Sync>(app_data: ProjectDirs, build: &Build,
 
     info!("Launching {}...", launch_manifest.build.commit_id);
 
-    launcher::launch(app_data.data_dir(), launch_manifest, version, launching_parameter, launcher_data).await?;
+    launcher::launch(LAUNCHER_DIRECTORY.data_dir(), launch_manifest, version, launching_parameter, launcher_data).await?;
     Ok(())
 }
 
