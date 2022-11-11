@@ -10,12 +10,7 @@
 
     console.log(JSON.stringify(versionData));
 
-    let branch = versionData.branch;
-    let build = versionData.buildId;
-
     function storeOptions() {
-        syncBuilds();
-
         Window.this.xcall("store_options", options);
     }
 
@@ -73,7 +68,7 @@
     <br>
     <label>
         Show nightly builds
-        <input type=checkbox bind:checked={options.showNightlyBuilds} on:change={storeOptions}>
+        <input type=checkbox bind:checked={options.showNightlyBuilds} on:change={syncBuilds}>
     </label>
 </div>
 
@@ -82,9 +77,10 @@
 
     <label>
         Keep Launcher Open
-        <input type=checkbox bind:checked={options.keepLauncherOpen} on:change={storeOptions}><br>
-        <button class="logout" on:click={logout}>Logout</button>
+        <input type=checkbox bind:checked={options.keepLauncherOpen} on:change={storeOptions}>
     </label>
+    <br>
+    <button class="logout" on:click={logout}>Logout</button>
 <br>
 </div>
 
@@ -92,9 +88,11 @@
     <h2>Game options</h2>
 
     <label>
-        no game options
+        Custom JVM
+        <input type=text bind:value={options.customJavaPath} on:change={storeOptions}>
     </label>
 </div>
+
 </div>
 
 <style>
