@@ -17,7 +17,7 @@ use rand::distributions::{Alphanumeric, DistString};
 ///
 /// TODO: rework usage design and add missing options
 ///
-pub fn cli_main(app_data: ProjectDirs, build_id: u32) {
+pub fn cli_main(build_id: u32) {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
     let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().expect("Failed to open runtime");
@@ -50,7 +50,7 @@ pub fn cli_main(app_data: ProjectDirs, build_id: u32) {
     };
 
     let result = rt.block_on(async move {
-        run(app_data, parameters, target_build).await
+        run(parameters, target_build).await
     });
 
     if let Err(e) = result {
@@ -58,11 +58,10 @@ pub fn cli_main(app_data: ProjectDirs, build_id: u32) {
     }
 }
 
-async fn run(app_data: ProjectDirs, parameters: LaunchingParameter, build: &Build) -> Result<()> {
+async fn run(parameters: LaunchingParameter, build: &Build) -> Result<()> {
     let (_, rx) = tokio::sync::oneshot::channel();
 
     prelauncher::launch(
-        app_data,
         build,
         parameters,
         LauncherData {

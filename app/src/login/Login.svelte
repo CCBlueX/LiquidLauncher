@@ -1,9 +1,12 @@
 <script>
+    import {url} from "../main/content/social-bar/ButtonText.svelte";
+
     export let handleMojangLogin;
     export let handleMicrosoftLogin;
     export let handleOfflineLogin;
 
     let passwordShown = false;
+    let microsoftCode;
 
     function handleRevealPassword() {
         passwordShown = !passwordShown;
@@ -14,33 +17,52 @@
     }
 
     function clickMicrosoftLogin() {
-        handleMicrosoftLogin();
+        function onCode(code) {
+            microsoftCode = code;
+        }
+
+        handleMicrosoftLogin(onCode);
     }
 
     function clickOfflineLogin() {
         handleOfflineLogin(document.getElementById("username").value);
+    }
+
+    function linkMicrosoft() {
+        Window.this.xcall("open", "https://microsoft.com/link");
     }
 </script>
 
 <div class="login">
     <div class="title">Log in</div>
     <div class="divider"></div>
-    <div class="input-wrapper">
-        <div class="icon">
-            <img src="img/icon/icon-person.svg" alt="icon">
+    {#if microsoftCode == null}
+        <div class="input-wrapper">
+            <div class="icon">
+                <img src="img/icon/icon-person.svg" alt="icon">
+            </div>
+            <input id="username" class="input-text" type="text" placeholder="Username or e-mail address">
         </div>
-        <input id="username" class="input-text" type="text" placeholder="Username or e-mail address">
-    </div>
-    <div class="input-wrapper">
-        <div class="icon">
-            <img src="img/icon/icon-lock.svg" alt="icon">
+        <div class="input-wrapper">
+            <div class="icon">
+                <img src="img/icon/icon-lock.svg" alt="icon">
+            </div>
+            <input id="password" class="input-text" type="{passwordShown ? "text" : "password"}" placeholder="Password">
+            <img class="button-reveal-password" on:click={handleRevealPassword} src="img/icon/icon-eye.svg" alt="reveal">
         </div>
-        <input id="password" class="input-text" type="{passwordShown ? "text" : "password"}" placeholder="Password">
-        <img class="button-reveal-password" on:click={handleRevealPassword} src="img/icon/icon-eye.svg" alt="reveal">
-    </div>
-    <div class="button-large primary" on:click={clickMojangLogin}>Login</div>
-    <div class="button-large" on:click={clickMicrosoftLogin}>Microsoft Login</div>
-    <div class="button-large" on:click={clickOfflineLogin} >Use as Offline Account</div>
+        <div class="button-large primary" on:click={clickMojangLogin}>Login</div>
+        <div class="button-large" on:click={clickMicrosoftLogin}>Microsoft Login</div>
+        <div class="button-large" on:click={clickOfflineLogin} >Use as Offline Account</div>
+    {:else}
+        <div class="input-wrapper">
+            <div class="icon">
+                <img src="img/icon/icon-lock.svg" alt="icon">
+            </div>
+            <input id="code" class="input-text" type="text" bind:value={microsoftCode} contenteditable="false">
+        </div>
+
+        <div class="button-large primary" on:click={linkMicrosoft}>Link</div>
+    {/if}
 </div>
 
 <style>

@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, thread};
 use std::iter::FromIterator;
 use std::option::Option::Some;
 use std::process::exit;
@@ -16,18 +16,17 @@ use tokio::task;
 use tokio::task::JoinHandle;
 
 use crate::app::api::LauncherApi;
-use crate::LauncherOptions;
+use crate::{LAUNCHER_DIRECTORY, LauncherOptions};
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
-use crate::minecraft::prelauncher;
+use crate::minecraft::{prelauncher, service};
 use crate::minecraft::progress::ProgressUpdate;
-use crate::minecraft::service::AuthService;
+use crate::minecraft::service::{auth_msa, auth_offline, authenticate_mojang};
 
 struct RunnerInstance {
     terminator: tokio::sync::oneshot::Sender<()>,
 }
 
 struct ConstantLauncherData {
-    app_data: ProjectDirs
 }
 
 struct EventHandler {
@@ -71,7 +70,6 @@ impl EventHandler {
     // script handler
     fn run_client(&self, build_id: i32, account_data: Value, on_progress: Value, on_output: Value, on_finalization: Value, on_error: Value) -> bool {
         let runner_instance_clone = self.runner_instance.clone();
-        let constant_data_clone = self.constant_data.clone();
 
         let mut runner_instance_content = self.async_runtime.block_on(self.runner_instance.lock());
         let mut join_handle = self.async_runtime.block_on(self.join_handle.lock());
@@ -83,15 +81,13 @@ impl EventHandler {
         let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
 
         let launching_parameter = LaunchingParameter {
-            auth_player_name: account_data.get_item("username").as_string().unwrap_or_else(|| "unexpected".to_string()),
-            auth_uuid: account_data.get_item("id").as_string().unwrap_or_else(|| "069a79f4-44e9-4726-a5be-fca90e38aaf5".to_string()),
-            auth_access_token: account_data.get_item("accessToken").as_string().unwrap_or_else(|| "-".to_string()),
+            auth_player_name: account_data.get_item("username").as_string().unwrap_or_else(|| "".to_string()),
+            auth_uuid: account_data.get_item("uuid").as_string().unwrap_or_else(|| "".to_string()),
+            auth_access_token: account_data.get_item("token").as_string().unwrap_or_else(|| "-".to_string()),
             auth_xuid: "x".to_string(),
-            clientid: "x".to_string(),
+            clientid: service::AZURE_CLIENT_ID.to_string(),
             user_type: account_data.get_item("type").as_string().unwrap_or_else(|| "legacy".to_string()),
         };
-
-        let app_data = self.constant_data.app_data.clone();
 
         let jh = self.async_runtime.spawn(async move {
             // todo: cache builds somewhere
@@ -111,7 +107,6 @@ impl EventHandler {
             };
 
             if let Err(err) = prelauncher::launch(
-                app_data,
                 build,
                 launching_parameter,
                 LauncherData {
@@ -195,9 +190,40 @@ impl EventHandler {
         true
     }
 
+    fn login_offline(&self, username: String, on_response: Value) -> bool {
+        self.async_runtime.spawn(async move {
+            let acc = auth_offline(username).await;
+            on_response.call(None, &make_args!(Value::parse(&*serde_json::to_string(&acc).unwrap()).unwrap()), None).unwrap();
+        });
+
+        true
+    }
+
+    fn login_msa(&self, on_error: Value, on_code: Value, on_response: Value) -> bool {
+        // todo: fork library and make it async
+        thread::spawn(move || {
+            let on_code_fn = |code: &String| {
+                on_code.call(None, &make_args!(Value::parse(&*code).unwrap()), None).unwrap();
+            };
+
+            match auth_msa(on_code_fn) {
+                Ok(acc) => {
+                    on_response.call(None, &make_args!(Value::parse(&*serde_json::to_string(&acc).unwrap()).unwrap()), None).unwrap()
+                },
+                Err(err) => {
+                    println!("{:?}", err);
+
+                    on_error.call(None, &make_args!(err.to_string()), None).unwrap()
+                }
+            };
+        });
+
+        true
+    }
+
     fn login_mojang(&self, username: String, password: String, on_error: Value, on_response: Value) -> bool {
         self.async_runtime.spawn(async move {
-            match AuthService::authenticate(AuthService::MOJANG, username, password).await {
+            match authenticate_mojang(username, password).await {
                 Ok(acc) => {
                     on_response.call(None, &make_args!(Value::parse(&*serde_json::to_string(&acc).unwrap()).unwrap()), None).unwrap()
                 },
@@ -213,7 +239,7 @@ impl EventHandler {
     }
 
     fn get_options(&self) -> Value {
-        let config_dir = self.constant_data.app_data.config_dir();
+        let config_dir = LAUNCHER_DIRECTORY.config_dir();
         let options = LauncherOptions::load(config_dir).unwrap_or_default(); // default to basic options if unable to load
         let json_options = options.to_json().unwrap();
 
@@ -221,7 +247,7 @@ impl EventHandler {
     }
 
     fn store_options(&self, options: Value) -> bool {
-        let config_dir = self.constant_data.app_data.config_dir();
+        let config_dir = LAUNCHER_DIRECTORY.config_dir();
         match LauncherOptions::from_json(options.to_string()) {
             Ok(launcher_options) => launcher_options.store(config_dir).unwrap(),
             Err(e) => error!("Storing options failed due to {}", e)
@@ -281,6 +307,8 @@ impl sciter::EventHandler for EventHandler {
         fn store_options(Value);
 		fn get_branches(Value, Value);
         fn get_builds(String, Value, Value);
+        fn login_offline(String, Value);
+        fn login_msa(Value, Value, Value);
         fn login_mojang(String, String, Value, Value);
         fn check_for_updates(Value);
         fn open(String);
@@ -290,7 +318,7 @@ impl sciter::EventHandler for EventHandler {
 
 
 /// Runs the GUI and returns when the window is closed.
-pub(crate) fn gui_main(app_data: ProjectDirs) {
+pub(crate) fn gui_main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
 
     let gui_index = get_path().unwrap();
@@ -303,7 +331,7 @@ pub(crate) fn gui_main(app_data: ProjectDirs) {
         .with_size((1000, 600))
         .create();
 
-    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { app_data }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
+    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
 
     frame.load_file(&gui_index);
     frame.run_app();

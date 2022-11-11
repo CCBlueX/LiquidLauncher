@@ -61,45 +61,41 @@
     updateBranches();
 
     // Account
-    let accountData = options.currentAccount; // username, accessToken, id, type
+    let accountData = options.currentAccount; // name, token, uuid, type
+
+    function saveAccount(account) {
+        accountData = account;
+        options.currentAccount = accountData;
+        Window.this.xcall("store_options", options);
+    }
 
     function loginIntoMojang(username, password) {
 
-        function onDone(account) {
-            accountData = account;
-        }
-
         function onError(error) {
-            console.log("Error: " + error);
-
-            // todo: handle login error
-            // label.textContent = "Error: " + error;
+            console.error("failed mojang authentication", error);
         }
 
-        Window.this.xcall("login_mojang", username, password, onError, onDone);
+        Window.this.xcall("login_mojang", username, password, onError, saveAccount);
     }
 
     function loginIntoOffline(username) {
         if (username.length <= 0 || username.length > 16) {
             // Username is too long
             // todo: handle error
-            console.log("Not valid username.");
+            console.error("not valid username (0 < username <= 16)", username);
             return;
         }
 
-        accountData = {
-            "username": username,
-            "accessToken": "-",
-            "id": "", // todo: get uuid from username
-            "type": "legacy"
-        };
-        options.currentAccount = accountData;
-        Window.this.xcall("store_options", options);
+        Window.this.xcall("login_offline", username, saveAccount);
     }
 
-    function loginIntoMicrosoft() {
-        // see microsoft_login branch
-        // Window.this.xcall("login_microsoft");
+    function loginIntoMicrosoft(onCode) {
+
+        function onError(error) {
+            console.error("failed microsoft authentication", error);
+        }
+
+        Window.this.xcall("login_msa", onError, onCode, saveAccount);
     }
 
     function exitApp() {
@@ -148,8 +144,8 @@
     {:else}
         <TitleBar>
             <Logo />
-            <WelcomeMessage message="Welcome {accountData.username}, try out our new version!" />
-            <Account accountName={accountData.username} accountType={accountData.type} avatarUrl="https://visage.surgeplay.com/face/{accountData.id}" showOptions={switchOptions} />
+            <WelcomeMessage message="Welcome {accountData.name}, try out our new version!" />
+            <Account accountName={accountData.name} accountType={accountData.type} avatarUrl="https://visage.surgeplay.com/face/{accountData.uuid}" showOptions={switchOptions} />
             <ButtonClose exit={exitApp} />
         </TitleBar>
 
