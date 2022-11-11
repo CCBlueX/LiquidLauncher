@@ -1,6 +1,7 @@
 <script>
     import {fetchNews} from "../../utils/news";
 
+    export let versionData;
     export let accountData;
     export let options;
 
@@ -18,65 +19,6 @@
         previewImage = news.banner.image;
     })();
 
-    export const update = () => {
-        updateBuilds();
-    }
-
-    function updateBranches() {
-
-        function onResponse(branches) {
-            let branchSelection = document.getElementById("branches");
-
-            branches.forEach(branch => {
-                let opt = document.createElement("option");
-                opt.value = branch;
-                opt.innerHTML = branch;
-                branchSelection.appendChild(opt);
-            });
-            branchSelection.value = branches.first;
-
-            updateBuilds();
-        }
-
-        function onError(e) {
-            console.log("Internal rust error on updating branches: " + e);
-        }
-
-        Window.this.xcall("get_branches", onResponse, onError);
-    }
-
-    let builds = [];
-
-    function updateBuilds() {
-        let branchSelection = document.getElementById("branches");
-        let branch = branchSelection.value;
-
-        let buildsSelection = document.getElementById("builds");
-        buildsSelection.innerHTML = "";
-
-        function onResponse(newBuilds) {
-            builds = newBuilds;
-
-            builds.forEach(build => {
-                if (build.release || options.showNightlyBuilds) {
-                    let opt = document.createElement("option");
-                    opt.value = build.buildId;
-                    opt.innerHTML = "Commit: " + build.commitId.substring(0, 7) + "\nVersion: " + build.lbVersion + " (MC " + build.mcVersion + ")\n" + build.date;
-                    buildsSelection.appendChild(opt);
-                }
-            });
-
-            // Select newest version
-            buildsSelection.value = builds[0].buildId;
-        }
-
-        function onError(e) {
-            console.log("Internal rust error on updating builds: " + e);
-        }
-
-        Window.this.xcall("get_builds", branch, onResponse, onError);
-    }
-
     function launching(status) {
         document.getElementById("launch").style.display = status ? 'block' : 'none';
         document.getElementById("version-select").style.display = status ? 'none' : 'block';
@@ -84,7 +26,6 @@
     }
 
     function startClient() {
-        let buildsSelection = document.getElementById("builds");
         let playButton = document.getElementById("play");
 
         let label = document.getElementById("statusLabel");
@@ -134,7 +75,7 @@
             log("Error on launching client: " + error);
         }
 
-        Window.this.xcall("run_client", parseInt(buildsSelection.value), accountData, onProgress, onOutput, onDone, onError);
+        Window.this.xcall("run_client", versionData.buildId, accountData, onProgress, onOutput, onDone, onError);
 
         label.textContent = "Running...";
         launching(true);
@@ -146,8 +87,7 @@
         launching(false);
     }
 
-    // Update branches
-    updateBranches();
+
 </script>
 
 <div class="wrapper">
@@ -177,18 +117,14 @@
     <div id="version-select" class="version-select" style="display: block;">
         <div class="version">
             <img class="icon" src="img/icon/icon-version-lb.png" alt="liquidbounce">
-            <div class="name">Branch</div>
-            <!--            <div class="date"></div>-->
-
-            <select name="branches" id="branches" on:change={updateBuilds}></select>
+            <div class="name">{versionData.lbVersion}</div>
+            <div class="date">{versionData.date}</div>
         </div>
 
         <div class="version">
             <img class="icon" src="img/icon/icon-version-mc.png" alt="minecraft">
-            <div class="name">Build</div>
-            <!--            <div class="date">2021-05-07</div>-->
-
-            <select name="builds" id="builds"></select>
+            <div class="name">{versionData.mcVersion}</div>
+            <div class="date">TODO: Date of MC Version</div>
         </div>
     </div>
 
