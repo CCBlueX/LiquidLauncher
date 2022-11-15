@@ -4,6 +4,10 @@
     export let text;
     export let targetURL;
     export let date;
+
+    function openTargetUrl() {
+        Window.this.xcall("open", targetURL);
+    }
 </script>
 
 <div class="news">
@@ -16,7 +20,7 @@
             <div class="date">{date}</div>
         </div>
         <div class="text">{text}</div>
-        <button class="show-changelog">Read More</button>
+        <button class="show-changelog" on:click={openTargetUrl}>Read More</button>
     </div>
 </div>
 
