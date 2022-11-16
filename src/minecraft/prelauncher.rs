@@ -2,11 +2,10 @@ use std::io::{Cursor, Read};
 use std::path::Path;
 
 use anyhow::Result;
-use directories::ProjectDirs;
 use log::*;
 use tokio::fs;
 
-use crate::app::api::{Build, LauncherApi, LaunchManifest, LoaderSubsystem, ModSource};
+use crate::app::api::{Build, ApiEndpoints, LaunchManifest, LoaderSubsystem, ModSource};
 use crate::error::LauncherError;
 use crate::app::webview::download_client;
 use crate::LAUNCHER_DIRECTORY;
@@ -36,7 +35,7 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
     let manifest_url = match subsystem {
         LoaderSubsystem::Fabric { manifest, .. } => manifest
             .replace("{MINECRAFT_VERSION}", &build.mc_version)
-            .replace("{FABRIC_LOADER_VERSION}", &build.fabric_loader_version),
+            .replace("{FABRIC_LOADER_VERSION}", &build.subsystem_specific_data.fabric_loader_version),
         LoaderSubsystem::Forge { manifest, .. } => manifest.clone()
     };
     let mut version = VersionProfile::load(&manifest_url).await?;

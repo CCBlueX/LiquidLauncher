@@ -6,7 +6,7 @@ use env_logger::Env;
 use log::*;
 use uuid::Uuid;
 
-use crate::app::api::{Build, LauncherApi};
+use crate::app::api::{Build, ApiEndpoints};
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::prelauncher;
 use crate::minecraft::progress::ProgressUpdate;
@@ -23,7 +23,7 @@ pub fn cli_main(build_id: u32) {
 
     let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().expect("Failed to open runtime");
 
-    let builds = rt.block_on(LauncherApi::load_all_builds())
+    let builds = rt.block_on(ApiEndpoints::builds())
         .expect("Failed to download version manifest");
 
     let random_username = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
@@ -67,7 +67,7 @@ pub fn cli_main(build_id: u32) {
 async fn run(parameters: LaunchingParameter, build: &Build) -> Result<()> {
     let (_, rx) = tokio::sync::oneshot::channel();
 
-    let launch_manifest = LauncherApi::load_version_manifest(build.build_id as i32).await?;
+    let launch_manifest = ApiEndpoints::launch_manifest(build.build_id as i32).await?;
 
     prelauncher::launch(
         launch_manifest,
