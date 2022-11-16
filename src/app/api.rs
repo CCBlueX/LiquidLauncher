@@ -23,7 +23,7 @@ impl LauncherApi {
         Ok(reqwest::get(format!("{}/api/v1/version/builds/{}", LAUNCHER_API, branch)).await?.error_for_status()?.json::<Vec<Build>>().await?)
     }
 
-    pub(crate) async fn load_version_manifest(build_id: u32) -> Result<LaunchManifest> {
+    pub(crate) async fn load_version_manifest(build_id: i32) -> Result<LaunchManifest> {
         Ok(reqwest::get(format!("{}/api/v1/version/launch/{}", LAUNCHER_API, build_id)).await?.error_for_status()?.json::<LaunchManifest>().await?)
     }
 }
@@ -35,6 +35,7 @@ pub struct Build {
     #[serde(rename(serialize = "commitId"))]
     pub commit_id: String,
     pub branch: String,
+    pub subsystem: String,
     #[serde(rename(serialize = "lbVersion"))]
     pub lb_version: String,
     #[serde(rename(serialize = "mcVersion"))]
@@ -60,7 +61,7 @@ pub struct Build {
 #[derive(Deserialize, Debug)]
 pub struct LaunchManifest {
     pub build: Build,
-    pub loader: LoaderVersion,
+    pub subsystem: LoaderSubsystem,
     pub mods: Vec<LoaderMod>,
     pub repositories: BTreeMap<String, String>,
 }
@@ -97,18 +98,11 @@ pub struct LoaderMod {
     pub source: ModSource,
 }
 
-
 #[derive(Deserialize, Debug)]
-pub struct LoaderVersion {
-    pub subsystem: LoaderSubsystem,
-    pub launcher_manifest: String,
-    pub mod_directory: String,
-}
-
-#[derive(Deserialize, Debug)]
+#[serde(tag = "name")]
 pub enum LoaderSubsystem {
     #[serde(rename = "fabric")]
-    Fabric,
+    Fabric { manifest: String, mod_directory: String },
     #[serde(rename = "forge")]
-    Forge,
+    Forge { manifest: String, mod_directory: String  },
 }

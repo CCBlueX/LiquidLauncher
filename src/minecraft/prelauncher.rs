@@ -19,13 +19,12 @@ use crate::utils::{download_file, get_maven_artifact_path};
 ///
 /// Prelaunching client
 ///
-pub(crate) async fn launch<D: Send + Sync>(build: &Build, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
+pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
     info!("Loading minecraft version manifest...");
     let mc_version_manifest = VersionManifest::download().await?;
 
-    info!("Loading launch manifest...");
-    let launch_manifest = LauncherApi::load_version_manifest(build.build_id).await?;
-    let loader = &launch_manifest.loader;
+    let build = &launch_manifest.build;
+    let subsystem = &launch_manifest.subsystem;
 
     launcher_data.progress_update(ProgressUpdate::set_max());
     launcher_data.progress_update(ProgressUpdate::SetProgress(0));
@@ -34,11 +33,11 @@ pub(crate) async fn launch<D: Send + Sync>(build: &Build, launching_parameter: L
     retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &launcher_data).await?;
 
     info!("Loading version profile...");
-    let manifest_url = match loader.subsystem {
-        LoaderSubsystem::Fabric => loader.launcher_manifest
-            .replace("{MINECRAFT_VERSION}", &*build.mc_version)
-            .replace("{FABRIC_LOADER_VERSION}", &*build.fabric_loader_version),
-        LoaderSubsystem::Forge => loader.launcher_manifest.clone()
+    let manifest_url = match subsystem {
+        LoaderSubsystem::Fabric { manifest, .. } => manifest
+            .replace("{MINECRAFT_VERSION}", &build.mc_version)
+            .replace("{FABRIC_LOADER_VERSION}", &build.fabric_loader_version),
+        LoaderSubsystem::Forge { manifest, .. } => manifest.clone()
     };
     let mut version = VersionProfile::load(&manifest_url).await?;
 
