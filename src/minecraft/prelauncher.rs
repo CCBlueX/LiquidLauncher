@@ -5,7 +5,7 @@ use anyhow::Result;
 use log::*;
 use tokio::fs;
 
-use crate::app::api::{Build, ApiEndpoints, LaunchManifest, LoaderSubsystem, ModSource};
+use crate::app::api::{Build, ApiEndpoints, LaunchManifest, LoaderSubsystem, ModSource, LoaderMod};
 use crate::error::LauncherError;
 use crate::app::webview::download_client;
 use crate::LAUNCHER_DIRECTORY;
@@ -29,7 +29,11 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
     launcher_data.progress_update(ProgressUpdate::SetProgress(0));
 
     // Copy retrieve and copy mods from manifest
-    retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &launcher_data).await?;
+    clear_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest).await?;
+    retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &launch_manifest.mods, &launcher_data).await?;
+    // todo: select via GUI
+    let additional_mods = ApiEndpoints::mods(&launch_manifest.build.mc_version, &launch_manifest.build.subsystem).await?;
+    retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &additional_mods, &launcher_data).await?;
 
     info!("Loading version profile...");
     let manifest_url = match subsystem {
@@ -61,12 +65,9 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
     Ok(())
 }
 
-pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, progress: &impl ProgressReceiver) -> Result<()> {
+pub(crate) async fn clear_mods(data: &Path, manifest: &LaunchManifest) -> Result<()> {
     let mod_cache_path = data.join("mod_cache");
     let mods_path = data.join("gameDir").join(&manifest.build.branch).join("mods");
-
-    fs::create_dir_all(&mod_cache_path).await?;
-    fs::create_dir_all(&mods_path).await?;
 
     // Clear mods directory
     let mut mods_read = fs::read_dir(&mods_path).await?;
@@ -75,16 +76,26 @@ pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifes
             fs::remove_file(entry.path()).await?;
         }
     }
+    Ok(())
+}
+
+pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods: &Vec<LoaderMod>, progress: &impl ProgressReceiver) -> Result<()> {
+    let mod_cache_path = data.join("mod_cache");
+    let mods_path = data.join("gameDir").join(&manifest.build.branch).join("mods");
+
+    fs::create_dir_all(&mod_cache_path).await?;
+    fs::create_dir_all(&mods_path).await?;
+
+
 
     // Download and copy mods
+    let max = get_max(mods.len());
 
-    let max = get_max(manifest.mods.len());
-
-    for (mod_idx, current_mod) in manifest.mods.iter().enumerate() {
+    for (mod_idx, current_mod) in mods.iter().enumerate() {
         // Skip mods that are not needed
-        if !current_mod.required && !current_mod.default {
-            continue;
-        }
+        // if !current_mod.required && !current_mod.default {
+        //    continue;
+        //}
 
         progress.progress_update(ProgressUpdate::set_label(format!("Downloading recommended mod {}", current_mod.name)));
 
