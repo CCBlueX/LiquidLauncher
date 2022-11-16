@@ -8,7 +8,7 @@ use anyhow::{anyhow, Result};
 use directories::ProjectDirs;
 use env_logger::Env;
 use futures::lock::Mutex;
-use log::error;
+use log::{error, info};
 use path_absolutize::Absolutize;
 use sciter::Value;
 use sysinfo::SystemExt;
@@ -104,24 +104,17 @@ impl EventHandler {
         };
 
         let jh = self.async_runtime.spawn(async move {
-            // todo: cache builds somewhere
-            let builds = match LauncherApi::load_all_builds().await {
+            info!("Loading launch manifest...");
+            let launch_manifest = match LauncherApi::load_version_manifest(build_id).await {
                 Ok(build) => build,
                 Err(err) => {
                     on_error.call(None, &make_args!(err.to_string()), None).unwrap();
                     return;
                 }
             };
-            let build = match builds.iter().find(|x| x.build_id == build_id as u32) {
-                Some(build) => build,
-                None => {
-                    on_error.call(None, &make_args!("unable to find build"), None).unwrap();
-                    return;
-                }
-            };
 
             if let Err(err) = prelauncher::launch(
-                build,
+                launch_manifest,
                 parameters,
                 LauncherData {
                     on_stdout: handle_stdout,

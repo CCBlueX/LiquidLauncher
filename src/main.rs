@@ -6,7 +6,7 @@
 extern crate sciter;
 
 use std::fs;
-use std::{sync::Mutex};
+use std::sync::Mutex;
 use once_cell::sync::Lazy;
 use anyhow::{anyhow, Result};
 use directories::ProjectDirs;

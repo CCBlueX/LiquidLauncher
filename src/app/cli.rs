@@ -67,8 +67,10 @@ pub fn cli_main(build_id: u32) {
 async fn run(parameters: LaunchingParameter, build: &Build) -> Result<()> {
     let (_, rx) = tokio::sync::oneshot::channel();
 
+    let launch_manifest = LauncherApi::load_version_manifest(build.build_id as i32).await?;
+
     prelauncher::launch(
-        build,
+        launch_manifest,
         parameters,
         LauncherData {
             on_stdout: handle_stdout,
