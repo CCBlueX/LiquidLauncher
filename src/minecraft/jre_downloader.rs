@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use os_info::{Bitness, Info, Type};
 use path_absolutize::Absolutize;
-use serde::Deserialize;
 use tokio::fs;
+use crate::app::api::ApiEndpoints;
 
 use crate::utils::{download_file, zip_extract};
 
@@ -21,17 +21,14 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, os_info: &Info, on_p
             Type::Macos => "mac",
             Type::Windows => "windows",
             _ => "linux",
-        };
+        }.to_string();
         let os_arch = match os_info.bitness() {
             Bitness::X64 => "x64",
             _ => "x32",
-        };
+        }.to_string();
 
         // Request JRE source
-        let jre_source = reqwest::get(format!("https://api.liquidbounce.net/api/v1/version/jre/{}/{}/{}", os_name, os_arch, jre_version))
-            .await?
-            .json::<JreSource>()
-            .await?;
+        let jre_source = ApiEndpoints::jre(&os_name, &os_arch, jre_version).await?;
 
         // Download from JRE source and extract runtime files
         fs::create_dir_all(&runtime_path).await?;
@@ -64,8 +61,3 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, os_info: &Info, on_p
     return Err(anyhow::anyhow!("Failed to find JRE"));
 }
 
-#[derive(Deserialize)]
-pub struct JreSource {
-    pub version: u32,
-    pub download_url: String
-}

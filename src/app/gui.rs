@@ -16,7 +16,7 @@ use tokio::runtime::Runtime;
 use tokio::task;
 use tokio::task::JoinHandle;
 
-use crate::app::api::LauncherApi;
+use crate::app::api::ApiEndpoints;
 use crate::{LAUNCHER_DIRECTORY, LauncherOptions};
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::{prelauncher, service};
@@ -105,7 +105,7 @@ impl EventHandler {
 
         let jh = self.async_runtime.spawn(async move {
             info!("Loading launch manifest...");
-            let launch_manifest = match LauncherApi::load_version_manifest(build_id).await {
+            let launch_manifest = match ApiEndpoints::launch_manifest(build_id).await {
                 Ok(build) => build,
                 Err(err) => {
                     on_error.call(None, &make_args!(err.to_string()), None).unwrap();
@@ -161,7 +161,7 @@ impl EventHandler {
     // script handler
     fn get_branches(&self, on_response: Value, on_error: Value) -> bool {
         self.async_runtime.spawn(async move {
-            match LauncherApi::load_branches().await {
+            match ApiEndpoints::branches().await {
                 Ok(branches) => {
                     on_response.call(None, &make_args!(Value::from_iter(branches)), None).unwrap()
                 },
@@ -178,7 +178,7 @@ impl EventHandler {
 
     fn get_builds(&self, branch: String, on_response: Value, on_error: Value) -> bool {
         self.async_runtime.spawn(async move {
-            match LauncherApi::load_builds(branch).await {
+            match ApiEndpoints::builds_by_branch(branch).await {
                 Ok(builds) => {
                     let builds = Value::from_iter(builds.iter().map(|x| {
                         Value::parse(&*serde_json::to_string(x).unwrap()).unwrap()
