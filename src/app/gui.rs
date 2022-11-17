@@ -103,6 +103,7 @@ impl EventHandler {
             let launch_manifest = match ApiEndpoints::launch_manifest(build_id).await {
                 Ok(build) => build,
                 Err(err) => {
+                    error!("Failed to load launch manifest: {:?}", err);
                     on_error.call(None, &make_args!(err.to_string()), None).unwrap();
                     return;
                 }
@@ -120,6 +121,7 @@ impl EventHandler {
                     terminator: terminator_rx
                 }
             ).await {
+                error!("Failed to launch minecraft client: {:?}", err);
                 on_error.call(None, &make_args!(err.to_string()), None).unwrap();
             }
 
