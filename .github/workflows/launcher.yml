@@ -110,7 +110,7 @@ jobs:
 
       - name: Download and extract Sciter and copy into unpacker
         run: |
-          curl https://gitlab.com/sciter-engine/sciter-js-sdk/-/archive/main/sciter-js-sdk-main.zip -o sciter-js-sdk-main.zip
+          curl https://gitlab.com/sciter-engine/sciter-js-sdk/-/archive/5.0.0.9/sciter-js-sdk-5.0.0.9.zip -o sciter-js-sdk-main.zip
           7z x sciter-js-sdk-main.zip
           cp sciter-js-sdk-main/bin/windows/x64/sciter.dll unpacker/data/
 
