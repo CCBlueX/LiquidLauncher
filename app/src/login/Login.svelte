@@ -1,6 +1,4 @@
 <script>
-    import {url} from "../main/content/social-bar/ButtonText.svelte";
-
     export let handleMojangLogin;
     export let handleMicrosoftLogin;
     export let handleOfflineLogin;

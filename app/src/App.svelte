@@ -75,6 +75,9 @@
         accountData = account;
         options.currentAccount = accountData;
         Window.this.xcall("store_options", options);
+
+        console.log("Successfully saved account.");
+        console.log(JSON.stringify(accountData));
     }
 
     function loginIntoMojang(username, password) {
@@ -106,20 +109,34 @@
         Window.this.xcall("login_msa", onError, onCode, saveAccount);
     }
 
-    function exitApp() {
-        Window.this.xcall("exit_app");
-    }
-
-    function switchOptions() {
-        optionsShown = !optionsShown;
-    }
-
     function logout() {
         Window.this.xcall("logout", accountData);
 
         accountData = null;
         options.currentAccount = accountData;
         Window.this.xcall("store_options", options);
+    }
+
+    // Refresh authentication
+    if (accountData != null) {
+        console.log("Refreshing account data...");
+
+        function onError(error) {
+            console.error("failed refresh authentication", error);
+            logout();
+        }
+
+        Window.this.xcall("refresh_account", accountData, onError, saveAccount);
+    }
+
+    // App
+
+    function exitApp() {
+        Window.this.xcall("exit_app");
+    }
+
+    function switchOptions() {
+        optionsShown = !optionsShown;
     }
 
     function checkForUpdates() {
@@ -130,6 +147,7 @@
             console.log(data.url);
         }
 
+        console.log("Checking for app updates...");
         Window.this.xcall("check_for_updates", newerVersionFound);
     }
 
