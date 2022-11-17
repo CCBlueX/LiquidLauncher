@@ -66,6 +66,10 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
 pub(crate) async fn clear_mods(data: &Path, manifest: &LaunchManifest) -> Result<()> {
     let mods_path = data.join("gameDir").join(&manifest.build.branch).join("mods");
 
+    if !mods_path.exists() {
+        return Ok(());
+    }
+
     // Clear mods directory
     let mut mods_read = fs::read_dir(&mods_path).await?;
     while let Some(entry) = mods_read.next_entry().await? {
