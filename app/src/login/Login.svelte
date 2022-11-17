@@ -62,7 +62,7 @@
             <div class="icon">
                 <img src="img/icon/icon-lock.svg" alt="icon">
             </div>
-            <input id="code" class="input-text" type="text" bind:value={microsoftCode} contenteditable="false">
+            <input id="code" class="input-text" type="text" bind:value={microsoftCode} contenteditable="false" readonly>
         </div>
 
         <div class="button-large primary" on:click={linkMicrosoft}>Link</div>
