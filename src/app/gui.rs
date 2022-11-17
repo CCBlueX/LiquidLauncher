@@ -346,7 +346,7 @@ impl sciter::EventHandler for EventHandler {
 
 /// Runs the GUI and returns when the window is closed.
 pub(crate) fn gui_main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("liquidlauncher=debug")).init();
 
     let gui_index = get_path().unwrap();
 
