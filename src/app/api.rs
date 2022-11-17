@@ -128,12 +128,13 @@ pub struct LaunchManifest {
 ///
 /// JSON struct of mod
 ///
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct LoaderMod {
     #[serde(default)]
     pub required: bool,
     #[serde(default)]
-    pub default: bool,
+    #[serde(alias = "default")]
+    pub enabled: bool,
     pub name: String,
     pub source: ModSource,
 }
@@ -141,7 +142,7 @@ pub struct LoaderMod {
 ///
 /// JSON struct of ModSource (the method to be used for downloading the mod)
 ///
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ModSource {
     #[serde(rename = "skip")]

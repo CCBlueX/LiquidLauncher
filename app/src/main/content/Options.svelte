@@ -5,20 +5,25 @@
     export let versionData;
     export let branches;
     export let builds;
+    export let mods;
 
     export let updateBuilds;
 
     console.log(JSON.stringify(versionData));
 
     function storeOptions() {
+        // store disabled mods into options
+        options.disabledMods = mods.filter(x => !x.enabled).map(x => x.name);
+
+        // store options to file
         Window.this.xcall("store_options", options);
     }
 
     function syncBuilds() {
         let branch = document.getElementById("branches").value;
-
         options.preferredBranch = branch;
         Window.this.xcall("store_options", options);
+
         updateBuilds(branch);
     }
 
@@ -103,7 +108,12 @@
 </div>
 
 <div class="inner_wrapper">
-    <h2>Game options</h2>
+    <h2>Additional Mods</h2>
+    <ul class="mods">
+        {#each mods as mod}
+            <li><input type=checkbox bind:checked={mod.enabled} disabled={mod.required} on:change={storeOptions}> {mod.name}</li>
+        {/each}
+    </ul>
 
 <!--    <label>
         Memory Percentage ({options.memoryPercentage} %)
@@ -121,7 +131,7 @@
 </div>
 
 <style>
-    label, h1, h2 {
+    label, h1, h2, ul, li {
         color: white;
     }
 
@@ -166,5 +176,9 @@
 
     .logout:hover {
         background-color: #e23e4c;
+    }
+
+    .mods {
+        list-style: none;
     }
 </style>

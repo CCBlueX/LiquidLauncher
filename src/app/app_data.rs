@@ -24,13 +24,15 @@ pub(crate) struct LauncherOptions {
     // todo: might move into it's own file when there is support for multiple accounts which might sync up with the used client
     #[serde(rename = "currentAccount")]
     pub current_account: Option<Account>,
+    #[serde(rename = "disabledMods")]
+    pub disabledMods: Vec<String>,
 }
 
 impl LauncherOptions {
 
     pub fn load(app_data: &Path) -> Result<Self> {
         // load the options from the file
-        Ok(serde_json::from_slice::<Self>(&*fs::read(app_data.join("options.json"))?)?)
+        Ok(serde_json::from_slice::<Self>(&fs::read(app_data.join("options.json"))?)?)
     }
 
     pub fn store(&self, app_data: &Path) -> Result<()> {
@@ -62,7 +64,8 @@ impl Default for LauncherOptions {
             custom_java_args: String::new(),
             preferred_branch: None,
             preferred_build: None,
-            current_account: None
+            current_account: None,
+            disabledMods: Vec::new()
         }
     }
 }

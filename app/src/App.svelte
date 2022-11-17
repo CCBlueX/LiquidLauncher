@@ -25,6 +25,8 @@
     let branches = [];
     let builds = [];
 
+    let mods = [];
+
     function updateBranches() {
 
         function onResponse(receivedBranches) {
@@ -55,6 +57,8 @@
                 build = builds.find(x => x.release || options.showNightlyBuilds); // Choose newest version
             }
             versionData = build;
+
+            requestMods();
         }
 
         function onError(e) {
@@ -62,6 +66,23 @@
         }
 
         Window.this.xcall("get_builds", branch, onResponse, onError);
+    }
+
+    function requestMods() {
+
+        function onResponse(listOfMods) {
+            mods = listOfMods;
+
+            mods.forEach(x => {
+                x.enabled = !options.disabledMods.includes(x.name);
+            });
+        }
+
+        function onError(e) {
+            console.error("unable to update mods", e);
+        }
+
+        Window.this.xcall("get_mods", versionData.mcVersion, versionData.subsystem, onResponse, onError);
     }
 
     updateBranches();
@@ -174,10 +195,10 @@
         </TitleBar>
 
         <Content>
-            <LaunchArea accountData={accountData} options={options} versionData={versionData} />
+            <LaunchArea accountData={accountData} options={options} versionData={versionData} mods={mods} />
 
             {#if optionsShown}
-                <Options bind:options={options} logout={logout} bind:versionData={versionData} branches={branches} builds={builds} updateBuilds={updateBuilds} />
+                <Options bind:options={options} logout={logout} bind:versionData={versionData} branches={branches} builds={builds} bind:mods={mods} updateBuilds={updateBuilds} />
             {:else}
                 <NewsContainer />
             {/if}
