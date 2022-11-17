@@ -11,6 +11,7 @@
     import TitleBar from "./main/title-bar/TitleBar.svelte";
     import WelcomeMessage from "./main/title-bar/WelcomeMessage.svelte";
     import Options from "./main/content/Options.svelte";
+    import UpdateContainer from "./main/content/UpdateContainer.svelte";
 
     // Options Storage
     let optionsShown = false;
@@ -159,16 +160,20 @@
         Window.this.xcall("store_options", options);
     }
 
+    let updateData = null;
+
     function checkForUpdates() {
         function newerVersionFound(data) {
-            // todo: prompt user about new version
-            console.log(data);
-            console.log(data.name);
-            console.log(data.url);
+            console.log(JSON.stringify(data));
+            updateData = data;
         }
 
         console.log("Checking for app updates...");
         Window.this.xcall("check_for_updates", newerVersionFound);
+    }
+
+    function ignoreUpdate() {
+        updateData = null;
     }
 
     // Check for updates at start-up
@@ -195,15 +200,21 @@
             <ButtonClose exit={exitApp} />
         </TitleBar>
 
-        <Content>
-            <LaunchArea accountData={accountData} options={options} versionData={versionData} mods={mods} />
 
-            {#if optionsShown}
-                <Options bind:options={options} logout={logout} bind:versionData={versionData} branches={branches} builds={builds} bind:mods={mods} updateBuilds={updateBuilds} />
-            {:else}
-                <NewsContainer />
-            {/if}
-        </Content>
+            <Content>
+                {#if updateData == null}
+                    <LaunchArea accountData={accountData} options={options} versionData={versionData} mods={mods} />
+
+                    {#if optionsShown}
+                        <Options bind:options={options} logout={logout} bind:versionData={versionData} branches={branches} builds={builds} bind:mods={mods} updateBuilds={updateBuilds} />
+                    {:else}
+                        <NewsContainer />
+                    {/if}
+                {:else}
+                    <UpdateContainer bind:updateData={updateData} ignoreUpdate={ignoreUpdate} />
+                {/if}
+            </Content>
+
     {/if}
 </main>
 
