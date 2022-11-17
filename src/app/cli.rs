@@ -1,7 +1,6 @@
 use std::io::{Write};
 
 use anyhow::Result;
-use directories::ProjectDirs;
 use env_logger::Env;
 use log::*;
 use uuid::Uuid;
@@ -11,7 +10,7 @@ use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::prelauncher;
 use crate::minecraft::progress::ProgressUpdate;
 use rand::distributions::{Alphanumeric, DistString};
-use sysinfo::{RefreshKind, SystemExt};
+use sysinfo::SystemExt;
 
 ///
 /// CLI of LiquidLauncher.
@@ -84,13 +83,13 @@ async fn run(parameters: LaunchingParameter, build: &Build) -> Result<()> {
 }
 
 
-fn handle_stdout(value: &(), data: &[u8]) -> Result<()> {
+fn handle_stdout(_value: &(), data: &[u8]) -> Result<()> {
     std::io::stdout().lock().write_all(data)?;
     std::io::stdout().lock().flush()?;
 
     Ok(())
 }
 
-fn handle_progress(value: &(), progress_update: ProgressUpdate) -> Result<()> {
+fn handle_progress(_value: &(), _progress_update: ProgressUpdate) -> Result<()> {
     Ok(())
 }

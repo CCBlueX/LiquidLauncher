@@ -5,7 +5,7 @@ use anyhow::Result;
 use log::*;
 use tokio::fs;
 
-use crate::app::api::{Build, ApiEndpoints, LaunchManifest, LoaderSubsystem, ModSource, LoaderMod};
+use crate::app::api::{ApiEndpoints, LaunchManifest, LoaderSubsystem, ModSource, LoaderMod};
 use crate::error::LauncherError;
 use crate::app::webview::download_client;
 use crate::LAUNCHER_DIRECTORY;
@@ -66,7 +66,6 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
 }
 
 pub(crate) async fn clear_mods(data: &Path, manifest: &LaunchManifest) -> Result<()> {
-    let mod_cache_path = data.join("mod_cache");
     let mods_path = data.join("gameDir").join(&manifest.build.branch).join("mods");
 
     // Clear mods directory

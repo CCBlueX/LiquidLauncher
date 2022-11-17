@@ -15,11 +15,9 @@
     // Options Storage
     let optionsShown = false;
 
+    console.log("Loading options...");
     let options = Window.this.xcall("get_options"); // read options from storage
     Window.this.xcall("store_options", options); // store options again in case they might be new
-
-    // debug out options
-    console.log(JSON.stringify(options));
 
     // Versions
     let versionData;

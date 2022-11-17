@@ -34,14 +34,6 @@ async fn version_data() -> Result<GitHubReleaseData> {
         .json::<GitHubReleaseData>().await?)
 }
 
-
-/// installs update
-///
-/// todo: work in progress
-async fn install_update(github_release_data: GitHubReleaseData) {
-
-}
-
 /// Structured form of the GitHub API release data
 #[derive(Serialize, Deserialize)]
 pub struct GitHubReleaseData {

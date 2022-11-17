@@ -1,6 +1,4 @@
 
-use std::fs::File;
-use std::path::Path;
 use anyhow::{anyhow, Result};
 use minceraft::auth::Auth;
 use reqwest::Client;
@@ -60,11 +58,6 @@ pub async fn authenticate_mojang(username: String, password: String) -> Result<A
             }))
         .send().await?;
 
-    #[derive(Deserialize)]
-    struct AuthenticateUser {
-        // optional
-    }
-
     // Game license
     #[derive(Deserialize)]
     struct AuthenticateProfile {
@@ -74,7 +67,6 @@ pub async fn authenticate_mojang(username: String, password: String) -> Result<A
 
     #[derive(Deserialize)]
     struct AuthenticateResponse {
-        user: Option<AuthenticateUser>,
         #[serde(rename = "accessToken")]
         access_token: String,
         // #[serde(rename = "availableProfiles")] .. not needed yet
@@ -131,7 +123,7 @@ impl Account {
                 let http = reqwest::blocking::Client::new();
                 let dc = minceraft::auth::DeviceCode::new(AZURE_CLIENT_ID, Some(auth_file), &http)?;
 
-                if let Some(inner) = &dc.inner { // login code
+                if let Some(_inner) = &dc.inner { // login code
                     return Err(anyhow!("code required, please re-login!"));
                 }
 
