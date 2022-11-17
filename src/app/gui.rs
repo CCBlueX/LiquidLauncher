@@ -14,7 +14,7 @@ use sysinfo::SystemExt;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 
-use crate::app::api::ApiEndpoints;
+use crate::app::api::{ApiEndpoints, LoaderMod};
 use crate::{LAUNCHER_DIRECTORY, LauncherOptions};
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
 use crate::minecraft::{prelauncher, service};
@@ -63,9 +63,10 @@ fn handle_progress(value: &Arc<std::sync::Mutex<EventFunctions>>, progress_updat
 impl EventHandler {
 
     // script handler
-    fn run_client(&self, build_id: i32, account_data: Value, options: Value, on_progress: Value, on_output: Value, on_finalization: Value, on_error: Value) -> bool {
+    fn run_client(&self, build_id: i32, account_data: Value, options: Value, mods: Value, on_progress: Value, on_output: Value, on_finalization: Value, on_error: Value) -> bool {
         let account = serde_json::from_str::<Account>(&account_data.to_string()).unwrap();
         let options = LauncherOptions::from_json(options.to_string()).unwrap();
+        let mods = serde_json::from_str::<Vec<LoaderMod>>(&mods.to_string()).unwrap();
 
         let (account_name, uuid, token, user_type) = match account {
             Account::MsaAccount { auth, .. } => (auth.name, auth.uuid, auth.token, "msa".to_string()),
@@ -110,6 +111,7 @@ impl EventHandler {
             if let Err(err) = prelauncher::launch(
                 launch_manifest,
                 parameters,
+                mods,
                 LauncherData {
                     on_stdout: handle_stdout,
                     on_stderr: handle_stderr,
@@ -179,6 +181,27 @@ impl EventHandler {
                     }).collect::<Vec<Value>>());
 
                     on_response.call(None, &make_args!(builds), None).unwrap()
+                },
+                Err(err) => {
+                    error!("{:?}", err);
+
+                    on_error.call(None, &make_args!(err.to_string()), None).unwrap()
+                }
+            };
+        });
+
+        true
+    }
+
+    fn get_mods(&self, mc_version: String, subsystem: String, on_response: Value, on_error: Value) -> bool {
+        self.async_runtime.spawn(async move {
+            match ApiEndpoints::mods(&mc_version, &subsystem).await {
+                Ok(mods) => {
+                    let mods = Value::from_iter(mods.iter().map(|x| {
+                        Value::parse(&serde_json::to_string(x).unwrap()).unwrap()
+                    }).collect::<Vec<Value>>());
+
+                    on_response.call(None, &make_args!(mods), None).unwrap()
                 },
                 Err(err) => {
                     error!("{:?}", err);
@@ -326,12 +349,13 @@ impl sciter::EventHandler for EventHandler {
 
     // route script calls to our handler
     dispatch_script_call! {
-		fn run_client(i32, Value, Value, Value, Value, Value, Value);
+		fn run_client(i32, Value, Value, Value, Value, Value, Value, Value);
 		fn terminate();
         fn get_options();
         fn store_options(Value);
 		fn get_branches(Value, Value);
         fn get_builds(String, Value, Value);
+        fn get_mods(String, String, Value, Value);
         fn login_offline(String, Value);
         fn login_msa(Value, Value, Value);
         fn login_mojang(String, String, Value, Value);

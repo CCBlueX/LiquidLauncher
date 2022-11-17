@@ -18,7 +18,7 @@ use crate::utils::{download_file, get_maven_artifact_path};
 ///
 /// Prelaunching client
 ///
-pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
+pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, launching_parameter: LaunchingParameter, additional_mods: Vec<LoaderMod>, launcher_data: LauncherData<D>) -> Result<()> {
     info!("Loading minecraft version manifest...");
     let mc_version_manifest = VersionManifest::download().await?;
 
@@ -31,8 +31,6 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
     // Copy retrieve and copy mods from manifest
     clear_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest).await?;
     retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &launch_manifest.mods, &launcher_data).await?;
-    // todo: select via GUI
-    let additional_mods = ApiEndpoints::mods(&launch_manifest.build.mc_version, &launch_manifest.build.subsystem).await?;
     retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &additional_mods, &launcher_data).await?;
 
     info!("Loading version profile...");
@@ -92,9 +90,9 @@ pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifes
 
     for (mod_idx, current_mod) in mods.iter().enumerate() {
         // Skip mods that are not needed
-        // if !current_mod.required && !current_mod.default {
-        //    continue;
-        //}
+        if !current_mod.required && !current_mod.enabled {
+            continue;
+        }
 
         progress.progress_update(ProgressUpdate::set_label(format!("Downloading recommended mod {}", current_mod.name)));
 

@@ -71,6 +71,7 @@ async fn run(parameters: LaunchingParameter, build: &Build) -> Result<()> {
     prelauncher::launch(
         launch_manifest,
         parameters,
+        Vec::new(), // no additional mods in CLI
         LauncherData {
             on_stdout: handle_stdout,
             on_stderr: handle_stdout,
