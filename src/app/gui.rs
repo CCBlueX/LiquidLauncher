@@ -181,7 +181,7 @@ impl EventHandler {
             match ApiEndpoints::builds_by_branch(branch).await {
                 Ok(builds) => {
                     let builds = Value::from_iter(builds.iter().map(|x| {
-                        Value::parse(&*serde_json::to_string(x).unwrap()).unwrap()
+                        Value::parse(&serde_json::to_string(x).unwrap()).unwrap()
                     }).collect::<Vec<Value>>());
 
                     on_response.call(None, &make_args!(builds), None).unwrap()
@@ -200,7 +200,7 @@ impl EventHandler {
     fn login_offline(&self, username: String, on_response: Value) -> bool {
         self.async_runtime.spawn(async move {
             let acc = auth_offline(username).await;
-            on_response.call(None, &make_args!(Value::parse(&*serde_json::to_string(&acc).unwrap()).unwrap()), None).unwrap();
+            on_response.call(None, &make_args!(Value::parse(&serde_json::to_string(&acc).unwrap()).unwrap()), None).unwrap();
         });
 
         true
@@ -210,12 +210,12 @@ impl EventHandler {
         // todo: fork library and make it async
         thread::spawn(move || {
             let on_code_fn = |code: &String| {
-                on_code.call(None, &make_args!(Value::parse(&*code).unwrap()), None).unwrap();
+                on_code.call(None, &make_args!(Value::parse(code).unwrap()), None).unwrap();
             };
 
             match auth_msa(on_code_fn) {
                 Ok(acc) => {
-                    on_response.call(None, &make_args!(Value::parse(&*serde_json::to_string(&acc).unwrap()).unwrap()), None).unwrap()
+                    on_response.call(None, &make_args!(Value::parse(&serde_json::to_string(&acc).unwrap()).unwrap()), None).unwrap()
                 },
                 Err(err) => {
                     println!("{:?}", err);
@@ -232,7 +232,7 @@ impl EventHandler {
         self.async_runtime.spawn(async move {
             match authenticate_mojang(username, password).await {
                 Ok(acc) => {
-                    on_response.call(None, &make_args!(Value::parse(&*serde_json::to_string(&acc).unwrap()).unwrap()), None).unwrap()
+                    on_response.call(None, &make_args!(Value::parse(&serde_json::to_string(&acc).unwrap()).unwrap()), None).unwrap()
                 },
                 Err(err) => {
                     println!("{:?}", err);
@@ -247,8 +247,24 @@ impl EventHandler {
 
     fn logout(&self, account_data: Value) {
         self.async_runtime.spawn(async move {
-            let acc = serde_json::from_str::<Account>(&*account_data.to_string()).unwrap();
+            let acc = serde_json::from_str::<Account>(&account_data.to_string()).unwrap();
             let _ = acc.logout().await; // we don't care if logouts fails...
+        });
+
+    }
+
+    fn refresh_account(&self, account_data: Value, on_error: Value, on_response: Value) {
+        thread::spawn(move || {
+            let acc = serde_json::from_str::<Account>(&account_data.to_string()).unwrap();
+            match acc.refresh() {
+                Ok(acc) => {
+                    on_response.call(None, &make_args!(Value::parse(&serde_json::to_string(&acc).unwrap()).unwrap()), None).unwrap()
+                },
+                Err(err) => {
+                    println!("{:?}", err);
+                    on_error.call(None, &make_args!(err.to_string()), None).unwrap()
+                }
+            };
         });
 
     }
@@ -326,6 +342,7 @@ impl sciter::EventHandler for EventHandler {
         fn login_msa(Value, Value, Value);
         fn login_mojang(String, String, Value, Value);
         fn logout(Value);
+        fn refresh_account(Value, Value, Value);
         fn check_for_updates(Value);
         fn open(String);
         fn exit_app();

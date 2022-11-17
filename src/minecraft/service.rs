@@ -28,7 +28,6 @@ pub fn auth_msa<F>(on_code: F) -> Result<Account>
     }
 
     let auth = dc.authenticate(&http)?;
-    println!("{:?}", auth);
 
     Ok(Account::MsaAccount {
         auth,
@@ -125,6 +124,28 @@ pub enum Account {
 }
 
 impl Account {
+
+    pub fn refresh(self) -> Result<Account> {
+        return match &self {
+            Account::MsaAccount { auth_file, .. } => {
+                let http = reqwest::blocking::Client::new();
+                let dc = minceraft::auth::DeviceCode::new(AZURE_CLIENT_ID, Some(auth_file), &http)?;
+
+                if let Some(inner) = &dc.inner { // login code
+                    return Err(anyhow!("code required, please re-login!"));
+                }
+
+                let auth = dc.authenticate(&http)?;
+
+                Ok(Account::MsaAccount {
+                    auth,
+                    auth_file: auth_file.clone()
+                })
+            }
+            Account::MojangAccount { .. } => Ok(self),
+            Account::OfflineAccount { .. } => Ok(self)
+        }
+    }
 
     pub async fn logout(&self) -> Result<()> {
         match self {
