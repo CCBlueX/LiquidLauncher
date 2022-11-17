@@ -36,7 +36,7 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, os_info: &Info, on_p
         let mut runtime_zip = runtime_path.clone();
         runtime_zip.push("runtime.zip");
 
-        let retrieved_bytes = download_file(&*jre_source.download_url, on_progress).await?;
+        let retrieved_bytes = download_file(&jre_source.download_url, on_progress).await?;
         fs::write(&runtime_zip.as_path(), retrieved_bytes).await?;
 
         let open_file = fs::File::open(&runtime_zip.as_path()).await?;
