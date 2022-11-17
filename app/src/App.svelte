@@ -156,6 +156,7 @@
 
     function switchOptions() {
         optionsShown = !optionsShown;
+        Window.this.xcall("store_options", options);
     }
 
     function checkForUpdates() {
