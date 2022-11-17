@@ -38,6 +38,7 @@ async fn version_data() -> Result<GitHubReleaseData> {
 #[derive(Serialize, Deserialize)]
 pub struct GitHubReleaseData {
     url: String,
+    html_url: String,
     id: i32,
     name: String,
     created_at: String,

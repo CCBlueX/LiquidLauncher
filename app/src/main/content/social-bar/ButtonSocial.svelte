@@ -4,13 +4,9 @@
     export let icon;
     export let text;
     export let url;
-
-    function openUrl() {
-        Window.this.xcall("open", url);
-    }
 </script>
 
-<button class="button" on:click={openUrl}>
+<button class="button" on:click={Window.this.xcall("open", url)}>
     <Tooltip {text} />
     <img class="icon" src="img/icon/social/icon-{icon}.svg" alt={icon}>
 </button>
