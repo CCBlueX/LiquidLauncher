@@ -43,6 +43,22 @@
 
         versionData = buildData;
     }
+
+    // todo: fix hacky solution
+    // due to https://sciter.com/forums/topic/select-options-is-undefined/
+    setTimeout(function() {
+        if (branches.includes(options.preferredBranch)) {
+            document.getElementById("branches").value = options.preferredBranch;
+        } else {
+            document.getElementById("branches").value = branches[0];
+        }
+
+        if (builds.filter(x => x.release || options.showNightlyBuilds).some(x => x.buildId === options.preferredBuild)) {
+            document.getElementById("builds").value = options.preferredBuild;
+        } else {
+            document.getElementById("builds").value = "Latest"
+        }
+    }, 1);
 </script>
 
 <div class="wrapper">
@@ -57,13 +73,15 @@
         {/each}
     </select>
     <select name="builds" id="builds" on:change={syncVersionData}>
-        <option value="latest">Latest</option>
+        {#if builds.filter(x => x.release || options.showNightlyBuilds).length > 0}
+            <option value="latest">Latest</option>
 
-        {#each builds as build}
-            {#if build.release || options.showNightlyBuilds}
-                <option value={build.buildId}>{build.lbVersion + " git-" + build.commitId.substring(0, 7)}</option>
-            {/if}
-        {/each}
+            {#each builds as build}
+                {#if build.release || options.showNightlyBuilds}
+                    <option value={build.buildId}>{build.lbVersion + " git-" + build.commitId.substring(0, 7)}</option>
+                {/if}
+            {/each}
+        {/if}
     </select>
     <br>
     <label>
@@ -87,15 +105,17 @@
 <div class="inner_wrapper">
     <h2>Game options</h2>
 
-    <label>
-        Memory Percentage (%)
-        <input type=text min=1 max=100 bind:value={options.memoryPercentage} on:change={storeOptions}>
+<!--    <label>
+        Memory Percentage ({options.memoryPercentage} %)
+        <br>
+        <input type=hslider min="20" max="100" bind:value={options.memoryPercentage} on:change={storeOptions}>
     </label>
     <br>
     <label>
         Custom JVM
-        <input type=text bind:value={options.customJavaPath} on:change={storeOptions}>
-    </label>
+        <br>
+        <input type=text bind:value={options.customJavaPath} on:input={storeOptions}>
+    </label>-->
 </div>
 
 </div>
