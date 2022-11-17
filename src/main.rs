@@ -6,11 +6,10 @@
 extern crate sciter;
 
 use std::fs;
-use std::sync::Mutex;
 use once_cell::sync::Lazy;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use directories::ProjectDirs;
-use minceraft::auth;
+use log::debug;
 use crate::app::app_data::LauncherOptions;
 
 pub mod app;
@@ -29,8 +28,10 @@ static LAUNCHER_DIRECTORY: Lazy<ProjectDirs> = Lazy::new(|| {
     }
 });
 
+#[allow(unreachable_code)]
 pub fn main() -> Result<()> {
     // application directory
+    debug!("Creating launcher directories...");
     fs::create_dir_all(LAUNCHER_DIRECTORY.data_dir())?;
     fs::create_dir_all(LAUNCHER_DIRECTORY.config_dir())?;
 

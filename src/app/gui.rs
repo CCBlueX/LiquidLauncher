@@ -5,7 +5,6 @@ use std::process::exit;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
-use directories::ProjectDirs;
 use env_logger::Env;
 use futures::lock::Mutex;
 use log::{error, info};
@@ -13,7 +12,6 @@ use path_absolutize::Absolutize;
 use sciter::Value;
 use sysinfo::SystemExt;
 use tokio::runtime::Runtime;
-use tokio::task;
 use tokio::task::JoinHandle;
 
 use crate::app::api::ApiEndpoints;
@@ -27,11 +25,7 @@ struct RunnerInstance {
     terminator: tokio::sync::oneshot::Sender<()>,
 }
 
-struct ConstantLauncherData {
-}
-
 struct EventHandler {
-    constant_data: Arc<ConstantLauncherData>,
     runner_instance: Arc<Mutex<Option<RunnerInstance>>>,
     join_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
     async_runtime: Runtime,
@@ -303,7 +297,7 @@ impl EventHandler {
                     }
 
                     // Call out newer version found function to Sciter JS and pass github release data
-                    found_newer_version.call(None, &make_args!(Value::parse(&*serde_json::to_string(&newest_version).unwrap()).unwrap()), None).unwrap();
+                    found_newer_version.call(None, &make_args!(Value::parse(&serde_json::to_string(&newest_version).unwrap()).unwrap()), None).unwrap();
                 }
                 Err(e) => error!("Update check failed {}", e)
             }
@@ -364,7 +358,7 @@ pub(crate) fn gui_main() {
         .with_size((1000, 600))
         .create();
 
-    frame.event_handler(EventHandler { constant_data: Arc::new(ConstantLauncherData { }), runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
+    frame.event_handler(EventHandler { runner_instance: Arc::new(Mutex::new(None)), join_handle: Arc::new(Default::default()), async_runtime: Runtime::new().unwrap() });
 
     frame.load_file(&gui_index);
     frame.run_app();
