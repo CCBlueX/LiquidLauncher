@@ -4,11 +4,16 @@ on: [push]
 
 jobs:
   build_launcher:
-    runs-on: ${{ matrix.config.os }}
     strategy:
       matrix:
-        config:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            suffix: ''
           - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            suffix: .exe
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
@@ -29,8 +34,21 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
+      - name:  Install libraries
+        run:   |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+               sudo apt update
+               sudo apt install libgtk-3-dev libsoup2.4-dev libwebkit2gtk-4.0-dev
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+               echo "No libs required"
+          else
+               echo "$RUNNER_OS not supported"
+               exit 1
+          fi
+        shell: bash
+
       - name: Install nightly toolchain
-        run:  rustup toolchain install nightly-x86_64-pc-windows-msvc
+        run:  rustup toolchain install nightly
 
       - name: Build
         run: cargo +nightly build --release
@@ -41,15 +59,14 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v1
         with:
-          name: liquidlauncher-barebone
-          path: target/release/liquidlauncher.exe
+          name: liquidlauncher-barebone-${{ matrix.target }}
+          path: target/release/liquidlauncher${{ matrix.suffix }}
 
   build_app:
-    runs-on: ${{ matrix.config.os }}
     strategy:
       matrix:
-        config:
-          - os: ubuntu-latest
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
@@ -72,12 +89,17 @@ jobs:
           path: app/public
 
   build_unpacker:
-    runs-on: ${{ matrix.config.os }}
     needs: [build_launcher, build_app]
     strategy:
       matrix:
-        config:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            suffix: ''
           - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            suffix: .exe
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
@@ -105,14 +127,25 @@ jobs:
 
       - uses: actions/download-artifact@v3
         with:
-          name: liquidlauncher-barebone
+          name: liquidlauncher-barebone-${{ matrix.target }}
           path: unpacker/data
 
       - name: Download and extract Sciter and copy into unpacker
         run: |
           curl https://gitlab.com/sciter-engine/sciter-js-sdk/-/archive/5.0.0.9/sciter-js-sdk-5.0.0.9.zip -o sciter.zip
           7z x sciter.zip
-          cp sciter-js-sdk-5.0.0.9/bin/windows/x64/sciter.dll unpacker/data/
+         
+          if [ "$RUNNER_OS" == "Linux" ]; then
+                cp sciter-js-sdk-5.0.0.9/bin/linux/x64/libsciter.so unpacker/data/libsciter-gtk.so
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+                cp sciter-js-sdk-5.0.0.9/bin/windows/x64/sciter.dll unpacker/data/
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+                cp sciter-js-sdk-5.0.0.9/bin/macosx/x64/libsciter.dylib unpacker/data/
+          else
+               echo "$RUNNER_OS not supported"
+               exit 1
+          fi
+        shell: bash
 
       - name: Display structure of launcher data
         run: ls -R unpacker/data
@@ -123,10 +156,10 @@ jobs:
           cargo build --release
 
       - name: Rename unpacker
-        run: mv unpacker/target/release/unpacker.exe unpacker/target/release/LiquidLauncher.exe
+        run: mv unpacker/target/release/unpacker${{ matrix.suffix }} unpacker/target/release/LiquidLauncher${{ matrix.suffix }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v1
         with:
-          name: liquidlauncher-installer
-          path: unpacker/target/release/LiquidLauncher.exe
+          name: liquidlauncher-installer-${{ matrix.target }}
+          path: unpacker/target/release/LiquidLauncher${{ matrix.suffix }}
