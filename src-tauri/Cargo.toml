@@ -1,18 +1,15 @@
 [package]
 name = "liquidlauncher"
 version = "0.1.0"
+description = "A Tauri App"
 authors = ["1zuna <marco@ccbluex.net>", "superblaubeere27"]
-edition = "2018"
+license = "GNU General Public License v3.0"
+repository = "https://github.com/CCBlueX/LiquidLauncher"
+edition = "2021"
+rust-version = "1.57"
 
-# Smaller size
-[profile.release]
-lto = true
-codegen-units = 1
-
-[features]
-default = ["gui", "cli"]
-gui = ["sciter-rs"]
-cli = []
+[build-dependencies]
+tauri-build = {version = "1.2", features = [] }
 
 [dependencies]
 # Log
@@ -53,8 +50,8 @@ uuid = { version = "1.2", features = ["serde", "v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 # UI library
-sciter-rs = { version = "0.5.58", optional = true }
-web-view = { version = "0.7", features = ["edge"] }
+tauri = {version = "1.2", features = ["api-all"] }
+window-vibrancy = "0.3.2"
 
 # HTTP library
 reqwest = { version = "0.11", features = ["json"] }
@@ -64,5 +61,10 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 toml = "0.5"
 
-[build-dependencies]
-embed-resource = "1.7"
+[features]
+# by default Tauri runs in production mode
+# when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
+default = [ "custom-protocol" ]
+# this feature is used used for production builds where `devPath` points to the filesystem
+# DO NOT remove this
+custom-protocol = [ "tauri/custom-protocol" ]

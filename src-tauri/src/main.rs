@@ -1,9 +1,8 @@
 #![feature(once_cell)]
-#![windows_subsystem = "windows"]
-
-#[cfg(feature = "gui")]
-#[macro_use]
-extern crate sciter;
+#![cfg_attr(
+    all(not(debug_assertions), target_os = "windows"),
+    windows_subsystem = "windows"
+  )]
 
 use std::fs;
 use once_cell::sync::Lazy;
@@ -28,7 +27,6 @@ static LAUNCHER_DIRECTORY: Lazy<ProjectDirs> = Lazy::new(|| {
     }
 });
 
-#[allow(unreachable_code)]
 pub fn main() -> Result<()> {
     // application directory
     debug!("Creating launcher directories...");
@@ -36,28 +34,6 @@ pub fn main() -> Result<()> {
     fs::create_dir_all(LAUNCHER_DIRECTORY.config_dir())?;
 
     // app
-
-    let args = std::env::args();
-    let mut real_args = args.skip(1);
-
-    if let Some(build_id) = real_args.next() {
-        #[cfg(feature = "cli")]
-            {
-                let u_build_id = build_id.parse::<u32>().expect("build id not valid");
-                app::cli::cli_main(u_build_id);
-                return Ok(());
-            }
-
-        eprintln!("This build does not support CLI.");
-        return Ok(());
-    }
-
-    #[cfg(feature = "gui")]
-        {
-            app::gui::gui_main();
-            return Ok(());
-        }
-
-    eprintln!("This build does not support GUI.");
-    Ok(())
+    app::gui::gui_main();
+    return Ok(());
 }
