@@ -9,7 +9,6 @@ use once_cell::sync::Lazy;
 use anyhow::Result;
 use directories::ProjectDirs;
 use log::debug;
-use crate::app::app_data::LauncherOptions;
 
 pub mod app;
 pub mod minecraft;

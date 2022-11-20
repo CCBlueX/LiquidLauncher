@@ -72,8 +72,7 @@
                 playButton.disabled = false;
             })
             .catch((e) => {
-                console.log("Error on launching client: " + e);
-                label.textContent = "Error: " + e;
+                alert(e);
             })
         
         label.textContent = "Running...";
@@ -82,8 +81,12 @@
     }
 
     function stopClient() {
-        // Window.this.xcall("terminate");
-        launching(false);
+        invoke('terminate').then(() => {
+                launching(false);
+            })
+            .catch((e) => {
+                alert(e);
+            });
     }
 
 
