@@ -1,4 +1,8 @@
 <script>
+    import { invoke } from "@tauri-apps/api/tauri";
+    import { listen } from '@tauri-apps/api/event'
+
+
     export let versionData;
     export let accountData;
     export let options;
@@ -18,6 +22,36 @@
         // previewImage = news.banner.image;
     })();
 
+    listen('process-output', (event) => {
+        console.log(event.payload);
+        console.log(event);
+        let logArea = document.getElementById('log-area');
+        logArea.innerText += event.payload + "\n";
+        logArea.scrollTop = logArea.scrollHeight;
+    });
+
+    listen('progress-update', (event) => {
+        let progressUpdate = event.payload;
+        console.log(event);
+        let label = document.getElementById("statusLabel");
+        let progressBar = document.getElementById("progress");
+
+        switch (progressUpdate.type) {
+                case "max": {
+                    progressBar.max = progressUpdate.value;
+                    break;
+                }
+                case "progress": {
+                    progressBar.value = progressUpdate.value;
+                    break;
+                }
+                case "label": {
+                    label.textContent = progressUpdate.value;
+                    break;
+                }
+            }
+    });
+
     function launching(status) {
         document.getElementById("launch").style.display = status ? 'block' : 'none';
         document.getElementById("version-select").style.display = status ? 'none' : 'block';
@@ -26,56 +60,22 @@
 
     function startClient() {
         let playButton = document.getElementById("play");
-
         let label = document.getElementById("statusLabel");
-        let progressBar = document.getElementById("progress");
-
-        // Clear log area for this run
         let logArea = document.getElementById('log-area');
         logArea.innerText = "";
 
-        function log(text) {
-            logArea.innerText += text + "\n";
-            logArea.scrollTop = logArea.scrollHeight;
-        }
+        invoke('run_client', { buildId: versionData.buildId, accountData: accountData, options: options, mods: mods })
+            .then(() => {
+                label.textContent = "Idle...";
+                launching(false);
 
-        function onProgress(action, value) {
-            switch (action) {
-                case "max": {
-                    progressBar.max = value;
-                    break;
-                }
-                case "progress": {
-                    progressBar.value = value;
-                    break;
-                }
-                case "label": {
-                    label.textContent = value;
-                    log(value);
-                    break;
-                }
-            }
-        }
-
-        function onOutput(type, value) {
-            log(value);
-        }
-
-        function onDone() {
-            label.textContent = "Idle...";
-            launching(false);
-
-            playButton.disabled = false;
-        }
-
-        function onError(error) {
-            console.log("Error on launching client: " + error);
-            label.textContent = "Error: " + error;
-            log("Error on launching client: " + error);
-        }
-
-        // Window.this.xcall("run_client", versionData.buildId, accountData, options, mods, onProgress, onOutput, onDone, onError);
-
+                playButton.disabled = false;
+            })
+            .catch((e) => {
+                console.log("Error on launching client: " + e);
+                label.textContent = "Error: " + e;
+            })
+        
         label.textContent = "Running...";
         launching(true);
         playButton.disabled = true;
