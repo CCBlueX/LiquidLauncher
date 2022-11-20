@@ -1,8 +1,8 @@
-use std::fs;
 use std::path::Path;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use tokio::fs;
 use crate::minecraft::service::Account;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -30,27 +30,17 @@ pub(crate) struct LauncherOptions {
 
 impl LauncherOptions {
 
-    pub fn load(app_data: &Path) -> Result<Self> {
+    pub async fn load(app_data: &Path) -> Result<Self> {
         // load the options from the file
-        Ok(serde_json::from_slice::<Self>(&fs::read(app_data.join("options.json"))?)?)
+        Ok(serde_json::from_slice::<Self>(&fs::read(app_data.join("options.json")).await?)?)
     }
 
-    pub fn store(&self, app_data: &Path) -> Result<()> {
+    pub async fn store(&self, app_data: &Path) -> Result<()> {
         // store the options in the file
-        fs::write(app_data.join("options.json"), serde_json::to_string(&self)?)?;
+        fs::write(app_data.join("options.json"), serde_json::to_string(&self)?).await?;
         Ok(())
     }
 
-
-    // used for nodejs app
-    pub fn from_json(json: String) -> Result<Self> {
-        Ok(serde_json::from_str::<Self>(&*json)?)
-    }
-
-    // used for nodejs app
-    pub fn to_json(&self) -> Result<String> {
-        Ok(serde_json::to_string(&self)?)
-    }
 
 }
 

@@ -40,7 +40,7 @@ impl ApiEndpoints {
     }
 
     /// Request all builds of branch
-    pub async fn builds_by_branch(branch: String) -> Result<Vec<Build>> {
+    pub async fn builds_by_branch(branch: &str) -> Result<Vec<Build>> {
         Self::request_from_endpoint(&format!("version/builds/{}", branch)).await
     }
 

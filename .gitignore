@@ -1,5 +1,4 @@
-/.idea/*
-/target
-/assets
-/run/*
-/.mixin.out
+/node_modules/
+/public/build/
+
+.DS_Store

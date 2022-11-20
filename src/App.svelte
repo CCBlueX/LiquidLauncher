@@ -13,12 +13,20 @@
     import Options from "./main/content/Options.svelte";
     import UpdateContainer from "./main/content/UpdateContainer.svelte";
 
+    // When using the Tauri API npm package:
+    import { invoke } from '@tauri-apps/api/tauri'
+
     // Options Storage
     let optionsShown = false;
 
     console.log("Loading options...");
-    let options = Window.this.xcall("get_options"); // read options from storage
-    Window.this.xcall("store_options", options); // store options again in case they might be new
+    var options = null;
+    invoke('get_options')
+        .then((o) => {
+            options = o;
+            console.log(JSON.stringify(o));
+        })
+        .catch((e) => console.error(e))
 
     // Versions
     let versionData;
@@ -29,61 +37,51 @@
     let mods = [];
 
     function updateBranches() {
+        invoke('request_branches')
+            .then((receivedBranches) => {
+                branches = receivedBranches;
 
-        function onResponse(receivedBranches) {
-            branches = receivedBranches;
-
-            let branch;
-            if (branches.includes(options.preferredBranch)) {
-                branch = options.preferredBranch;
-            } else {
-                branch = branches[0];
-            }
-            updateBuilds(branch);
-        }
-
-        function onError(e) {
-            console.log("unable to update branches", e);
-        }
-
-        Window.this.xcall("get_branches", onResponse, onError);
+                let branch;
+                if (branches.includes(options.preferredBranch)) {
+                    branch = options.preferredBranch;
+                } else {
+                    branch = branches[0];
+                }
+                updateBuilds(branch);
+            })
+            .catch((e) => console.error(e))
     }
 
     function updateBuilds(branch) {
-        function onResponse(receivedBuilds) {
-            builds = receivedBuilds;
+        invoke('request_builds', { branch: branch })
+            .then((receivedBuilds) => {
+                builds = receivedBuilds;
 
-            let build = builds.find(x => x.buildId === options.preferredBuild);
-            if (build === undefined) {
-                build = builds.find(x => x.release || options.showNightlyBuilds); // Choose newest version
-            }
-            versionData = build;
+                let build = builds.find(x => x.buildId === options.preferredBuild);
+                if (build === undefined) {
+                    build = builds.find(x => x.release || options.showNightlyBuilds); // Choose newest version
+                }
+                versionData = build;
 
-            requestMods();
-        }
-
-        function onError(e) {
-            console.error("unable to update builds ", e);
-        }
-
-        Window.this.xcall("get_builds", branch, onResponse, onError);
+                requestMods();
+            })
+            .catch((e) => console.error(e))
     }
 
     function requestMods() {
+        // function onResponse(listOfMods) {
+        //     mods = listOfMods;
 
-        function onResponse(listOfMods) {
-            mods = listOfMods;
+        //     mods.forEach(x => {
+        //         x.enabled = !options.disabledMods.includes(x.name);
+        //     });
+        // }
 
-            mods.forEach(x => {
-                x.enabled = !options.disabledMods.includes(x.name);
-            });
-        }
+        // function onError(e) {
+        //     console.error("unable to update mods", e);
+        // }
 
-        function onError(e) {
-            console.error("unable to update mods", e);
-        }
-
-        Window.this.xcall("get_mods", versionData.mcVersion, versionData.subsystem, onResponse, onError);
+        // Window.this.xcall("get_mods", versionData.mcVersion, versionData.subsystem, onResponse, onError);
     }
 
     updateBranches();
@@ -106,7 +104,7 @@
             console.error("failed mojang authentication", error);
         }
 
-        Window.this.xcall("login_mojang", username, password, onError, saveAccount);
+        // Window.this.xcall("login_mojang", username, password, onError, saveAccount);
     }
 
     function loginIntoOffline(username) {
@@ -117,7 +115,7 @@
             return;
         }
 
-        Window.this.xcall("login_offline", username, saveAccount);
+        // Window.this.xcall("login_offline", username, saveAccount);
     }
 
     function loginIntoMicrosoft(onCode) {
@@ -126,15 +124,15 @@
             console.error("failed microsoft authentication", error);
         }
 
-        Window.this.xcall("login_msa", onError, onCode, saveAccount);
+        // Window.this.xcall("login_msa", onError, onCode, saveAccount);
     }
 
     function logout() {
-        Window.this.xcall("logout", accountData);
+        // Window.this.xcall("logout", accountData);
 
         accountData = null;
         options.currentAccount = accountData;
-        Window.this.xcall("store_options", options);
+        // Window.this.xcall("store_options", options);
     }
 
     // Refresh authentication
@@ -146,38 +144,31 @@
             logout();
         }
 
-        Window.this.xcall("refresh_account", accountData, onError, saveAccount);
+        // Window.this.xcall("refresh_account", accountData, onError, saveAccount);
     }
 
     // App
 
     function exitApp() {
-        Window.this.xcall("exit_app");
+        invoke('exit_app')
     }
 
     function switchOptions() {
         optionsShown = !optionsShown;
-        Window.this.xcall("store_options", options);
     }
 
-    let updateData = null;
+    // function checkForUpdates() {
+    //     function newerVersionFound(data) {
+    //         console.log(JSON.stringify(data));
+    //         updateData = data;
+    //     }
 
-    function checkForUpdates() {
-        function newerVersionFound(data) {
-            console.log(JSON.stringify(data));
-            updateData = data;
-        }
+    //     console.log("Checking for app updates...");
+    //     Window.this.xcall("check_for_updates", newerVersionFound);
+    // }
 
-        console.log("Checking for app updates...");
-        Window.this.xcall("check_for_updates", newerVersionFound);
-    }
-
-    function ignoreUpdate() {
-        updateData = null;
-    }
-
-    // Check for updates at start-up
-    checkForUpdates();
+    // // Check for updates at start-up
+    // checkForUpdates();
 </script>
 
 <main>
@@ -202,16 +193,12 @@
 
 
             <Content>
-                {#if updateData == null}
-                    <LaunchArea accountData={accountData} options={options} versionData={versionData} mods={mods} />
+                <LaunchArea accountData={accountData} options={options} versionData={versionData} mods={mods} />
 
-                    {#if optionsShown}
-                        <Options bind:options={options} logout={logout} bind:versionData={versionData} branches={branches} builds={builds} bind:mods={mods} updateBuilds={updateBuilds} />
-                    {:else}
-                        <NewsContainer />
-                    {/if}
+                {#if optionsShown}
+                    <!-- <Options bind:options={options} logout={logout} bind:versionData={versionData} branches={branches} builds={builds} bind:mods={mods} updateBuilds={updateBuilds} /> -->
                 {:else}
-                    <UpdateContainer bind:updateData={updateData} ignoreUpdate={ignoreUpdate} />
+                    <NewsContainer />
                 {/if}
             </Content>
 
