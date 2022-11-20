@@ -25,8 +25,11 @@
             options = o;
             accountData = options.currentAccount;
             console.log(JSON.stringify(o));
+
+            invoke('store_options', { options: options })
+                .catch((e) => console.error(e))
         })
-        .catch((e) => console.error(e))
+        .catch((e) => alert(e))
 
     // Versions
     let versionData;
@@ -69,19 +72,22 @@
     }
 
     function requestMods() {
-        // function onResponse(listOfMods) {
-        //     mods = listOfMods;
+        invoke('request_mods', { mcVersion: versionData.mcVersion, subsystem: versionData. subsystem })
+            .then((listOfMods) => {
+                mods = listOfMods;
 
-        //     mods.forEach(x => {
-        //         x.enabled = !options.disabledMods.includes(x.name);
-        //     });
-        // }
-
-        // function onError(e) {
-        //     console.error("unable to update mods", e);
-        // }
-
-        // Window.this.xcall("get_mods", versionData.mcVersion, versionData.subsystem, onResponse, onError);
+                mods.forEach(mod => {
+                    // check if mod is already configured in options
+                    if (mod.name in options.modStates) {
+                        mod.enabled = options.modStates[mod.name]; // set enabled from options
+                    } else {
+                        options.modStates[mod.name] = mod.enabled; // set default enabled
+                    }
+                });
+                invoke('store_options', { options: options })
+                    .catch((e) => console.error(e))
+            })
+            .catch((e) => console.error(e));
     }
 
     updateBranches();
@@ -92,7 +98,8 @@
     function saveAccount(account) {
         accountData = account;
         options.currentAccount = accountData;
-        // Window.this.xcall("store_options", options);
+        invoke('store_options', { options: options })
+                .catch((e) => console.error(e))
 
         console.log("Successfully saved account.");
         console.log(JSON.stringify(accountData));
@@ -196,7 +203,7 @@
                 <LaunchArea accountData={accountData} options={options} versionData={versionData} mods={mods} />
 
                 {#if optionsShown}
-                    <!-- <Options bind:options={options} logout={logout} bind:versionData={versionData} branches={branches} builds={builds} bind:mods={mods} updateBuilds={updateBuilds} /> -->
+                    <Options bind:options={options} logout={logout} bind:versionData={versionData} branches={branches} builds={builds} bind:mods={mods} updateBuilds={updateBuilds} />
                 {:else}
                     <NewsContainer />
                 {/if}

@@ -1,6 +1,5 @@
-use std::{process::exit, sync::{Arc, Mutex}, thread};
+use std::{process::exit, sync::{Arc, Mutex}};
 
-use anyhow::anyhow;
 use env_logger::Env;
 use log::{info};
 use sysinfo::SystemExt;
