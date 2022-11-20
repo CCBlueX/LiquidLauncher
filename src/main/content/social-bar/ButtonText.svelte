@@ -4,7 +4,7 @@
     export let url;
 
     function openUrl() {
-        Window.this.xcall("open", url);
+        // Window.this.xcall("open", url);
     }
 </script>
 

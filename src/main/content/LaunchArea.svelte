@@ -76,7 +76,7 @@
             log("Error on launching client: " + error);
         }
 
-        Window.this.xcall("run_client", versionData.buildId, accountData, options, mods, onProgress, onOutput, onDone, onError);
+        // Window.this.xcall("run_client", versionData.buildId, accountData, options, mods, onProgress, onOutput, onDone, onError);
 
         label.textContent = "Running...";
         launching(true);
@@ -84,7 +84,7 @@
     }
 
     function stopClient() {
-        Window.this.xcall("terminate");
+        // Window.this.xcall("terminate");
         launching(false);
     }
 

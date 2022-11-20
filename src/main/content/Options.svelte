@@ -16,13 +16,13 @@
         options.disabledMods = mods.filter(x => !x.enabled).map(x => x.name);
 
         // store options to file
-        Window.this.xcall("store_options", options);
+        // Window.this.xcall("store_options", options);
     }
 
     function syncBuilds() {
         let branch = document.getElementById("branches").value;
         options.preferredBranch = branch;
-        Window.this.xcall("store_options", options);
+        // Window.this.xcall("store_options", options);
 
         updateBuilds(branch);
     }
@@ -44,7 +44,7 @@
             console.error("failed to sync version data to user selection", buildData);
             return;
         }
-        Window.this.xcall("store_options", options);
+        // Window.this.xcall("store_options", options);
 
         versionData = buildData;
     }
