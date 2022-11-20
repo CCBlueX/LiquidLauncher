@@ -76,22 +76,18 @@ async fn request_mods(mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod
     Ok(mods)
 }
 
-struct ProgressState {
-    window: Window,
-}
-
-fn handle_stdout(value: &Arc<std::sync::Mutex<ProgressState>>, data: &[u8]) -> anyhow::Result<()> {
-    value.lock().unwrap().window.emit("process-output", String::from_utf8(data.to_vec())?)?;
+fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
+    window.lock().unwrap().emit("process-output", String::from_utf8(data.to_vec())?)?;
     Ok(())
 }
 
-fn handle_stderr(value: &Arc<std::sync::Mutex<ProgressState>>, data: &[u8]) -> anyhow::Result<()> {
-    value.lock().unwrap().window.emit("process-output", String::from_utf8(data.to_vec())?)?;
+fn handle_stderr(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
+    window.lock().unwrap().emit("process-output", String::from_utf8(data.to_vec())?)?;
     Ok(())
 }
 
-fn handle_progress(value: &Arc<std::sync::Mutex<ProgressState>>, progress_update: ProgressUpdate) -> anyhow::Result<()> {
-    value.lock().unwrap().window.emit("progress-update", progress_update)?;
+fn handle_progress(window: &Arc<std::sync::Mutex<Window>>, progress_update: ProgressUpdate) -> anyhow::Result<()> {
+    window.lock().unwrap().emit("progress-update", progress_update)?;
     Ok(())
 }
 
@@ -140,9 +136,7 @@ async fn run_client(build_id: i32, account_data: Account, options: LauncherOptio
                 on_stdout: handle_stdout,
                 on_stderr: handle_stderr,
                 on_progress: handle_progress,
-                data: Box::new(Arc::new(std::sync::Mutex::new(ProgressState {
-                    window
-                }))),
+                data: Box::new(Arc::new(std::sync::Mutex::new(window))),
                 terminator: terminator_rx
             }
     ).await
@@ -167,7 +161,7 @@ async fn terminate(app_state: tauri::State<'_, AppState>) -> Result<(), String> 
 }
 
 /// Runs the GUI and returns when the window is closed.
-pub(crate) fn gui_main() {
+pub fn gui_main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("liquidlauncher=debug")).init();
 
     tauri::Builder::default()
