@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, collections::HashMap};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -24,8 +24,8 @@ pub(crate) struct LauncherOptions {
     // todo: might move into it's own file when there is support for multiple accounts which might sync up with the used client
     #[serde(rename = "currentAccount")]
     pub current_account: Option<Account>,
-    #[serde(rename = "disabledMods")]
-    pub disabledMods: Vec<String>,
+    #[serde(rename = "modStates")]
+    pub mod_states: HashMap<String, bool>,
 }
 
 impl LauncherOptions {
@@ -55,7 +55,7 @@ impl Default for LauncherOptions {
             preferred_branch: None,
             preferred_build: None,
             current_account: None,
-            disabledMods: Vec::new()
+            mod_states: HashMap::new()
         }
     }
 }
