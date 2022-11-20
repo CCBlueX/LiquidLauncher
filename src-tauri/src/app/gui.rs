@@ -1,5 +1,6 @@
-use std::{process::exit, sync::Arc};
+use std::{process::exit, sync::{Arc, Mutex}, thread};
 
+use anyhow::anyhow;
 use env_logger::Env;
 use log::{info};
 use sysinfo::SystemExt;
@@ -8,6 +9,14 @@ use tauri::{Manager, Window};
 use crate::{LAUNCHER_DIRECTORY, minecraft::{service::{Account, self}, launcher::{LaunchingParameter, LauncherData}, progress::ProgressUpdate, prelauncher}};
 
 use super::{app_data::LauncherOptions, api::{ApiEndpoints, Build, LoaderMod}};
+
+struct RunnerInstance {
+    terminator: tokio::sync::oneshot::Sender<()>,
+}
+
+struct AppState {
+    runner_instance: Arc<Mutex<Option<RunnerInstance>>>
+}
 
 #[tauri::command]
 fn exit_app() {
@@ -87,14 +96,12 @@ fn handle_progress(value: &Arc<std::sync::Mutex<ProgressState>>, progress_update
 }
 
 #[tauri::command]
-async fn run_client(build_id: i32, account_data: Account, options: LauncherOptions, mods: Vec<LoaderMod>, window: Window) -> Result<(), String> {
+async fn run_client(build_id: i32, account_data: Account, options: LauncherOptions, mods: Vec<LoaderMod>, window: Window, app_state: tauri::State<'_, AppState>) -> Result<(), String> {
     let (account_name, uuid, token, user_type) = match account_data {
         Account::MsaAccount { auth, .. } => (auth.name, auth.uuid, auth.token, "msa".to_string()),
         Account::MojangAccount { name, token, uuid } => (name, token, uuid, "mojang".to_string()),
         Account::OfflineAccount { name, uuid } => (name, "-".to_string(), uuid, "legacy".to_string())
     };
-
-    let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
 
     let sys = sysinfo::System::new_all();
     let parameters = LaunchingParameter {
@@ -109,10 +116,21 @@ async fn run_client(build_id: i32, account_data: Account, options: LauncherOptio
         keep_launcher_open: options.keep_launcher_open
     };
 
+    let runner_instance = &app_state.runner_instance;
+
+    if runner_instance.lock().map_err(|e| format!("unable to lock runner instance: {:?}", e))?.is_some() {
+        return Err("client is already running".to_string());
+    }
+
     info!("Loading launch manifest...");
     let launch_manifest = ApiEndpoints::launch_manifest(build_id)
         .await
         .map_err(|e| format!("unable to request launch manifest: {:?}", e))?;
+
+    let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
+
+    *runner_instance.lock().map_err(|e| format!("unable to lock runner instance: {:?}", e))?
+        = Some(RunnerInstance { terminator: terminator_tx });
 
     prelauncher::launch(
             launch_manifest,
@@ -130,6 +148,21 @@ async fn run_client(build_id: i32, account_data: Account, options: LauncherOptio
     ).await
         .map_err(|e| format!("failed to launch client: {:?}", e))?;
 
+    *runner_instance.lock().map_err(|e| format!("unable to lock runner instance: {:?}", e))?
+        = None;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn terminate(app_state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let mut lck = app_state.runner_instance.lock()
+        .map_err(|e| format!("unable to lock runner instance: {:?}", e))?;
+
+    if let Some(inst) = lck.take() {
+        println!("Sending sigterm");
+        inst.terminator.send(()).unwrap();
+    }
     Ok(())
 }
 
@@ -159,6 +192,9 @@ pub(crate) fn gui_main() {
 
             Ok(())
         })
+        .manage(AppState { 
+            runner_instance: Arc::new(Mutex::new(None))
+        })
         .invoke_handler(tauri::generate_handler![
             exit_app,
             open_url,
@@ -167,7 +203,8 @@ pub(crate) fn gui_main() {
             request_branches,
             request_builds,
             request_mods,
-            run_client
+            run_client,
+            terminate
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
