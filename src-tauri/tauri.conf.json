@@ -6,7 +6,7 @@
     "distDir": "../public"
   },
   "package": {
-    "productName": "liquidlauncher",
+    "productName": "LiquidLauncher",
     "version": "0.1.0"
   },
   "tauri": {
@@ -15,8 +15,8 @@
     },
     "bundle": {
       "active": true,
-      "category": "DeveloperTool",
-      "copyright": "",
+      "category": "Utility",
+      "copyright": "CCBlueX",
       "deb": {
         "depends": []
       },
@@ -24,7 +24,7 @@
       "icon": [
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "net.ccbluex.liquidlauncher",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -34,7 +34,7 @@
         "signingIdentity": null
       },
       "resources": [],
-      "shortDescription": "",
+      "shortDescription": "A minecraft cheat launcher",
       "targets": "all",
       "windows": {
         "certificateThumbprint": null,
