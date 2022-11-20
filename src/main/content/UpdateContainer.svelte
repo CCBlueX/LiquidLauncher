@@ -1,6 +1,7 @@
 <script>
     import SocialBar from "./social-bar/SocialBar.svelte";
-
+    import { invoke } from '@tauri-apps/api/tauri'
+    
     export let updateData;
     export let ignoreUpdate;
 </script>
@@ -11,7 +12,7 @@
 
         <label>Version: {updateData.name}</label><br>
         <label>Published: {updateData.published_at}</label><br>
-        <button class="download" on:click={Window.this.xcall("open", updateData.html_url)}>Download</button>
+        <button class="download" on:click={invoke("open", { url: updateData.html_url })}>Download</button>
         <button class="ignore" on:click={ignoreUpdate}>Ignore</button>
     </div>
 

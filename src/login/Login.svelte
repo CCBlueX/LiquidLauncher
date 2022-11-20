@@ -31,7 +31,7 @@
     }
 
     function linkMicrosoft() {
-        Window.this.xcall("open", "https://microsoft.com/link");
+        // Window.this.xcall("open", "https://microsoft.com/link");
     }
 </script>
 

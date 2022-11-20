@@ -13,7 +13,6 @@
     import Options from "./main/content/Options.svelte";
     import UpdateContainer from "./main/content/UpdateContainer.svelte";
 
-    // When using the Tauri API npm package:
     import { invoke } from '@tauri-apps/api/tauri'
 
     // Options Storage
@@ -92,7 +91,7 @@
     function saveAccount(account) {
         accountData = account;
         options.currentAccount = accountData;
-        Window.this.xcall("store_options", options);
+        // Window.this.xcall("store_options", options);
 
         console.log("Successfully saved account.");
         console.log(JSON.stringify(accountData));

@@ -1,12 +1,13 @@
 <script>
     import Tooltip from "../../misc/ToolTip.svelte";
+    import { invoke } from '@tauri-apps/api/tauri'
 
     export let icon;
     export let text;
     export let url;
 </script>
 
-<button class="button" on:click={Window.this.xcall("open", url)}>
+<button class="button" on:click={invoke("open", { url: url })}>
     <Tooltip {text} />
     <img class="icon" src="img/icon/social/icon-{icon}.svg" alt={icon}>
 </button>
