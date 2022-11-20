@@ -1,12 +1,11 @@
 <script>
     import SocialBar from "../social-bar/SocialBar.svelte";
     import News from "./News.svelte";
-    import { fetchNews } from "../../../utils/news";
-
+    
     let news = [];
 
     (async () => {
-        news = await fetchNews();
+        // news = await fetchNews();
     })();
 </script>
 
