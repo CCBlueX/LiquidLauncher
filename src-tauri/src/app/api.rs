@@ -50,7 +50,7 @@ impl ApiEndpoints {
     }
 
     /// Request list of downloadable mods for mc_version and used subsystem
-    pub async fn mods(mc_version: &String, subsystem: &String) -> Result<Vec<LoaderMod>> {
+    pub async fn mods(mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod>> {
         Self::request_from_endpoint(&format!("version/mods/{}/{}", mc_version, subsystem)).await
     }
 

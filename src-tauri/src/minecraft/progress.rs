@@ -1,5 +1,7 @@
 use core::convert::AsRef;
 
+use serde::Serialize;
+
 #[derive(Debug)]
 pub enum ProgressUpdateSteps {
     DownloadLiquidBounceMods,
@@ -33,10 +35,14 @@ impl ProgressUpdateSteps {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Clone)]
+#[serde(tag = "type", content = "value")]
 pub enum ProgressUpdate {
+    #[serde(rename = "max")] 
     SetMax(u64),
+    #[serde(rename = "progress")] 
     SetProgress(u64),
+    #[serde(rename = "label")] 
     SetLabel(String),
 }
 
