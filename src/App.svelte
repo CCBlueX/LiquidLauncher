@@ -23,6 +23,7 @@
     invoke('get_options')
         .then((o) => {
             options = o;
+            accountData = options.currentAccount;
             console.log(JSON.stringify(o));
         })
         .catch((e) => console.error(e))
@@ -86,7 +87,7 @@
     updateBranches();
 
     // Account
-    let accountData = options.currentAccount; // name, token, uuid, type
+    let accountData = null; // name, token, uuid, type
 
     function saveAccount(account) {
         accountData = account;

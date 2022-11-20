@@ -1,6 +1,4 @@
 <script>
-    import {fetchNews} from "../../utils/news";
-
     export let versionData;
     export let accountData;
     export let options;
@@ -12,12 +10,12 @@
     let previewImage;
 
     (async () => {
-        const news = (await fetchNews())[0];
-        console.log(news);
-        title = news.title;
-        date = news.date;
-        text = news.text;
-        previewImage = news.banner.image;
+        // const news = (await fetchNews())[0];
+        // console.log(news);
+        // title = news.title;
+        // date = news.date;
+        // text = news.text;
+        // previewImage = news.banner.image;
     })();
 
     function launching(status) {
