@@ -28,12 +28,12 @@
 }
 
 body {
-    background-image: url("img/background.jpg");
-    background-size: cover;
+    background: transparent;
     font-family: "Gilroy", sans-serif;
     font-weight: light;
     font-size: 14px;
     user-select: none;
+    border-radius: 14px;
 }
 
 ::-webkit-scrollbar {

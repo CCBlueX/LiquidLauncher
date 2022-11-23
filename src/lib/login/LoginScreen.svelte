@@ -6,6 +6,8 @@
     import VerticalFlexWrapper from "../common/VerticalFlexWrapper.svelte";
     import Facts from "./Facts.svelte";
     import LoginModal from "./loginmodal/LoginModal.svelte";
+
+    export let options;
 </script>
 
 <VerticalFlexWrapper blur={false}>
@@ -17,7 +19,7 @@
     <div class="main-section-wrapper">
         <Facts />
 
-        <LoginModal on:login />
+        <LoginModal bind:options />
     </div>
 
     <SocialBar />

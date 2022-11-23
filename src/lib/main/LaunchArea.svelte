@@ -6,14 +6,9 @@
     export let versionInfo;
     export let mcVersion;
     export let lbVersion;
+    export let running;
 
     const dispatch = createEventDispatcher();
-
-    let running = false;
-
-    function handleLaunchClick(e) {
-        running = !running;
-    }
 </script>
 
 <div class="launch-area">
@@ -35,11 +30,11 @@
 
     {#if running}
         <div class="running-button-wrapper">
-            <ButtonLaunchArea text="Terminate" active={true} on:click={handleLaunchClick} /> 
+            <ButtonLaunchArea text="Terminate" active={true} on:click={() => dispatch("terminate")} /> 
             <ButtonLaunchArea text="Log" active={false} on:click={() => dispatch("showClientLog")} />  
         </div>
     {:else}
-        <ButtonLaunchArea text="Launch LiquidBounce" active={false} on:click={handleLaunchClick} />
+        <ButtonLaunchArea text="Launch LiquidBounce" active={false} on:click={() => dispatch("launch")} />
     {/if}
 </div>
 

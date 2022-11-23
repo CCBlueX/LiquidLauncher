@@ -18,12 +18,6 @@ struct AppState {
 }
 
 #[tauri::command]
-fn exit_app() {
-    // exit app
-    exit(0);
-}
-
-#[tauri::command]
 fn open_url(url: &str) -> Result<(), String> {
     open::that(url)
         .map_err(|e| format!("unable to open url: {:?}", e))?;
@@ -73,6 +67,14 @@ async fn request_mods(mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod
         .map_err(|e| format!("unable to request mods: {:?}", e))?;
 
     Ok(mods)
+}
+
+#[tauri::command]
+async fn login_offline(username: &str) -> Result<Account, String> {
+    let account = service::auth_offline(username.to_string())
+        .await;
+
+    Ok(account)
 }
 
 fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
@@ -189,7 +191,6 @@ pub fn gui_main() {
             runner_instance: Arc::new(Mutex::new(None))
         })
         .invoke_handler(tauri::generate_handler![
-            exit_app,
             open_url,
             get_options,
             store_options,
@@ -197,6 +198,7 @@ pub fn gui_main() {
             request_builds,
             request_mods,
             run_client,
+            login_offline,
             terminate
         ])
         .run(tauri::generate_context!())

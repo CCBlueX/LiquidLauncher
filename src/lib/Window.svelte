@@ -1,38 +1,38 @@
 <script>
+    import { invoke } from "@tauri-apps/api";
     import LoginScreen from "./login/LoginScreen.svelte";
     import MainScreen from "./main/MainScreen.svelte";
 
-    let loggedIn = false;
+    export let options;
 
-    function handleLogin(e) {
-        loggedIn = true;
+    options.store = function() {
+        invoke("store_options", { options })
+            .catch(e => console.error(e));
+    };
+
+    console.log(options);
+
+    function logout() {
+        options.currentAccount = null;
+        options.store();
     }
 </script>
 
 <div class="window">
     <!-- TODO: Animation? -->
-    {#if loggedIn}
-        <MainScreen />
+    {#if options.currentAccount !== null }
+        <MainScreen bind:options on:logout={logout} />
     {:else}
-        <LoginScreen on:login={handleLogin} />
+        <LoginScreen bind:options />
     {/if}
 </div>
 
 <style>
     .window {
         background-color: rgba(0, 0, 0, 0.6);
-        width: 1000px;
-        height: 670px;
-        border-radius: 14px;
+        width: 100vw;
+        height: 100vh;
         padding: 32px;
-
-        /* Testing */
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        backdrop-filter: blur(10px);
-        overflow: hidden;
-        resize: both;
+        border-radius: 14px;
     }
 </style>

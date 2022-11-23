@@ -1,4 +1,4 @@
-<div class="title-bar">
+<div class="title-bar" data-tauri-drag-region>
     <slot />
 </div>
 

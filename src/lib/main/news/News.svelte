@@ -1,10 +1,16 @@
 <script>
+    import { invoke } from "@tauri-apps/api/tauri";
+
     export let bannerText;
     export let title;
     export let date;
     export let bannerUrl;
     export let url;
     export let description;
+
+    function handleClick() {
+        invoke("open_url", { url: url });
+    }
 </script>
 
 <div class="news">
@@ -17,7 +23,7 @@
             <div class="date">{date}</div>
         </div>
         <div class="description">{description}</div>
-        <button class="button-show-news" type="button">Read more</button>
+        <button class="button-show-news" type="button" on:click={handleClick}>Read more</button>
     </div>
 </div>
 

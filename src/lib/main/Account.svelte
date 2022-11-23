@@ -1,15 +1,15 @@
 <script>
     import { createEventDispatcher } from "svelte";
 
-
     export let username;
+    export let uuid;
     export let accountType;
 
     const dispatch = createEventDispatcher();
 </script>
 
 <div class="account">
-    <img class="avatar" src="https://crafatar.com/avatars/3aa1c8378f4948e9ab4d7a7c36679748?size=100" alt="avatar">
+    <img class="avatar" src="https://crafatar.com/avatars/{uuid}?size=100" alt="avatar">
     <div class="details">
         <div class="username">{username}</div>
         <div class="type">{accountType}</div>

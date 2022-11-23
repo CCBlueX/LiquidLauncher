@@ -1,4 +1,4 @@
-<div class="status-bar">
+<div class="status-bar" data-tauri-drag-region>
     <slot />
 </div>
 
