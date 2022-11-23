@@ -1,15 +1,18 @@
 <script>
+    import { createEventDispatcher } from "svelte";
+
     export let title;
     export let items;
     export let value;
-</script>
 
+    const dispatch = createEventDispatcher();
+</script>
 
 <div class="select-setting">
     <div class="title">{title}</div>
-    <select class="select" bind:value={value}>
+    <select class="select" bind:value={value} on:change={e => dispatch("change", e)}>
         {#each items as i}
-            <option value={i}>{i}</option>
+            <option value={i.value}>{i.text}</option>
         {/each}
     </select>
 </div>

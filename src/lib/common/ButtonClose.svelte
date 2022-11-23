@@ -1,4 +1,13 @@
-<button class="button-close" type="button">
+<script>
+    import { invoke } from "@tauri-apps/api/tauri";
+    import { appWindow } from "@tauri-apps/api/window";
+
+    function closeWindow() {
+        appWindow.close();
+    }
+</script>
+
+<button class="button-close" type="button" on:click={closeWindow}>
     <img class="icon" src="img/icon/icon-button-close.svg" alt="close">
 </button>
 

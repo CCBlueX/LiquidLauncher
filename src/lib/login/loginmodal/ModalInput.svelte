@@ -1,14 +1,16 @@
 <script>
     export let icon;
-    export let type;
     export let placeholder;
+    export let value;
+
+    export let characterLimit;
 </script>
 
 <div class="wrapper">
     <div class="icon">
         <img src="img/icon/icon-{icon}.svg" alt={icon}>
     </div>
-    <input class="input" type={type} placeholder={placeholder}>
+    <input class="input" type="text" placeholder={placeholder} maxlength={characterLimit} bind:value>
 </div>
 
 <style>

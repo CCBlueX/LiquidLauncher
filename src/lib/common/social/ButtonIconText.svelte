@@ -1,10 +1,12 @@
 <script>
+    import { invoke } from "@tauri-apps/api/tauri";
+
     export let text;
     export let icon;
     export let url;
 
     function handleClick(e) {
-
+        invoke("open_url", { url: url });
     }
 </script>
 

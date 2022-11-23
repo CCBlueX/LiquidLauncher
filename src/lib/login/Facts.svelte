@@ -3,7 +3,7 @@
 
     const facts = [
         {
-            title: "3.000.000 Total Downloads",
+            title: "5.000.000 Total Downloads",
             description: "LiquidBounce is one of the most popular hacked clients of all time."
         },
         {

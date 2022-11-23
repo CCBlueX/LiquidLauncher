@@ -2,11 +2,20 @@
     import { createEventDispatcher } from "svelte";
     import ModalButton from "./ModalButton.svelte";
     import ModalInput from "./ModalInput.svelte";
+    
+    import { invoke } from "@tauri-apps/api/tauri";
 
-    const dispatch = createEventDispatcher();
+    export let options;
+
+    let offlineUsername = "";
 
     function handleOfflineLoginClick(e) {
-        dispatch("login");
+        invoke("login_offline", { username: offlineUsername })
+            .then((accountData) => {
+                options.currentAccount = accountData;
+                options.store();
+            })
+            .catch(e => console.error(e));
     }
 
     function handleMicrosoftLoginClick(e) {
@@ -17,7 +26,7 @@
 <div class="modal">
     <div class="title">Log in</div>
 
-    <ModalInput type="text" placeholder="Username" icon="person" />
+    <ModalInput placeholder="Username" icon="person" characterLimit={16} bind:value={offlineUsername} />
     <ModalButton text="Offline login" primary={false} on:click={handleOfflineLoginClick} />
     <ModalButton text="Microsoft login" primary={true} on:click={handleMicrosoftLoginClick} />
 </div>
