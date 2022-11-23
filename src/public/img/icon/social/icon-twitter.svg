@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="22" height="22" viewBox="0 0 22 22">
+  <defs>
+    <clipPath id="clip-path">
+      <rect id="Rechteck_37" data-name="Rechteck 37" width="22" height="22" transform="translate(0.364 0.364)" fill="#fff" stroke="#707070" stroke-width="1"/>
+    </clipPath>
+  </defs>
+  <g id="Gruppe_maskieren_1" data-name="Gruppe maskieren 1" transform="translate(-0.364 -0.364)" clip-path="url(#clip-path)">
+    <path id="Twitter" d="M19.2,34.346A13.268,13.268,0,0,0,32.555,20.988c0-.2,0-.405-.014-.607a9.552,9.552,0,0,0,2.342-2.43,9.371,9.371,0,0,1-2.7.739,4.711,4.711,0,0,0,2.064-2.6,9.409,9.409,0,0,1-2.981,1.14,4.7,4.7,0,0,0-8,4.282,13.329,13.329,0,0,1-9.676-4.905,4.7,4.7,0,0,0,1.454,6.267,4.66,4.66,0,0,1-2.131-.588v.059a4.7,4.7,0,0,0,3.767,4.6,4.687,4.687,0,0,1-2.12.081,4.7,4.7,0,0,0,4.386,3.26A9.421,9.421,0,0,1,13.118,32.3,9.556,9.556,0,0,1,12,32.237a13.292,13.292,0,0,0,7.2,2.105" transform="translate(-12.468 -13.659)" fill="#fff"/>
+  </g>
+</svg>

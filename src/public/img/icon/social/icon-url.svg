@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="12" height="13.091" viewBox="0 0 12 13.091">
+  <defs>
+    <clipPath id="clip-path">
+      <rect id="Rechteck_28" data-name="Rechteck 28" width="12" height="13.091" transform="translate(0.455 -0.318)" fill="#fff"/>
+    </clipPath>
+  </defs>
+  <g id="Gruppe_maskieren_10" data-name="Gruppe maskieren 10" transform="translate(-0.455 0.318)" clip-path="url(#clip-path)">
+    <g id="foreign" transform="translate(0.455 0.227)">
+      <g id="Gruppe_70" data-name="Gruppe 70" transform="translate(4.496)">
+        <g id="Gruppe_69" data-name="Gruppe 69">
+          <path id="Pfad_34" data-name="Pfad 34" d="M14.968,0H10.68a.536.536,0,1,0,0,1.072h2.994L8.157,6.589a.536.536,0,1,0,.758.758L14.432,1.83V4.824a.536.536,0,1,0,1.072,0V.536A.536.536,0,0,0,14.968,0Z" transform="translate(-8)" fill="#fff"/>
+        </g>
+      </g>
+      <g id="Gruppe_72" data-name="Gruppe 72" transform="translate(0 2.353)">
+        <g id="Gruppe_71" data-name="Gruppe 71">
+          <path id="Pfad_35" data-name="Pfad 35" d="M9.111,7.216a.536.536,0,0,0-.536.536v4.824h-7.5v-7.5H5.9A.536.536,0,1,0,5.9,4H.536A.536.536,0,0,0,0,4.536v8.575a.536.536,0,0,0,.536.536H9.111a.536.536,0,0,0,.536-.536V7.752A.536.536,0,0,0,9.111,7.216Z" transform="translate(0 -4)" fill="#fff"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
