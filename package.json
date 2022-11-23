@@ -16,6 +16,8 @@
     "@tauri-apps/cli": "^1.2.0"
   },
   "dependencies": {
-    "@tauri-apps/api": "^1.2.0"
+    "@tauri-apps/api": "^1.2.0",
+    "@sveltejs/svelte-virtual-list": "^3.0.1",
+    "nouislider": "^15.6.1"
   }
 }
