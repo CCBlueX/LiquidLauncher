@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="22" height="22" viewBox="0 0 22 22">
+  <defs>
+    <clipPath id="clip-path">
+      <rect id="Rechteck_34" data-name="Rechteck 34" width="22" height="22" transform="translate(0.273 0.364)" fill="#fff" stroke="#707070" stroke-width="1"/>
+    </clipPath>
+  </defs>
+  <g id="Gruppe_maskieren_3" data-name="Gruppe maskieren 3" transform="translate(-0.273 -0.364)" clip-path="url(#clip-path)">
+    <path id="svg_xml_base64_PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMCAyMCI_PGRlZnM_PHJhZGlhbEdyYWRpZW50IGlkPSJhIiBjeD0iNjUuNjAwMDM" data-name="svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMCAyMCI+PGRlZnM+PHJhZGlhbEdyYWRpZW50IGlkPSJhIiBjeD0iNjUuNjAwMDM" d="M122.963,9.048V19.234c0,1.7-.029,2.865-.029,4.016h-5.482c-3.274,0-5.071-1.562-5.071-4.017a3.353,3.353,0,0,1,2.356-3.327,3.186,3.186,0,0,1-1.9-3.043c0-2.272,1.777-3.814,4.892-3.814h5.231Zm5.747,0c3.115,0,4.892,1.542,4.892,3.814a3.186,3.186,0,0,1-1.9,3.043,3.353,3.353,0,0,1,2.356,3.327c0,2.455-1.8,4.017-5.071,4.017h-5.482c0-1.151-.027-2.319-.029-4.016V9.048h5.231Zm-8.563,8.116h-2.476c-1.637,0-2.456.629-2.456,1.867,0,1.3.759,1.948,2.256,1.948h1.3c1.038,0,1.378-.507,1.378-2.049V17.163Zm8.623,0h-2.476v1.765c0,1.542.339,2.049,1.378,2.049h1.3c1.5,0,2.256-.649,2.256-1.948C131.226,17.792,130.408,17.163,128.77,17.163Zm-8.6-5.843h-2.276c-1.458,0-2.216.67-2.216,1.806s.759,1.806,2.216,1.806h2.276Zm8.383,0h-2.276v3.611h2.276c1.458,0,2.216-.67,2.216-1.806s-.759-1.806-2.216-1.806Z" transform="translate(-111.789 -4.811)" fill="#fff"/>
+  </g>
+</svg>

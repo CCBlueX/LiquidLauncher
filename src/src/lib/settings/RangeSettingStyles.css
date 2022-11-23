@@ -1,0 +1,26 @@
+.range-setting .noUi-handle {
+    background-color: #4677ff;
+    box-shadow: unset;
+    border: none;
+    border-radius: 50%;
+    height: 12px !important;
+    width: 12px !important;
+    transform: translate(-10px, 1px);
+}
+
+.range-setting .noUi-handle::after,
+.range-setting .noUi-handle::before {
+    display: none;
+}
+
+.range-setting .noUi-target {
+    margin: 10px 0;
+    height: 2px;
+    border: none;
+    background-color: rgba(0, 0, 0, 0.5);
+    box-shadow: unset;
+}
+
+.range-setting .noUi-connect {
+    background-color: #4677ff;
+}

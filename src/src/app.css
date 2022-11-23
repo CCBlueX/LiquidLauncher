@@ -1,0 +1,46 @@
+@font-face {
+    font-family: "Gilroy";
+    font-weight: bold;
+    src: url("font/Gilroy-Bold.ttf");
+}
+
+@font-face {
+    font-family: "Gilroy";
+    font-weight: medium;
+    src: url("font/Gilroy-Medium.ttf");
+}
+
+@font-face {
+    font-family: "Gilroy";
+    font-weight: light;
+    src: url("font/Gilroy-SemiBold.ttf");
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-appearance: none;
+}
+
+*:focus {
+    outline: none;
+}
+
+body {
+    background-image: url("img/background.jpg");
+    background-size: cover;
+    font-family: "Gilroy", sans-serif;
+    font-weight: light;
+    font-size: 14px;
+    user-select: none;
+}
+
+::-webkit-scrollbar {
+    width: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #4677FF;
+    border-radius: 5px;
+}
