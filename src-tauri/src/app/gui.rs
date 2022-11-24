@@ -1,7 +1,7 @@
 use std::{process::exit, sync::{Arc, Mutex}};
 
 use env_logger::Env;
-use log::{info};
+use log::{info, error};
 use sysinfo::SystemExt;
 use tauri::{Manager, Window};
 
@@ -172,16 +172,29 @@ pub fn gui_main() {
             #[cfg(target_os = "macos")]
             {
                 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
-                apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
-                    .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+                if let Err(e) = apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None) {
+                    error!("Failed to apply vibrancy: {:?}", e);
+                }
             }
             
-
+            // Applies blur to the window and make corners rounded
             #[cfg(target_os = "windows")]
             {
-                use window_vibrancy::apply_acrylic;
-                apply_acrylic(&window, None)
-                    .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
+                use window_vibrancy::{apply_acrylic, apply_rounded_corners, apply_blur};
+
+                if let Err(e) = apply_acrylic(&window, None) {
+                    error!("Failed to apply acrylic vibrancy: {:?}", e);
+
+                    if let Err(e) = apply_blur(&window) {
+                        error!("Failed to apply blur vibrancy: {:?}", e);
+                    }
+                }
+
+                if let Err(e) = apply_rounded_corners(&window) {
+                    error!("Failed to apply rounded corners: {:?}", e);
+                    
+                    // todo: fallback to HTML corners
+                }
             }
 
             Ok(())
