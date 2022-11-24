@@ -33,6 +33,6 @@
         width: 100vw;
         height: 100vh;
         padding: 32px;
-        border-radius: 14px;
+        /* border-radius: 14px; */
     }
 </style>
