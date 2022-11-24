@@ -33,7 +33,7 @@ body {
     font-weight: light;
     font-size: 14px;
     user-select: none;
-    border-radius: 14px;
+    /* border-radius: 14px; */
 }
 
 ::-webkit-scrollbar {
