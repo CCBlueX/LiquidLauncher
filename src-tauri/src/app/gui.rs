@@ -183,7 +183,8 @@ pub fn gui_main() {
                 apply_acrylic(&window, Some((18, 18, 18, 125)))
                 .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
             }
-            
+
+            window.center().expect("Failed to center window");
 
             Ok(())
         })
