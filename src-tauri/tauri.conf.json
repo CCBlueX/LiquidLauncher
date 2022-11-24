@@ -53,10 +53,11 @@
         "title": "LiquidLauncher",
         "width": 1000,
         "height": 670,
-        "resizable": true,
+        "resizable": false,
         "fullscreen": false,
         "transparent": true,
-        "decorations": false
+        "decorations": false,
+        "center": true
       }
     ]
   }
