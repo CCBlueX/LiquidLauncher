@@ -93,7 +93,7 @@ fn handle_progress(window: &Arc<std::sync::Mutex<Window>>, progress_update: Prog
 }
 
 #[tauri::command]
-async fn run_client(build_id: i32, account_data: Account, options: LauncherOptions, mods: Vec<LoaderMod>, window: Window, app_state: tauri::State<'_, AppState>) -> Result<(), String> {
+async fn run_client(build_id: i32, account_data: Account, options: LauncherOptions, mods: Vec<LoaderMod>, window: Window, app_state: tauri::State<'_, AppState>, handle: tauri::AppHandle) -> Result<(), String> {
     let (account_name, uuid, token, user_type) = match account_data {
         Account::MsaAccount { auth, .. } => (auth.name, auth.uuid, auth.token, "msa".to_string()),
         Account::MojangAccount { name, token, uuid } => (name, token, uuid, "mojang".to_string()),
@@ -118,7 +118,7 @@ async fn run_client(build_id: i32, account_data: Account, options: LauncherOptio
     if runner_instance.lock().map_err(|e| format!("unable to lock runner instance: {:?}", e))?.is_some() {
         return Err("client is already running".to_string());
     }
-
+    
     info!("Loading launch manifest...");
     let launch_manifest = ApiEndpoints::launch_manifest(build_id)
         .await
