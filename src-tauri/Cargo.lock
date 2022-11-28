@@ -4082,7 +4082,7 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 [[package]]
 name = "window-vibrancy"
 version = "0.3.2"
-source = "git+https://github.com/CCBlueX/window-vibrancy.git?branch=rounded_corners#6152f7fb8240fbd8e91a7a53ce83327f8d2d3952"
+source = "git+https://github.com/CCBlueX/window-vibrancy.git#6152f7fb8240fbd8e91a7a53ce83327f8d2d3952"
 dependencies = [
  "cocoa",
  "objc",
