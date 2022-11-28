@@ -6,8 +6,6 @@ pub enum LauncherError {
     InvalidVersionProfile(String),
     #[error("Unknown template parameter: {0}")]
     UnknownTemplateParameter(String),
-    #[error("Invalid java script: {0}")]
-    InvalidJavaScript(String),
 }
 
 #[derive(Error, Debug)]

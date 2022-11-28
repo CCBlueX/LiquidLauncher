@@ -5,7 +5,7 @@ use anyhow::Result;
 use log::*;
 use tokio::fs;
 
-use crate::app::api::{ApiEndpoints, LaunchManifest, LoaderSubsystem, ModSource, LoaderMod};
+use crate::app::api::{LaunchManifest, LoaderSubsystem, ModSource, LoaderMod};
 use crate::error::LauncherError;
 use crate::app::webview::download_client;
 use crate::LAUNCHER_DIRECTORY;

@@ -1,7 +1,7 @@
-use std::{process::exit, sync::{Arc, Mutex}, thread};
+use std::{sync::{Arc, Mutex}, thread};
 
 use env_logger::Env;
-use log::{info, error, debug};
+use log::{info, error};
 use sysinfo::SystemExt;
 use tauri::{Manager, Window};
 
@@ -86,7 +86,7 @@ fn login_microsoft(window: tauri::Window) -> Result<(), String> {
 
             let _ = window.emit("microsoft_code", code);
         }).unwrap(); // unwrap is fine cuz own thread
-        
+
         let _ = window.emit("microsoft_successful", account);
     });
 
