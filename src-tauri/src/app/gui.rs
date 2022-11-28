@@ -1,7 +1,7 @@
-use std::{process::exit, sync::{Arc, Mutex}};
+use std::{process::exit, sync::{Arc, Mutex}, thread};
 
 use env_logger::Env;
-use log::{info, error};
+use log::{info, error, debug};
 use sysinfo::SystemExt;
 use tauri::{Manager, Window};
 
@@ -75,6 +75,22 @@ async fn login_offline(username: &str) -> Result<Account, String> {
         .await;
 
     Ok(account)
+}
+
+#[tauri::command]
+fn login_microsoft(window: tauri::Window) -> Result<(), String> {
+    // todo: rewrite library async
+    thread::spawn(move || {
+        let account = service::auth_msa(|code| {
+            info!("received code: {}", code);
+
+            let _ = window.emit("microsoft_code", code);
+        }).unwrap(); // unwrap is fine cuz own thread
+        
+        let _ = window.emit("microsoft_successful", account);
+    });
+
+  Ok(())
 }
 
 fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
@@ -211,6 +227,7 @@ pub fn gui_main() {
             request_mods,
             run_client,
             login_offline,
+            login_microsoft,
             terminate
         ])
         .run(tauri::generate_context!())

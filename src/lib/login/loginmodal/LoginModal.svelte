@@ -4,6 +4,7 @@
     import ModalInput from "./ModalInput.svelte";
     
     import { invoke } from "@tauri-apps/api/tauri";
+    import { listen } from "@tauri-apps/api/event";
 
     export let options;
 
@@ -19,16 +20,43 @@
     }
 
     function handleMicrosoftLoginClick(e) {
+        invoke("login_microsoft");
+    }
 
+    let microsoftCode;
+
+    listen("microsoft_code", (e) => {
+        microsoftCode = e.payload;
+    });
+
+    listen("microsoft_successful", (e) => {
+        options.currentAccount = e.payload;
+        options.store();
+    });
+
+    function linkMicrosoftOpen() {
+        invoke("open_url", { url: "https://microsoft.com/link" })
+    }
+
+    function cancelMicrosoft() {
+        microsoftCode = null;
     }
 </script>
 
 <div class="modal">
-    <div class="title">Log in</div>
+    {#if microsoftCode == null}
+        <div class="title">Log in</div>
 
-    <ModalInput placeholder="Username" icon="person" characterLimit={16} bind:value={offlineUsername} />
-    <ModalButton text="Offline login" primary={false} on:click={handleOfflineLoginClick} />
-    <ModalButton text="Microsoft login" primary={true} on:click={handleMicrosoftLoginClick} />
+        <ModalInput placeholder="Username" icon="person" characterLimit={16} bind:value={offlineUsername} />
+        <ModalButton text="Offline login" primary={false} on:click={handleOfflineLoginClick} />
+        <ModalButton text="Microsoft login" primary={true} on:click={handleMicrosoftLoginClick} />
+    {:else}
+        <div class="title">Microsoft Login</div>
+
+        <ModalInput placeholder="Microsoft Code" characterLimit={16} icon="lock" bind:value={microsoftCode} />
+        <ModalButton text="Link" primary={true} on:click={linkMicrosoftOpen} />
+        <ModalButton text="Cancel" primary={false} on:click={cancelMicrosoft} />
+    {/if}
 </div>
 
 <style>
