@@ -1,5 +1,6 @@
 use std::io::{Cursor, Read};
 use std::path::Path;
+use std::sync::{Mutex, Arc};
 
 use anyhow::Result;
 use log::*;
@@ -18,7 +19,7 @@ use crate::utils::{download_file, get_maven_artifact_path};
 ///
 /// Prelaunching client
 ///
-pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, launching_parameter: LaunchingParameter, additional_mods: Vec<LoaderMod>, launcher_data: LauncherData<D>) -> Result<()> {
+pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, launching_parameter: LaunchingParameter, additional_mods: Vec<LoaderMod>, launcher_data: LauncherData<D>, window: Arc<Mutex<tauri::Window>>) -> Result<()> {
     info!("Loading minecraft version manifest...");
     let mc_version_manifest = VersionManifest::download().await?;
 
@@ -30,8 +31,8 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
 
     // Copy retrieve and copy mods from manifest
     clear_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest).await?;
-    retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &launch_manifest.mods, &launcher_data).await?;
-    retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &additional_mods, &launcher_data).await?;
+    retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &launch_manifest.mods, &launcher_data, &window).await?;
+    retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &additional_mods, &launcher_data, &window).await?;
 
     info!("Loading version profile...");
     let manifest_url = match subsystem {
@@ -80,7 +81,7 @@ pub(crate) async fn clear_mods(data: &Path, manifest: &LaunchManifest) -> Result
     Ok(())
 }
 
-pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods: &Vec<LoaderMod>, progress: &impl ProgressReceiver) -> Result<()> {
+pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods: &Vec<LoaderMod>, progress: &impl ProgressReceiver, window: &Arc<Mutex<tauri::Window>>) -> Result<()> {
     let mod_cache_path = data.join("mod_cache");
     let mods_path = data.join("gameDir").join(&manifest.build.branch).join("mods");
 
@@ -109,7 +110,7 @@ pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifes
 
             match &current_mod.source {
                 ModSource::SkipAd { artifact_name: _, url, extract } => {
-                    let retrieved_bytes = download_client(url, |a, b| progress.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLiquidBounceMods, get_progress(mod_idx, a, b) as u64, max))).await?;
+                    let retrieved_bytes = download_client(url, |a, b| progress.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLiquidBounceMods, get_progress(mod_idx, a, b) as u64, max)), window).await?;
 
                     // Extract bytes
                     let final_file = if *extract {
