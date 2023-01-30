@@ -3,7 +3,8 @@
     "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run dev",
     "devPath": "http://localhost:5173",
-    "distDir": "../public"
+    "distDir": "../public",
+    "withGlobalTauri": true
   },
   "package": {
     "productName": "LiquidLauncher",
@@ -43,7 +44,13 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": null,
+      "dangerousExternalCommandAccess": [
+          {
+              "url": "https://dl.ccbluex.net/*",
+              "windows": ["client_download"]
+          }
+      ]
     },
     "updater": {
       "active": false
