@@ -13,6 +13,9 @@
     console.log(options);
 
     function logout() {
+        invoke("logout", { accountData: options.currentAccount })
+            .catch(e => console.error(e));
+
         options.currentAccount = null;
         options.store();
     }

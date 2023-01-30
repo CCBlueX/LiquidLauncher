@@ -1,5 +1,4 @@
 <script>
-    import { createEventDispatcher } from "svelte";
     import ModalButton from "./ModalButton.svelte";
     import ModalInput from "./ModalInput.svelte";
     
