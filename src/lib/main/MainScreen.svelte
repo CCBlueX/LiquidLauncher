@@ -148,10 +148,12 @@
         clientRunning = true;
 
         let build = getBuild();
-
         await invoke("run_client", { buildId: build.buildId, accountData: options.currentAccount, options: options, mods: mods });
-        clientRunning = false;
     }
+
+    listen("client-exited", () => {
+        clientRunning = false;
+    });
 
     async function terminateClient() {
         await invoke("terminate");
