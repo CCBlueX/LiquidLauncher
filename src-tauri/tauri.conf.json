@@ -44,7 +44,13 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": null,
+      "dangerousExternalCommandAccess": [
+          {
+              "url": "https://dl.ccbluex.net/*",
+              "windows": ["client_download"]
+          }
+      ]
     },
     "updater": {
       "active": false
