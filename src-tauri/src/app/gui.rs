@@ -144,7 +144,7 @@ async fn run_client(build_id: i32, account_data: Account, options: LauncherOptio
             },
             window_mutex.clone()
     ).await
-        .map_err(|e| format!("failed to launch client: {:?}", e))?;
+        .map_err(|e| format!("Failed to launch client: {:?}", e))?;
 
     *runner_instance.lock().map_err(|e| format!("unable to lock runner instance: {:?}", e))?
         = None;

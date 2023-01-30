@@ -88,8 +88,6 @@ pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifes
     fs::create_dir_all(&mod_cache_path).await?;
     fs::create_dir_all(&mods_path).await?;
 
-
-
     // Download and copy mods
     let max = get_max(mods.len());
 
