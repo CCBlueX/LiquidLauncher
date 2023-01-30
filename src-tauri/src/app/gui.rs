@@ -149,23 +149,38 @@ async fn run_client(build_id: i32, account_data: Account, options: LauncherOptio
     *runner_instance.lock().map_err(|e| format!("unable to lock runner instance: {:?}", e))?
         = Some(RunnerInstance { terminator: terminator_tx });
 
-    prelauncher::launch(
-            launch_manifest,
-            parameters,
-            mods,
-            LauncherData {
-                on_stdout: handle_stdout,
-                on_stderr: handle_stderr,
-                on_progress: handle_progress,
-                data: Box::new(window_mutex.clone()),
-                terminator: terminator_rx
-            },
-            window_mutex.clone()
-    ).await
-        .map_err(|e| format!("Failed to launch client: {:?}", e))?;
+    let copy_of_runner_instance = runner_instance.clone();
 
-    *runner_instance.lock().map_err(|e| format!("unable to lock runner instance: {:?}", e))?
-        = None;
+    thread::spawn(move || {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async {
+                if let Err(e) = prelauncher::launch(
+                    launch_manifest,
+                    parameters,
+                    mods,
+                    LauncherData {
+                        on_stdout: handle_stdout,
+                        on_stderr: handle_stderr,
+                        on_progress: handle_progress,
+                        data: Box::new(window_mutex.clone()),
+                        terminator: terminator_rx
+                    },
+                    window_mutex.clone()
+                ).await {
+                    error!("unable to launch client: {:?}", e);
+                    handle_stderr(&window_mutex, format!("Failed to launch client: {:?}", e).as_bytes()).unwrap();
+                };
+
+                *copy_of_runner_instance.lock().map_err(|e| format!("unable to lock runner instance: {:?}", e)).unwrap()
+                    = None;
+                window_mutex.lock().unwrap().emit("client-exited", ()).unwrap()
+            });
+    });
+
+
 
     Ok(())
 }
