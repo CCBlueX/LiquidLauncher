@@ -2,10 +2,12 @@ use std::{sync::{Arc, Mutex}, thread};
 
 use env_logger::Env;
 use log::{info, error};
+use serde::{Deserialize, Serialize};
 use sysinfo::SystemExt;
 use tauri::{Manager, Window};
 
 use crate::{LAUNCHER_DIRECTORY, minecraft::{service::{Account, self}, launcher::{LaunchingParameter, LauncherData}, progress::ProgressUpdate, prelauncher}};
+use crate::app::api::{ContentDelivery, News};
 
 use super::{app_data::LauncherOptions, api::{ApiEndpoints, Build, LoaderMod}};
 
@@ -199,6 +201,14 @@ async fn logout(account_data: Account) -> Result<(), String> {
     account_data.logout().await.map_err(|e| format!("unable to logout: {:?}", e))
 }
 
+
+#[tauri::command]
+async fn fetch_news() -> Result<Vec<News>, String> {
+    ContentDelivery::news()
+        .await
+        .map_err(|e| format!("unable to fetch news: {:?}", e))
+}
+
 /// Runs the GUI and returns when the window is closed.
 pub fn gui_main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("liquidlauncher=debug")).init();
@@ -252,6 +262,7 @@ pub fn gui_main() {
             login_microsoft,
             logout,
             refresh,
+            fetch_news,
             terminate
         ])
         .run(tauri::generate_context!())

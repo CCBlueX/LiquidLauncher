@@ -11,6 +11,45 @@ use crate::utils::get_maven_artifact_path;
 pub const LAUNCHER_API: &str = "https://api.liquidbounce.net";
 pub const LAUNCHER_API_VERSION: &str = "api/v1";
 
+pub const CONTENT_DELIVERY: &str = "https://cloud.liquidbounce.net";
+pub const CONTENT_FOLDER: &str = "LiquidLauncher";
+
+/// Placeholder struct for content delivery implementation
+pub struct ContentDelivery;
+
+///
+/// Content Delivery for our LiquidBounce services
+///
+/// https://cloud.liquidbounce.net/LiquidLauncher/
+/// /news.json
+impl ContentDelivery {
+
+    /// Request news
+    pub async fn news() -> Result<Vec<News>> {
+        Self::request_from_content_delivery("news.json").await
+    }
+
+    /// Request JSON formatted data from content delivery
+    pub async fn request_from_content_delivery<T: DeserializeOwned>(file: &str) -> Result<T> {
+        Ok(reqwest::get(format!("{}/{}/{}", CONTENT_DELIVERY, CONTENT_FOLDER, file)).await?
+            .error_for_status()?
+            .json::<T>()
+            .await?
+        )
+    }
+
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct News {
+    pub title: String,
+    pub description: String,
+    pub date: String,
+    pub url: String,
+    pub bannerText: String,
+    pub bannerUrl: String
+}
+
 /// Placeholder struct for API endpoints implementation
 pub struct ApiEndpoints;
 

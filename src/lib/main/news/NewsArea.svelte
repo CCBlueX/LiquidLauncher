@@ -1,57 +1,15 @@
 <script>
     import SocialBar from "../../common/social/SocialBar.svelte";
     import News from "./News.svelte";
+    import {invoke} from "@tauri-apps/api/tauri";
 
-    const news = [
-        {
-            bannerText: "b73",
-            title: "LiquidBounce b73",
-            date: "2021-05-07",
-            bannerUrl: "img/b73.jpg",
-            url: "https://google.de",
-            description: "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam"
-        },
-        {
-            bannerText: "b73",
-            title: "LiquidBounce b73",
-            date: "2021-05-07",
-            bannerUrl: "img/b73.jpg",
-            url: "https://google.de",
-            description: "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam"
-        },
-        {
-            bannerText: "b73",
-            title: "LiquidBounce b73",
-            date: "2021-05-07",
-            bannerUrl: "img/b73.jpg",
-            url: "https://google.de",
-            description: "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam"
-        },
-        {
-            bannerText: "b73",
-            title: "LiquidBounce b73",
-            date: "2021-05-07",
-            bannerUrl: "img/b73.jpg",
-            url: "https://google.de",
-            description: "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam"
-        },
-        {
-            bannerText: "b73",
-            title: "LiquidBounce b73",
-            date: "2021-05-07",
-            bannerUrl: "img/b73.jpg",
-            url: "https://google.de",
-            description: "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam"
-        },
-        {
-            bannerText: "b73",
-            title: "LiquidBounce b73",
-            date: "2021-05-07",
-            bannerUrl: "img/b73.jpg",
-            url: "https://google.de",
-            description: "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam"
-        },
-    ]
+    let news = []
+
+    invoke("fetch_news")
+        .then((onlineNews) => {
+            news = onlineNews;
+        })
+        .catch(e => console.error(e));
 </script>
 
 <div class="news-area">
