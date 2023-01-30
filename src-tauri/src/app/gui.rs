@@ -180,6 +180,11 @@ async fn terminate(app_state: tauri::State<'_, AppState>) -> Result<(), String> 
     Ok(())
 }
 
+#[tauri::command]
+async fn logout(account_data: Account) -> Result<(), String> {
+    account_data.logout().await.map_err(|e| format!("unable to logout: {:?}", e))
+}
+
 /// Runs the GUI and returns when the window is closed.
 pub fn gui_main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("liquidlauncher=debug")).init();
@@ -231,6 +236,7 @@ pub fn gui_main() {
             run_client,
             login_offline,
             login_microsoft,
+            logout,
             terminate
         ])
         .run(tauri::generate_context!())
