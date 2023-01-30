@@ -1,6 +1,7 @@
 pub mod os;
 
-use std::path::{Path};
+use std::path::Path;
+use log::debug;
 use async_zip::read::seek::ZipFileReader;
 use tokio::fs;
 use tokio::fs::File;
@@ -18,7 +19,11 @@ pub(crate) fn get_maven_artifact_path(artifact_id: &String) -> Result<String> {
 }
 
 pub(crate) async fn download_file<F>(url: &str, on_progress: F) -> Result<Vec<u8>> where F : Fn(u64, u64) {
-    let mut response = reqwest::get(url).await?.error_for_status()?;
+    debug!("Downloading file {:?}", url);
+
+    let mut response = reqwest::get(url.trim()).await?.error_for_status()?;
+
+    debug!("Response received from url");
 
     let max_len = response.content_length().unwrap_or(0);
 
@@ -28,6 +33,8 @@ pub(crate) async fn download_file<F>(url: &str, on_progress: F) -> Result<Vec<u8
 
     on_progress(0, max_len);
 
+    debug!("Reading data from response chunk...");
+
     while let Some(data) = response.chunk().await? {
         output.extend_from_slice(&data);
 
@@ -35,6 +42,8 @@ pub(crate) async fn download_file<F>(url: &str, on_progress: F) -> Result<Vec<u8
 
         on_progress(curr_len as u64, max_len);
     }
+
+    debug!("Downloaded file");
 
     Ok(output)
 }
