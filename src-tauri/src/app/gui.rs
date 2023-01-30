@@ -181,6 +181,20 @@ async fn terminate(app_state: tauri::State<'_, AppState>) -> Result<(), String> 
 }
 
 #[tauri::command]
+async fn refresh(account_data: Account, window: tauri::Window) -> Result<(), String> {
+    // todo: rewrite library async
+    thread::spawn(move || {
+        let account = account_data.refresh()
+            .map_err(|e| format!("unable to refresh: {:?}", e))
+            .unwrap();
+
+        let _ = window.emit("refreshed", account);
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn logout(account_data: Account) -> Result<(), String> {
     account_data.logout().await.map_err(|e| format!("unable to logout: {:?}", e))
 }
@@ -237,6 +251,7 @@ pub fn gui_main() {
             login_offline,
             login_microsoft,
             logout,
+            refresh,
             terminate
         ])
         .run(tauri::generate_context!())
