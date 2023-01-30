@@ -12,6 +12,8 @@
     function handleOfflineLoginClick(e) {
         invoke("login_offline", { username: offlineUsername })
             .then((accountData) => {
+                console.debug("login_offline", accountData)
+
                 options.currentAccount = accountData;
                 options.store();
             })
@@ -25,10 +27,14 @@
     let microsoftCode;
 
     listen("microsoft_code", (e) => {
+        console.debug("microsoft_code", e.payload);
+
         microsoftCode = e.payload;
     });
 
     listen("microsoft_successful", (e) => {
+        console.debug("microsoft_successful", e.payload);
+
         options.currentAccount = e.payload;
         options.store();
     });
