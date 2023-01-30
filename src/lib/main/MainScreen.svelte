@@ -191,7 +191,7 @@
         <Logo />
         <StatusBar>
             {#if !clientRunning}
-                <TextStatus text="Welcome Kuqs, try out our new version!" /> 
+                <TextStatus text="Welcome {options.currentAccount.name}, try out our new version!" />
             {:else}
                 <ProgressStatus value={progressBarProgress} max={progressBarMax} text={progressBarLabel} />
             {/if}
