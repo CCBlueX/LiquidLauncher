@@ -93,7 +93,9 @@
 
                 // Format date for user readability
                 builds.forEach(build => {
-                    build.date = new Date(build.date).toLocaleString();
+                    let date = new Date(build.date);
+                    build.date = date.toLocaleString();
+                    build.dateDay = date.toLocaleDateString();
                 });
 
                 updateData();
@@ -122,7 +124,7 @@
                 versionInfo = {
                     bannerUrl: "https://liquidbounce.net/LiquidLauncher/img/b73.jpg",
                     title: "LiquidBounce " + b.lbVersion + " for Minecraft " + b.mcVersion,
-                    date: b.date,
+                    date: b.dateDay,
                     description: result.changelog,
                 };
             })
