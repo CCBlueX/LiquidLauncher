@@ -69,7 +69,7 @@
         "title": "LiquidLauncher",
         "width": 1000,
         "height": 670,
-        "resizable": false,
+        "resizable": true,
         "fullscreen": false,
         "transparent": true,
         "decorations": false,
