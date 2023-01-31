@@ -141,7 +141,8 @@ async fn run_client(build_id: i32, account_data: Account, options: LauncherOptio
         auth_xuid: "x".to_string(),
         clientid: service::AZURE_CLIENT_ID.to_string(),
         user_type,
-        keep_launcher_open: options.keep_launcher_open
+        keep_launcher_open: options.keep_launcher_open,
+        concurrent_downloads: options.concurrent_downloads,
     };
 
     let runner_instance = &app_state.runner_instance;

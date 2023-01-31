@@ -39,10 +39,6 @@ impl<D: Send + Sync> ProgressReceiver for LauncherData<D> {
     }
 }
 
-// Sorry if I burn your cpu and connection
-const CONCURRENT_LIBRARY_DOWNLOADS: usize = 10;
-const CONCURRENT_ASSET_DOWNLOADS: usize = 100;
-
 pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, version_profile: VersionProfile, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>, window: Arc<Mutex<tauri::Window>>) -> Result<()> {
     let launcher_data_arc = Arc::new(launcher_data);
 
@@ -150,7 +146,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
                 };
             })
         })
-    ).buffer_unordered(CONCURRENT_LIBRARY_DOWNLOADS).collect().await;
+    ).buffer_unordered(launching_parameter.concurrent_downloads as usize).collect().await;
     for x in class_paths {
         if let Some(library_path) = x? {
             write!(class_path, "{}{}", &library_path, OS.get_path_separator())?;
@@ -200,7 +196,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
                 Ok(())
             }
         })
-    ).buffer_unordered(CONCURRENT_ASSET_DOWNLOADS).collect().await;
+    ).buffer_unordered(launching_parameter.concurrent_downloads as usize).collect().await;
 
     launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadAssets, asset_max, asset_max));
 
@@ -307,6 +303,7 @@ pub struct LaunchingParameter {
     pub clientid: String,
     pub user_type: String,
     pub keep_launcher_open: bool,
+    pub concurrent_downloads: i32,
 }
 
 fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(input: &String, retriever: F) -> Result<String> {

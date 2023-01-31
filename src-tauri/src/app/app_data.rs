@@ -5,6 +5,10 @@ use serde::{Deserialize, Serialize};
 use tokio::fs;
 use crate::minecraft::service::Account;
 
+fn default_concurrent_downloads() -> i32 {
+    10
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct LauncherOptions {
     #[serde(rename = "keepLauncherOpen")]
@@ -24,8 +28,10 @@ pub(crate) struct LauncherOptions {
     // todo: might move into it's own file when there is support for multiple accounts which might sync up with the used client
     #[serde(rename = "currentAccount")]
     pub current_account: Option<Account>,
-    #[serde(rename = "modStates")]
+    #[serde(rename = "modStates", default)]
     pub mod_states: HashMap<String, bool>,
+    #[serde(rename = "concurrentDownloads", default = "default_concurrent_downloads")]
+    pub concurrent_downloads: i32
 }
 
 impl LauncherOptions {
@@ -55,7 +61,8 @@ impl Default for LauncherOptions {
             preferred_branch: None,
             preferred_build: None,
             current_account: None,
-            mod_states: HashMap::new()
+            mod_states: HashMap::new(),
+            concurrent_downloads: 10
         }
     }
 }
