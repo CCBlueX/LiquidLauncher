@@ -1,4 +1,5 @@
 #![feature(once_cell)]
+#![feature(exit_status_error)]
 #![cfg_attr(
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"

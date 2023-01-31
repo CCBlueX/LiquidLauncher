@@ -20,6 +20,7 @@ use crate::app::api::LaunchManifest;
 use crate::error::LauncherError;
 use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
 use crate::minecraft::rule_interpreter;
+use crate::minecraft::runtime::JavaRuntime;
 use crate::minecraft::version::LibraryDownloadInfo;
 use crate::utils::{download_file, zip_extract};
 
@@ -208,8 +209,8 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     let game_dir = data.join("gameDir").join(manifest.build.branch);
     fs::create_dir_all(&game_dir).await?;
 
-    let mut command = Command::new(java_bin);
-    command.current_dir(&game_dir);
+    let java_runtime = JavaRuntime::new(java_bin);
+
 
     let mut command_arguments = Vec::new();
 
@@ -252,20 +253,10 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
         );
     }
 
-
     launcher_data_arc.progress_update(ProgressUpdate::set_label("Launching..."));
     launcher_data_arc.progress_update(ProgressUpdate::set_to_max());
 
-    debug!("MC-Arguments: {}", &mapped.join(" "));
-    command.args(mapped);
-
-    command
-        .stderr(Stdio::piped())
-        .stdout(Stdio::piped());
-
-    debug!("Launching with arguments: {:?}", &command);
-
-    let mut running_task = command.spawn()?;
+    let mut running_task = java_runtime.execute(mapped, &game_dir).await?;
 
     if !launching_parameter.keep_launcher_open {
         exit(0) // Close launcher after start
@@ -291,7 +282,8 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
                 running_task.kill().await?;
                 break;
             },
-            _ = running_task.wait() => {
+            exit_status = running_task.wait() => {
+                exit_status?.exit_ok()?;
                 break;
             },
         }
