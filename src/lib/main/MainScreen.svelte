@@ -27,7 +27,7 @@
     const dispatch = createEventDispatcher();
 
     const versionInfo = {
-        bannerUrl: "img/b73.jpg",
+        bannerUrl: "https://liquidbounce.net/LiquidLauncher/img/b73.jpg",
         title: "Lorem ipsum dolor sit amet",
         date: "2021-05-07",
         description: "Changelog...",
