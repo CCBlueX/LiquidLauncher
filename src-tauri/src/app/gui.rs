@@ -6,7 +6,7 @@ use sysinfo::SystemExt;
 use tauri::{Manager, Window};
 
 use crate::{LAUNCHER_DIRECTORY, minecraft::{service::{Account, self}, launcher::{LaunchingParameter, LauncherData}, progress::ProgressUpdate, prelauncher}};
-use crate::app::api::{ContentDelivery, News};
+use crate::app::api::{Branches, ContentDelivery, News};
 
 use super::{app_data::LauncherOptions, api::{ApiEndpoints, Build, LoaderMod}};
 
@@ -44,7 +44,7 @@ async fn store_options(options: LauncherOptions) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn request_branches() -> Result<Vec<String>, String> {
+async fn request_branches() -> Result<Branches, String> {
     let branches = ApiEndpoints::branches()
         .await
         .map_err(|e| format!("unable to request branches: {:?}", e))?;

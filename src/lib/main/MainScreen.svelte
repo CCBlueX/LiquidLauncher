@@ -30,8 +30,7 @@
         bannerUrl: "img/b73.jpg",
         title: "Lorem ipsum dolor sit amet",
         date: "2021-05-07",
-        description:
-            "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.\n\nAt vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.\n\nAt vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.",
+        description: "Changelog...",
     };
 
     let settingsShown = false;
@@ -73,7 +72,7 @@
     let builds = [];
 
     function getBuild() {
-        if (options.preferredBuild == -1) { // -1 = latest
+        if (options.preferredBuild === -1) { // -1 = latest
             // The find() method returns a value of the first element in the array that satisfies the provided testing function. Otherwise undefined is returned.
             return builds.find(e => e.release || options.showNightlyBuilds);
         }
@@ -86,10 +85,11 @@
 
     let mods = [];
 
+    /// Request builds from API server
     function requestBuilds() {
         invoke("request_builds", { branch: options.preferredBranch })
-            .then(b => {
-                builds = b;
+            .then(result => {
+                builds = result;
 
                 // Format date for user readability
                 builds.forEach(build => {
@@ -101,6 +101,7 @@
             .catch(e => console.error(e));
     }
 
+    /// Update build data
     function updateData() {
         let b = getBuild();
         console.debug("Updating build data", b);
@@ -110,17 +111,18 @@
             title: b.lbVersion
         };
         mcVersion = {
-            date: "",
+            date: "", // todo: No date for MC version
             title: b.mcVersion
         };
 
         requestMods(b.mcVersion, b.subsystem);
     }
 
+    /// Request mods from API server
     function requestMods(mcVersion, subsystem) {
         invoke("request_mods", { mcVersion, subsystem })
-            .then(b => {
-                mods = b;
+            .then(result => {
+                mods = result;
 
                 mods.forEach(mod => {
                     mod.enabled = options.modStates[mod.name] ?? mod.enabled;
@@ -129,13 +131,19 @@
             .catch(e => console.error(e));
     }
 
+    // Request branches from API server
     invoke("request_branches")
-        .then(b => {
-            branches = b;
+        .then(result => {
+            // string array of branches
+            branches = result.branches;
+
+            // Default to first branch and latest build
             if (options.preferredBranch === null) {
-                options.preferredBranch = b[0];
+                options.preferredBranch = result.defaultBranch;
+                options.preferredBuild = -1;
             }
-            
+
+            // request builds of branch
             requestBuilds();
         })
         .catch(e => console.error(e));

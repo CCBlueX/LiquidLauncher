@@ -8,18 +8,17 @@
     let options;
 
     invoke("get_options").then((result) => {
-        console.debug("read options", result);
         options = result;
-        console.debug("set options");
-
-        // Easy way to store options
-        options.store = function() {
-            invoke("store_options", { options })
-                .catch(e => console.error(e));
-        };
 
         // Debug options - might be interesting to see what's in there
         console.debug("read options", options);
+
+        // Easy way to store options
+        options.store = function() {
+            console.debug("storing options", options);
+            invoke("store_options", { options })
+                .catch(e => console.error(e));
+        };
 
         // Refresh the current account if it exists
         if (options.currentAccount !== null) {
@@ -68,5 +67,9 @@
         height: 100vh;
         padding: 32px;
         /* border-radius: 14px; */
+    }
+
+    h1 {
+        color: white;
     }
 </style>

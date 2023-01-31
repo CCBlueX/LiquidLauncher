@@ -71,7 +71,7 @@ pub struct ApiEndpoints;
 impl ApiEndpoints {
 
     /// Request all available branches
-    pub async fn branches() -> Result<Vec<String>> {
+    pub async fn branches() -> Result<Branches> {
         Self::request_from_endpoint("version/branches").await
     }
 
@@ -109,6 +109,13 @@ impl ApiEndpoints {
         )
     }
 
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Branches {
+    #[serde(rename = "defaultBranch")]
+    pub default_branch: String,
+    pub branches: Vec<String>
 }
 
 ///
