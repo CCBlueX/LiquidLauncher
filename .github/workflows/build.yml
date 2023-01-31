@@ -1,5 +1,9 @@
 name: Build
-on: [push]
+on:
+  push:
+    branches: [ tauri ]
+  pull_request:
+    branches: [ tauri ]
 
 jobs:
   build-tauri:
