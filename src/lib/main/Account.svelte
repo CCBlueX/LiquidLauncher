@@ -8,11 +8,13 @@
     const dispatch = createEventDispatcher();
 </script>
 
-<div class="account" data-tauri-drag-region >
-    <img class="avatar" src="https://crafatar.com/avatars/{uuid}?size=100" alt="avatar" data-tauri-drag-region>
+<div class="account">
+    <object data="https://crafatar.com/avatars/{uuid}?size=100" type="image/png" class="avatar">
+        <img src="img/steve.png" alt=avatar class="avatar"/>
+    </object>
     <div class="details">
-        <div class="username" data-tauri-drag-region>{username}</div>
-        <div class="type" data-tauri-drag-region>{accountType}</div>
+        <div class="username">{username}</div>
+        <div class="type">{accountType}</div>
     </div>
     <button class="button-settings" type="button" on:click={() => dispatch("showSettings")} >
         <img class="icon" src="img/icon/icon-cog.svg" alt="settings">
@@ -35,6 +37,7 @@
     .avatar {
         border-radius: 50%;
         height: 35px;
+        overflow: hidden;
     }
 
     .details {

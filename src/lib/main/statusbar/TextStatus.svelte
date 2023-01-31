@@ -2,7 +2,7 @@
     export let text;
 </script>
 
-<div class="text-status" data-tauri-drag-region>{text}</div>
+<div class="text-status">{text}</div>
 
 <style>
     .text-status {

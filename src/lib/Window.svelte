@@ -47,6 +47,10 @@
 </script>
 
 <div class="window">
+    <div class="drag-area" data-tauri-drag-region>
+
+    </div>
+
     {#if options !== undefined }
         <!-- TODO: Animation? -->
         {#if options.currentAccount !== null }
@@ -61,11 +65,21 @@
 </div>
 
 <style>
+    .drag-area {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: calc(100vw - 150px);
+        height: 100px;
+        z-index: 100;
+    }
+
     .window {
         background-color: rgba(0, 0, 0, 0.6);
         width: 100vw;
         height: 100vh;
         padding: 32px;
+        overflow: hidden;
         /* border-radius: 14px; */
     }
 

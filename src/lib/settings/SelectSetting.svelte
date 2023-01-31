@@ -38,5 +38,6 @@
     .select-setting option {
         background-color: white;
         color: black;
+        font-family: monospace;
     }
 </style>

@@ -9,5 +9,6 @@
         font-family: monospace;
         font-size: 16px;
         color: white;
+        user-select: text;
     }
 </style>

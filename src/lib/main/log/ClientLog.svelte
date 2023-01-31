@@ -1,11 +1,13 @@
 <script>
     import { fly } from "svelte/transition";
     import VirtualList from "@sveltejs/svelte-virtual-list";
-    import { createEventDispatcher } from "svelte";
+    import { afterUpdate, createEventDispatcher } from "svelte";
     import ToggleSetting from "../../settings/ToggleSetting.svelte";
     import LogMessage from "./LogMessage.svelte";
 
     export let messages;
+
+    let messageOutputElement;
 
     const dispatch = createEventDispatcher();
 </script>
