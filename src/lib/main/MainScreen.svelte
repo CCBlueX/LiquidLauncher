@@ -172,12 +172,10 @@
 
 {#if settingsShown}
     <SettingsContainer title="Settings" on:hideSettings={hideSettings}>
-        <TextSetting title="JVM Arguments" placeholder="Arguments" value="-Xmx4G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M"></TextSetting>
-        <TextSetting title="JVM Location" placeholder="Internal" value=""></TextSetting>
+        <TextSetting title="JVM Location" placeholder="Internal" bind:value={options.customJavaPath} ></TextSetting>
         <ToggleSetting title="Keep launcher running" bind:value={options.keepLauncherOpen} />
-        <RangeSetting title="Memory" min={0} max={4096} value={[1024, 3072]} valueSuffix="MB" step={1}></RangeSetting>
+        <RangeSetting title="Memory" min={20} max={100} bind:value={options.memoryPercentage} valueSuffix="%" step={1}></RangeSetting>
         <ButtonSetting text="Logout" on:click={() => dispatch("logout")} />
-        <SelectSetting title="Version" items={["Minecraft", "Roblox", "Axolotl", "Brot"]} value="Minecraft"></SelectSetting>
     </SettingsContainer>
 {/if}
 

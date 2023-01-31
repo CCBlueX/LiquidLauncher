@@ -14,12 +14,12 @@
     function updateSliderKeypress(e) {
         if (e.key === "Enter") {
             e.preventDefault();
-            slider.noUiSlider.set(value);
+            slider.noUiSlider.set([value]);
         }
     }
 
     function updateSliderBlur(e) {
-        slider.noUiSlider.set(value);
+        slider.noUiSlider.set([value]);
     }
 
     let slider = null;
@@ -28,7 +28,7 @@
 
         noUiSlider.create(slider, {
             start: start,
-            connect: value.length > 1 ? true : "lower",
+            connect: "lower",
             padding: [0, 0],
             range: {
                 min: min,
@@ -38,9 +38,7 @@
         });
 
         slider.noUiSlider.on("update", values => {
-            value = values.map(v => parseFloat(v));
-            
-            console.log(values);
+            value = parseFloat(values[0]);
         });
     });
 
@@ -51,13 +49,8 @@
 <div class="range-setting">
     <div class="title">{title}</div>
     <div class="value">
-        <span class="input-value" contenteditable="true" bind:textContent={value[0]} on:keypress={updateSliderKeypress} on:blur={updateSliderBlur}></span>
+        <span class="input-value" contenteditable="true" bind:textContent={value} on:keypress={updateSliderKeypress} on:blur={updateSliderBlur}></span>
         <span class="value-suffix">{valueSuffix}</span>
-        {#if value.length > 1}
-            <span class="value-devider">-</span>
-            <span class="input-value" contenteditable="true" bind:textContent={value[1]} on:keypress={updateSliderKeypress} on:blur={updateSliderBlur}></span>
-            <span class="value-suffix">{valueSuffix}</span>
-        {/if}
     </div>
     <div bind:this={slider} class="slider" />
 </div>
