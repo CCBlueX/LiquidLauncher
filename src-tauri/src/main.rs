@@ -3,7 +3,7 @@
 #![cfg_attr(
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
-  )]
+)]
 
 use std::fs;
 use once_cell::sync::Lazy;
@@ -16,8 +16,6 @@ pub mod minecraft;
 
 mod error;
 mod utils;
-
-pub mod updater;
 
 const LAUNCHER_VERSION: &str = env!("CARGO_PKG_VERSION");
 static LAUNCHER_DIRECTORY: Lazy<ProjectDirs> = Lazy::new(|| {

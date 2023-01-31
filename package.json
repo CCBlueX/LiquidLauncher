@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-      "tauri": "node tauri/tooling/cli/node/tauri.js"
+    "tauri": "node tauri/tooling/cli/node/tauri.js"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^1.1.0",

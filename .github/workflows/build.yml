@@ -1,0 +1,65 @@
+name: Build
+on:
+  push:
+    branches: [ tauri ]
+  pull_request:
+    branches: [ tauri ]
+
+jobs:
+  build-tauri:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: build tauri-cli
+        run: |
+          cd tauri/tooling/cli/node
+          yarn
+          yarn build
+      - name: install app dependencies and build it
+        run: yarn && yarn build
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+
+      - uses: actions/upload-artifact@v2
+        if: matrix.platform == 'ubuntu-latest'
+        with:
+          name: liquidlauncher-linux
+          path: ./src-tauri/target/release/bundle/appimage/liquid-launcher_**.AppImage.*
+
+      - uses: actions/upload-artifact@v2
+        if: matrix.platform == 'windows-latest'
+        with:
+          path: ./src-tauri/target/release/bundle/msi/*
+      - uses: actions/upload-artifact@v2
+        if: matrix.platform == 'windows-latest'
+        with:
+          name: liquidlauncher-windows
+          path: ./src-tauri/target/release/bundle/msi/LiquidLauncher_**.msi.*
+
+      - uses: actions/upload-artifact@v2
+        if: matrix.platform == 'macos-latest'
+        with:
+          name: liquidlauncher-macos
+          path: ./src-tauri/target/release/bundle/macos/LiquidLauncher.app.tar.*
