@@ -4,29 +4,36 @@
     import MainScreen from "./main/MainScreen.svelte";
     import { once } from "@tauri-apps/api/event";
 
-    export let options;
+    // Load options from file
+    let options;
 
-    // Easy way to store options
-    options.store = function() {
-        invoke("store_options", { options })
-            .catch(e => console.error(e));
-    };
+    invoke("get_options").then((result) => {
+        console.debug("read options", result);
+        options = result;
+        console.debug("set options");
 
-    // Debug options - might be interesting to see what's in there
-    console.debug("read options", options);
+        // Easy way to store options
+        options.store = function() {
+            invoke("store_options", { options })
+                .catch(e => console.error(e));
+        };
 
-    // Refresh the current account if it exists
-    if (options.currentAccount !== null) {
-        // This will be run in the background
-        invoke("refresh", { accountData: options.currentAccount })
+        // Debug options - might be interesting to see what's in there
+        console.debug("read options", options);
 
-        once("refreshed", (e) => {
-            console.debug("refreshed account data", e.payload);
+        // Refresh the current account if it exists
+        if (options.currentAccount !== null) {
+            // This will be run in the background
+            invoke("refresh", { accountData: options.currentAccount })
 
-            options.currentAccount = e.payload;
-            options.store();
-        });
-    }
+            once("refreshed", (e) => {
+                console.debug("refreshed account data", e.payload);
+
+                options.currentAccount = e.payload;
+                options.store();
+            });
+        }
+    });
 
     // Logout from current account
     function logout() {
@@ -41,12 +48,17 @@
 </script>
 
 <div class="window">
-    <!-- TODO: Animation? -->
-    {#if options.currentAccount !== null }
-        <MainScreen bind:options on:logout={logout} />
+    {#if options !== undefined }
+        <!-- TODO: Animation? -->
+        {#if options.currentAccount !== null }
+            <MainScreen bind:options on:logout={logout} />
+        {:else}
+            <LoginScreen bind:options />
+        {/if}
     {:else}
-        <LoginScreen bind:options />
+        <h1>Loading options...</h1>
     {/if}
+
 </div>
 
 <style>
