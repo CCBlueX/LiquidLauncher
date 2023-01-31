@@ -334,7 +334,7 @@ impl AssetObject {
             progress.progress_update(ProgressUpdate::set_label(format!("Downloading asset object {}", self.hash)));
 
             info!("Downloading {}", self.hash);
-            let os = reqwest::get(&*format!("http://resources.download.minecraft.net/{}/{}", &self.hash[0..2], &self.hash)).await?.error_for_status()?.bytes().await?;
+            let os = reqwest::get(&*format!("https://resources.download.minecraft.net/{}/{}", &self.hash[0..2], &self.hash)).await?.error_for_status()?.bytes().await?;
             fs::write(asset_path, os).await?;
             info!("Downloaded {}", self.hash);
 
