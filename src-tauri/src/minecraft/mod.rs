@@ -5,3 +5,4 @@ pub mod service;
 pub mod prelauncher;
 pub mod progress;
 pub mod jre_downloader;
+pub mod runtime;

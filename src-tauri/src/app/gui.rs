@@ -96,12 +96,24 @@ fn login_microsoft(window: tauri::Window) -> Result<(), String> {
 }
 
 fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
-    window.lock().unwrap().emit("process-output", String::from_utf8(data.to_vec())?)?;
+    let data = String::from_utf8(data.to_vec())?;
+    if data.is_empty() {
+        return Ok(()); // ignore empty lines
+    }
+
+    info!("{}", data);
+    window.lock().unwrap().emit("process-output", data)?;
     Ok(())
 }
 
 fn handle_stderr(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
-    window.lock().unwrap().emit("process-output", String::from_utf8(data.to_vec())?)?;
+    let data = String::from_utf8(data.to_vec())?;
+    if data.is_empty() {
+        return Ok(()); // ignore empty lines
+    }
+
+    error!("{}", data);
+    window.lock().unwrap().emit("process-output", data)?;
     Ok(())
 }
 
@@ -170,7 +182,7 @@ async fn run_client(build_id: i32, account_data: Account, options: LauncherOptio
                     },
                     window_mutex.clone()
                 ).await {
-                    error!("unable to launch client: {:?}", e);
+                    window_mutex.lock().unwrap().emit("client-error", format!("Failed to launch client: {:?}", e)).unwrap();
                     handle_stderr(&window_mutex, format!("Failed to launch client: {:?}", e).as_bytes()).unwrap();
                 };
 

@@ -155,6 +155,12 @@
         clientRunning = false;
     });
 
+    listen("client-error", (e) => {
+        alert(e.payload);
+        clientLogShown = true;
+        console.error(e.payload);
+    });
+
     async function terminateClient() {
         await invoke("terminate");
     }
