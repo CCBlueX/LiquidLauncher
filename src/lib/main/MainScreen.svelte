@@ -193,6 +193,15 @@
     async function terminateClient() {
         await invoke("terminate");
     }
+
+    function clearData() {
+        invoke("clear_data").then(() => {
+            alert("Data cleared.");
+        }).catch(e => {
+            alert("Failed to clear data: " + e);
+            console.error(e)
+        });
+    }
 </script>
 
 {#if clientLogShown}
@@ -205,6 +214,7 @@
         <ToggleSetting title="Keep launcher running" bind:value={options.keepLauncherOpen} />
         <RangeSetting title="Memory" min={20} max={100} bind:value={options.memoryPercentage} valueSuffix="%" step={1}></RangeSetting>
         <ButtonSetting text="Logout" on:click={() => dispatch("logout")} />
+        <ButtonSetting text="Clear data" on:click={clearData} />
     </SettingsContainer>
 {/if}
 

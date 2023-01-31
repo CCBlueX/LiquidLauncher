@@ -241,6 +241,20 @@ async fn fetch_news() -> Result<Vec<News>, String> {
         .map_err(|e| format!("unable to fetch news: {:?}", e))
 }
 
+#[tauri::command]
+async fn clear_data() -> Result<(), String> {
+    let data_directory = LAUNCHER_DIRECTORY.data_dir();
+
+    ["assets", "gameDir", "libraries", "mod_cache", "natives", "runtimes", "versions"]
+        .iter()
+        .map(|dir| data_directory.join(dir))
+        .filter(|dir| dir.exists())
+        .map(std::fs::remove_dir_all)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("unable to clear data: {:?}", e))?;
+    Ok(())
+}
+
 /// Runs the GUI and returns when the window is closed.
 pub fn gui_main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("liquidlauncher=debug")).init();
@@ -295,6 +309,7 @@ pub fn gui_main() {
             logout,
             refresh,
             fetch_news,
+            clear_data,
             terminate
         ])
         .run(tauri::generate_context!())
