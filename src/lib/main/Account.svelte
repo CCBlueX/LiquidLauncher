@@ -8,13 +8,13 @@
     const dispatch = createEventDispatcher();
 </script>
 
-<div class="account">
-    <img class="avatar" src="https://crafatar.com/avatars/{uuid}?size=100" alt="avatar">
+<div class="account" data-tauri-drag-region >
+    <img class="avatar" src="https://crafatar.com/avatars/{uuid}?size=100" alt="avatar" data-tauri-drag-region>
     <div class="details">
-        <div class="username">{username}</div>
-        <div class="type">{accountType}</div>
+        <div class="username" data-tauri-drag-region>{username}</div>
+        <div class="type" data-tauri-drag-region>{accountType}</div>
     </div>
-    <button class="button-settings" type="button" on:click={() => dispatch("showSettings")}>
+    <button class="button-settings" type="button" on:click={() => dispatch("showSettings")} >
         <img class="icon" src="img/icon/icon-cog.svg" alt="settings">
     </button>
 </div>
