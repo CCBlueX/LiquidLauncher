@@ -35,3 +35,21 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/upload-artifact@v2
+        if: matrix.platform == 'ubuntu-latest'
+        with:
+          name: linux-liquidlauncher-artifacts
+          path: ./target/release/bundle/appimage/LiquidLauncher.AppImage.*
+
+      - uses: actions/upload-artifact@v2
+        if: matrix.platform == 'windows-latest'
+        with:
+          name: windows-liquidlauncher-artifacts
+          path: ./target/release/bundle/msi/*
+
+      - uses: actions/upload-artifact@v2
+        if: matrix.platform == 'macos-latest'
+        with:
+          name: macos-liquidlauncher-artifacts
+          path: ./target/release/bundle/macos/LiquidLauncher.app.tar.*
