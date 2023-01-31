@@ -60,7 +60,7 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
 
     info!("Launching {}...", launch_manifest.build.commit_id);
 
-    launcher::launch(LAUNCHER_DIRECTORY.data_dir(), launch_manifest, version, launching_parameter, launcher_data).await?;
+    launcher::launch(LAUNCHER_DIRECTORY.data_dir(), launch_manifest, version, launching_parameter, launcher_data, window).await?;
     Ok(())
 }
 

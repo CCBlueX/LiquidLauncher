@@ -169,6 +169,8 @@ async fn run_client(build_id: i32, account_data: Account, options: LauncherOptio
             .build()
             .unwrap()
             .block_on(async {
+                let keep_launcher_open = parameters.keep_launcher_open;
+
                 if let Err(e) = prelauncher::launch(
                     launch_manifest,
                     parameters,
@@ -182,6 +184,10 @@ async fn run_client(build_id: i32, account_data: Account, options: LauncherOptio
                     },
                     window_mutex.clone()
                 ).await {
+                    if !keep_launcher_open {
+                        window_mutex.lock().unwrap().show().unwrap();
+                    }
+
                     window_mutex.lock().unwrap().emit("client-error", format!("Failed to launch client: {:?}", e)).unwrap();
                     handle_stderr(&window_mutex, format!("Failed to launch client: {:?}", e).as_bytes()).unwrap();
                 };

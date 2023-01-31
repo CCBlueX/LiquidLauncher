@@ -44,7 +44,7 @@ impl<D: Send + Sync> ProgressReceiver for LauncherData<D> {
 const CONCURRENT_LIBRARY_DOWNLOADS: usize = 10;
 const CONCURRENT_ASSET_DOWNLOADS: usize = 100;
 
-pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, version_profile: VersionProfile, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>) -> Result<()> {
+pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, version_profile: VersionProfile, launching_parameter: LaunchingParameter, launcher_data: LauncherData<D>, window: Arc<Mutex<tauri::Window>>) -> Result<()> {
     let launcher_data_arc = Arc::new(launcher_data);
 
     let features: HashSet<String> = HashSet::new();
@@ -259,7 +259,8 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     let mut running_task = java_runtime.execute(mapped, &game_dir).await?;
 
     if !launching_parameter.keep_launcher_open {
-        exit(0) // Close launcher after start
+        // Hide launcher window
+        window.lock().unwrap().hide().unwrap();
     }
 
     let mut stdout = running_task.stdout.take().unwrap();
@@ -287,6 +288,11 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
                 break;
             },
         }
+    }
+
+    if !launching_parameter.keep_launcher_open {
+        // Hide launcher window
+        exit(0);
     }
 
     Ok(())
