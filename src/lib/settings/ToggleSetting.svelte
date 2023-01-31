@@ -1,10 +1,14 @@
 <script>
+    import { createEventDispatcher } from "svelte";
+
     export let value;
     export let title;
+
+    const dispatch = createEventDispatcher();
 </script>
 
 <label class="toggle-setting">
-    <input class="checkbox" type="checkbox" bind:checked={value} />
+    <input class="checkbox" type="checkbox" bind:checked={value} on:change={e => dispatch("change", e)} />
     <span class="slider" />
 
     <div class="title">{title}</div>
