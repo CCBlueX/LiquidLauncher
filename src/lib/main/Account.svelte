@@ -46,12 +46,12 @@
 
     .details .username {
         color: white;
-        font-weight: bold;
+        font-weight: 600;
     }
 
     .details .type {
         color: rgba(255, 255, 255, .5);
-        font-weight: bold;
+        font-weight: 600;
     }
 
     .button-settings {

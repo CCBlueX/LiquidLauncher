@@ -9,6 +9,15 @@
     export let running;
 
     const dispatch = createEventDispatcher();
+
+    function parseChangelog(text) {
+        text = text.replaceAll("[a]", "&bull;");
+        text = text.replaceAll("[i]", "&bull;");
+        text = text.replaceAll("[b]", "&bull;");
+        text = text.replaceAll("[r]", "&bull;");
+
+        return text;
+    }
 </script>
 
 <div class="launch-area">
@@ -20,7 +29,7 @@
     </div>
 
     <pre class="description">
-        {versionInfo.description}
+        {@html parseChangelog(versionInfo.description)}
     </pre>
 
     <div class="version-selector">

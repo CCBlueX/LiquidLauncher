@@ -20,7 +20,7 @@
     <div class="content">
         <div class="title-date">
             <div class="title">{title}</div>
-            <div class="date">{date}</div>
+            <div class="date">{new Date(date).toLocaleDateString()}</div>
         </div>
         <div class="description">{description}</div>
         <button class="button-show-news" type="button" on:click={handleClick}>Read more</button>
@@ -45,8 +45,8 @@
 
     .banner-text {
         color: white;
-        font-weight: bold;
-        font-size: 34px;
+        font-weight: 600;
+        font-size: 26px;
     }
 
     .content {
@@ -62,8 +62,9 @@
 
     .content .title {
         color: white;
-        font-weight: bold;
+        font-weight: 600;
         font-size: 12px;
+        margin-right: 5px;
     }
 
     .content .date {

@@ -30,12 +30,13 @@
 
     .text {
         color: white;
-    }
-
-    .text {
         position: absolute;
         top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        max-width: calc(100% - 40px);
+        transform: translateY(-50%);
+        left: 20px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
     }
 </style>

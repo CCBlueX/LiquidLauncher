@@ -24,7 +24,7 @@
         font-family: "Gilroy", sans-serif;
         cursor: pointer;
         width: 100%;
-        font-weight: bold;
+        font-weight: 600;
     }
 
     .button:hover {

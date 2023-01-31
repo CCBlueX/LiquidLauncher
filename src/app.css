@@ -1,18 +1,18 @@
 @font-face {
     font-family: "Gilroy";
-    font-weight: bold;
+    font-weight: 600;
     src: url("font/Gilroy-Bold.ttf");
 }
 
 @font-face {
     font-family: "Gilroy";
-    font-weight: medium;
+    font-weight: 500;
     src: url("font/Gilroy-Medium.ttf");
 }
 
 @font-face {
     font-family: "Gilroy";
-    font-weight: light;
+    font-weight: 400;
     src: url("font/Gilroy-SemiBold.ttf");
 }
 
@@ -30,7 +30,7 @@
 body {
     background: transparent;
     font-family: "Gilroy", sans-serif;
-    font-weight: light;
+    font-weight: 400;
     font-size: 14px;
     user-select: none;
     /* border-radius: 14px; */

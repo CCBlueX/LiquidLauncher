@@ -49,7 +49,7 @@
 
     .text {
         font-size: 14px;
-        font-weight: medium;
+        font-weight: 500;
         color: white;
     }
 </style>

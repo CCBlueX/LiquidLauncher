@@ -229,8 +229,8 @@
         <ToggleSetting title="Keep launcher running" bind:value={options.keepLauncherOpen} />
         <RangeSetting title="Memory" min={20} max={100} bind:value={options.memoryPercentage} valueSuffix="%" step={1}></RangeSetting>
         <RangeSetting title="Concurrent Downloads" min={1} max={50} bind:value={options.concurrentDownloads} valueSuffix="connections" step={1}></RangeSetting>
-        <ButtonSetting text="Logout" on:click={() => dispatch("logout")} />
-        <ButtonSetting text="Clear data" on:click={clearData} />
+        <ButtonSetting text="Logout" on:click={() => dispatch("logout")} color="#4677FF" />
+        <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
     </SettingsContainer>
 {/if}
 
@@ -252,7 +252,7 @@
         <Logo />
         <StatusBar>
             {#if !clientRunning}
-                <TextStatus text="Welcome {options.currentAccount.name}, try out our new version!" />
+                <TextStatus text="Welcome back, {options.currentAccount.name}." />
             {:else}
                 <ProgressStatus value={progressBarProgress} max={progressBarMax} text={progressBarLabel} />
             {/if}

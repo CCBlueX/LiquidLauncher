@@ -73,7 +73,7 @@
     .title {
         font-size: 40px;
         color: white;
-        font-weight: bold;
+        font-weight: 600;
     }
 
     .description {

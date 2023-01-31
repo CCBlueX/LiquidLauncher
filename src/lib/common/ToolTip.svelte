@@ -33,7 +33,7 @@
         padding: 5px 7px;
         border-radius: 6px;
         font-size: 14px;
-        font-weight: bold;
+        font-weight: 600;
         position: absolute;
         white-space: nowrap;
         left: 50%;
