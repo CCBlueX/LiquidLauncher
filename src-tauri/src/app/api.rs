@@ -100,6 +100,11 @@ impl ApiEndpoints {
         Self::request_from_endpoint(&format!("version/jre/{}/{}/{}", os_name, os_arch, jre_version)).await
     }
 
+    /// Request changelog of specified build
+    pub async fn changelog(build_id: i32) -> Result<Changelog> {
+        Self::request_from_endpoint(&format!("version/changelog/{}", build_id)).await
+    }
+
     /// Request JSON formatted data from launcher API
     pub async fn request_from_endpoint<T: DeserializeOwned>(endpoint: &str) -> Result<T> {
         Ok(reqwest::get(format!("{}/{}/{}", LAUNCHER_API, LAUNCHER_API_VERSION, endpoint)).await?
@@ -116,6 +121,12 @@ pub struct Branches {
     #[serde(rename = "defaultBranch")]
     pub default_branch: String,
     pub branches: Vec<String>
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Changelog {
+    pub build: Build,
+    pub changelog: String
 }
 
 ///

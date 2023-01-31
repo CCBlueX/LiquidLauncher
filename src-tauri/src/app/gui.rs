@@ -6,7 +6,7 @@ use sysinfo::SystemExt;
 use tauri::{Manager, Window};
 
 use crate::{LAUNCHER_DIRECTORY, minecraft::{service::{Account, self}, launcher::{LaunchingParameter, LauncherData}, progress::ProgressUpdate, prelauncher}};
-use crate::app::api::{Branches, ContentDelivery, News};
+use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 
 use super::{app_data::LauncherOptions, api::{ApiEndpoints, Build, LoaderMod}};
 
@@ -243,6 +243,13 @@ async fn fetch_news() -> Result<Vec<News>, String> {
 }
 
 #[tauri::command]
+async fn fetch_changelog(build_id: i32) -> Result<Changelog, String> {
+    ApiEndpoints::changelog(build_id)
+        .await
+        .map_err(|e| format!("unable to fetch changelog: {:?}", e))
+}
+
+#[tauri::command]
 async fn clear_data() -> Result<(), String> {
     let data_directory = LAUNCHER_DIRECTORY.data_dir();
 
@@ -310,6 +317,7 @@ pub fn gui_main() {
             logout,
             refresh,
             fetch_news,
+            fetch_changelog,
             clear_data,
             terminate
         ])

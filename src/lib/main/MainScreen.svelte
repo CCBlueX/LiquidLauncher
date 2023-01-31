@@ -26,7 +26,7 @@
 
     const dispatch = createEventDispatcher();
 
-    const versionInfo = {
+    let versionInfo = {
         bannerUrl: "https://liquidbounce.net/LiquidLauncher/img/b73.jpg",
         title: "Lorem ipsum dolor sit amet",
         date: "2021-05-07",
@@ -114,6 +114,19 @@
             date: "", // todo: No date for MC version
             title: b.mcVersion
         };
+
+        // Update changelog
+        invoke("fetch_changelog", { buildId: b.buildId })
+            .then(result => {
+                console.log("Fetched changelog data", result);
+                versionInfo = {
+                    bannerUrl: "https://liquidbounce.net/LiquidLauncher/img/b73.jpg",
+                    title: "LiquidBounce " + b.lbVersion + " for Minecraft " + b.mcVersion,
+                    date: b.date,
+                    description: result.changelog,
+                };
+            })
+            .catch(e => console.error(e));
 
         requestMods(b.mcVersion, b.subsystem);
     }
