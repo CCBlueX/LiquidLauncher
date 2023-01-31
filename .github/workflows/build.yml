@@ -41,6 +41,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         if: matrix.platform == 'ubuntu-latest'
         with:
+          name: liquidlauncher-linux
           path: ./src-tauri/target/release/bundle/appimage/liquid-launcher_**.AppImage.*
 
       - uses: actions/upload-artifact@v2
@@ -50,9 +51,11 @@ jobs:
       - uses: actions/upload-artifact@v2
         if: matrix.platform == 'windows-latest'
         with:
+          name: liquidlauncher-windows
           path: ./src-tauri/target/release/bundle/msi/LiquidLauncher_**.msi.*
 
       - uses: actions/upload-artifact@v2
         if: matrix.platform == 'macos-latest'
         with:
+          name: liquidlauncher-macos
           path: ./src-tauri/target/release/bundle/macos/LiquidLauncher.app.tar.*
