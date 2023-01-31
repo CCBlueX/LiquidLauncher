@@ -2,7 +2,6 @@ use std::{sync::{Arc, Mutex}, thread};
 
 use env_logger::Env;
 use log::{info, error};
-use serde::{Deserialize, Serialize};
 use sysinfo::SystemExt;
 use tauri::{Manager, Window};
 

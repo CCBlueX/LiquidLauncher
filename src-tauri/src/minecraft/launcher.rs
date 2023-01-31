@@ -1,9 +1,9 @@
-use std::{path::{Path, PathBuf}, sync::Mutex};
+use std::{path::{Path, PathBuf}};
 use std::collections::HashSet;
 use std::fmt::Write;
 
-use std::process::{exit, Stdio};
-use std::sync::Arc;
+use std::process::{exit};
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use anyhow::Result;
@@ -11,9 +11,8 @@ use futures::stream::{self, StreamExt};
 
 use log::*;
 use path_absolutize::*;
-use tokio::{fs, process::Command};
 use tokio::io::AsyncReadExt;
-use tokio::fs::OpenOptions;
+use tokio::{fs, fs::OpenOptions};
 
 use crate::{LAUNCHER_VERSION, utils::os::OS};
 use crate::app::api::LaunchManifest;

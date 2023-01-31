@@ -1,15 +1,10 @@
-// use crate::error::LauncherError;
-//use web_view::Content;
-// use std::sync::{Arc, Mutex};
-
 use std::{sync::{Arc, Mutex}, time::Duration};
 use serde::Deserialize;
 use anyhow::Result;
 use log::{info, debug};
 use tauri::Manager;
-
-// use log::info;
-use crate::{utils::download_file, error::LauncherError};
+use tokio::time::sleep;
+use crate::{utils::download_file};
 
 pub(crate) async fn download_client<F>(url: &str, on_progress: F, window: &Arc<Mutex<tauri::Window>>) -> Result<Vec<u8>> where F : Fn(u64, u64){
     let app_handle = window.lock().unwrap().app_handle();
@@ -52,6 +47,10 @@ pub(crate) async fn download_client<F>(url: &str, on_progress: F, window: &Arc<M
     });
 
     let url = loop {
+        // sleep for 100ms
+        sleep(Duration::from_millis(100)).await;
+
+        // check if we got the download link
         if let Ok(mg) = download_link_cell.lock() {
             if let Some(received) = mg.clone() {
                 break received;

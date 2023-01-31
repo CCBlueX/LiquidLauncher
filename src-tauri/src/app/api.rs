@@ -46,8 +46,10 @@ pub struct News {
     pub description: String,
     pub date: String,
     pub url: String,
-    pub bannerText: String,
-    pub bannerUrl: String
+    #[serde(rename = "bannerText")]
+    pub banner_text: String,
+    #[serde(rename = "bannerUrl")]
+    pub banner_url: String
 }
 
 /// Placeholder struct for API endpoints implementation
