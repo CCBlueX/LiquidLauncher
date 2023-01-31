@@ -73,8 +73,9 @@
     let builds = [];
 
     function getBuild() {
-        if (options.preferredBuild == -1) {
-            return builds[0]; // get latest build
+        if (options.preferredBuild == -1) { // -1 = latest
+            // The find() method returns a value of the first element in the array that satisfies the provided testing function. Otherwise undefined is returned.
+            return builds.find(e => e.release || options.showNightlyBuilds);
         }
 
         return builds.find((build) => build.buildId === options.preferredBuild);
@@ -89,7 +90,11 @@
         invoke("request_builds", { branch: options.preferredBranch })
             .then(b => {
                 builds = b;
-                // options.preferredBuild = b[0].buildId;
+
+                // Format date for user readability
+                builds.forEach(build => {
+                    build.date = new Date(build.date).toLocaleString();
+                });
 
                 updateData();
             })
@@ -98,13 +103,14 @@
 
     function updateData() {
         let b = getBuild();
+        console.debug("Updating build data", b);
 
         lbVersion = {
             date: b.date,
             title: b.lbVersion
         };
         mcVersion = {
-            date: "nix",
+            date: "",
             title: b.mcVersion
         };
 
@@ -115,6 +121,10 @@
         invoke("request_mods", { mcVersion, subsystem })
             .then(b => {
                 mods = b;
+
+                mods.forEach(mod => {
+                    mod.enabled = options.modStates[mod.name] ?? mod.enabled;
+                });
             })
             .catch(e => console.error(e));
     }
@@ -148,6 +158,7 @@
         clientRunning = true;
 
         let build = getBuild();
+        console.debug("Running build", build);
         await invoke("run_client", { buildId: build.buildId, accountData: options.currentAccount, options: options, mods: mods });
     }
 
@@ -160,6 +171,16 @@
         clientLogShown = true;
         console.error(e.payload);
     });
+
+    function updateModStates() {
+        options.modStates = mods.reduce(function(map, mod) {
+            map[mod.name] = mod.enabled;
+            return map;
+        }, {});
+
+        console.debug("Updated mod states", options.modStates);
+        options.store();
+    }
 
     async function terminateClient() {
         await invoke("terminate");
@@ -182,11 +203,11 @@
 {#if versionSelectShown}
     <SettingsContainer title="Select version" on:hideSettings={hideVersionSelection}>
         <SelectSetting title="Branch" items={branches.map(e => ({ value: e, text: e }))} bind:value={options.preferredBranch} on:change={requestBuilds}></SelectSetting>
-        <SelectSetting title="Build" items={[{ value: -1, text: "Latest" }, ...builds.map(e => ({ value: e.buildId, text: e.lbVersion + " git-" + e.commitId.substring(0, 7) }))]} bind:value={options.preferredBuild} on:change={updateData}></SelectSetting>
-        <ToggleSetting title="Show nightly builds" bind:value={options.showNightlyBuilds} />
+        <SelectSetting title="Build" items={[{ value: -1, text: "Latest" }, ...builds.filter(e => e.release || options.showNightlyBuilds).map(e => ({ value: e.buildId, text: e.lbVersion + " git-" + e.commitId.substring(0, 7) + " - " + e.date }))]} bind:value={options.preferredBuild} on:change={updateData}></SelectSetting>
+        <ToggleSetting title="Show nightly builds" bind:value={options.showNightlyBuilds} on:change={updateData} />
         <SettingWrapper title="Additional mods">
             {#each mods as m}
-                <ToggleSetting title={m.name} bind:value={m.enabled} />
+                <ToggleSetting title={m.name} bind:value={m.enabled} on:change={updateModStates} />
             {/each}
         </SettingWrapper>
     </SettingsContainer>

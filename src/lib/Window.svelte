@@ -2,7 +2,7 @@
     import { invoke } from "@tauri-apps/api";
     import LoginScreen from "./login/LoginScreen.svelte";
     import MainScreen from "./main/MainScreen.svelte";
-    import { listen, once } from "@tauri-apps/api/event";
+    import { once } from "@tauri-apps/api/event";
 
     export let options;
 
