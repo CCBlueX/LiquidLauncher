@@ -10,6 +10,17 @@
     let offlineUsername = "";
 
     function handleOfflineLoginClick(e) {
+        if (offlineUsername.length > 16 || offlineUsername.length < 1) {
+            alert("Username must be between 1 and 16 characters long.");
+            return;
+        }
+
+        let usernameRegex = /^[a-zA-Z0-9]+$/;
+        if (!usernameRegex.test(offlineUsername)) {
+            alert("Username can only contain letters and numbers.");
+            return;
+        }
+
         invoke("login_offline", { username: offlineUsername })
             .then((accountData) => {
                 console.debug("login_offline", accountData)
