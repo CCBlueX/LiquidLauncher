@@ -57,7 +57,12 @@
       ]
     },
     "updater": {
-      "active": false
+      "active": true,
+      "endpoints": [
+        "https://api.liquidbounce.net/api/v1/launcher/releases/{{target}}/{{current_version}}"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU1QkM5MTlDREQ4NkEzNjMKUldSam80YmRuSkc4NVNxS2MzYVZPN1I4a283RkdsS0lPTjVjRWlxQ1JhdzFZUkRtc0c1eEtqSzQK"
     },
     "windows": [
       {

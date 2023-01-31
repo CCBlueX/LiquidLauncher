@@ -17,8 +17,6 @@ pub mod minecraft;
 mod error;
 mod utils;
 
-pub mod updater;
-
 const LAUNCHER_VERSION: &str = env!("CARGO_PKG_VERSION");
 static LAUNCHER_DIRECTORY: Lazy<ProjectDirs> = Lazy::new(|| {
     match ProjectDirs::from("net", "CCBlueX",  "LiquidLauncher") {
