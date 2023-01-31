@@ -55,7 +55,7 @@ impl Default for LauncherOptions {
         Self {
             keep_launcher_open: false,
             show_nightly_builds: false,
-            memory_percentage: 90, // 90% memory of computer allocated to game
+            memory_percentage: 80, // 80% memory of computer allocated to game
             custom_java_path: String::new(),
             custom_java_args: String::new(),
             preferred_branch: None,
