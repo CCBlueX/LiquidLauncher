@@ -33,7 +33,7 @@
                 options.store();
             });
         }
-    });
+    }).catch(e => console.error(e));
 
     // Logout from current account
     function logout() {

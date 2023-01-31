@@ -47,6 +47,10 @@
       "csp": null,
       "dangerousExternalCommandAccess": [
           {
+            "url": "https://tauri.localhost/*",
+            "windows": ["main"]
+          },
+          {
               "url": "https://dl.ccbluex.net/*",
               "windows": ["client_download"]
           }
