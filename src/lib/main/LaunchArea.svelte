@@ -85,6 +85,7 @@
         font-family: "Gilroy", sans-serif;
         font-weight: 400;
         font-size: 12px;
+        overflow-x: hidden;
     }
 
     .version-selector {
