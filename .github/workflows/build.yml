@@ -25,7 +25,7 @@ jobs:
           node-version: 16
       
       - name: install Rust nightly
-        uses: dtolnay/rust-toolchain@nightly^
+        uses: dtolnay/rust-toolchain@nightly
       
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-latest'
