@@ -34,24 +34,24 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
       
       - name: Cache cargo registry
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache cargo index
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
         
       - name: Cache tauri build
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ./src-tauri/target
           key: ${{ runner.os }}-tauri-build-target-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache tauri CLI build
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ./tauri/tooling/cli/target
           key: ${{ runner.os }}-tauri-cli-build-target-${{ hashFiles('**/Cargo.lock') }}
