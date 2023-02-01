@@ -51,10 +51,6 @@ jobs:
       - uses: actions/upload-artifact@v2
         if: matrix.platform == 'windows-latest'
         with:
-          path: ./src-tauri/target/release/bundle/msi/*
-      - uses: actions/upload-artifact@v2
-        if: matrix.platform == 'windows-latest'
-        with:
           name: liquidlauncher-windows
           path: ./src-tauri/target/release/bundle/msi/LiquidLauncher_**.msi.*
 
