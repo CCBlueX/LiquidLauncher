@@ -16,12 +16,13 @@ pub(crate) async fn download_client<F>(url: &str, on_progress: F, window: &Arc<M
         tauri::WindowUrl::External(download_page.parse().unwrap())
     )
         .title("Download of LiquidBounce")
-        /// A custom user agent might reduce the trust of the browser resulting in less ad revenue.
-        /// .user_agent("LiquidLauncher")
         .center()
         .focused(true)
         .maximized(true)
         .build().unwrap();
+
+    /// A custom user agent might reduce the trust of the browser resulting in less ad revenue.
+    /// .user_agent("LiquidLauncher")
     
     // Show and maximize the download view
     download_view.show().unwrap();
