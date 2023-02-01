@@ -18,17 +18,44 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
+    
       - name: setup node
         uses: actions/setup-node@v3
         with:
           node-version: 16
+      
       - name: install Rust nightly
         uses: dtolnay/rust-toolchain@nightly
+      
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+        
+      - name: Cache tauri build
+        uses: actions/cache@v3
+        with:
+          path: ./src-tauri/target
+          key: ${{ runner.os }}-tauri-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache tauri CLI build
+        uses: actions/cache@v3
+        with:
+          path: ./tauri/tooling/cli/target
+          key: ${{ runner.os }}-tauri-cli-build-target-${{ hashFiles('**/Cargo.lock') }}
+
       - name: build tauri-cli
         run: |
           cd tauri/tooling/cli/node
@@ -48,10 +75,6 @@ jobs:
           name: liquidlauncher-linux
           path: ./src-tauri/target/release/bundle/appimage/liquid-launcher_**.AppImage.*
 
-      - uses: actions/upload-artifact@v2
-        if: matrix.platform == 'windows-latest'
-        with:
-          path: ./src-tauri/target/release/bundle/msi/*
       - uses: actions/upload-artifact@v2
         if: matrix.platform == 'windows-latest'
         with:
