@@ -54,7 +54,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ./tauri/tooling/cli/target
-          key: ${{ runner.os }}-tauri-build-target-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-tauri-cli-build-target-${{ hashFiles('**/Cargo.lock') }}
 
       - name: build tauri-cli
         run: |
