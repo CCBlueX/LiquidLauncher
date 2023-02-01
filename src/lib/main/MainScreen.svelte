@@ -28,9 +28,9 @@
 
     let versionInfo = {
         bannerUrl: "https://liquidbounce.net/LiquidLauncher/img/b73.jpg",
-        title: "Lorem ipsum dolor sit amet",
-        date: "2021-05-07",
-        description: "Changelog...",
+        title: "Loading...",
+        date: "Loading...",
+        description: "Loading...",
     };
 
     let settingsShown = false;
