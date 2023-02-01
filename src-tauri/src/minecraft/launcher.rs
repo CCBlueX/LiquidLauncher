@@ -258,32 +258,13 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
         window.lock().unwrap().hide().unwrap();
     }
 
-    let mut stdout = running_task.stdout.take().unwrap();
-    let mut stderr = running_task.stderr.take().unwrap();
-
-    let mut stdout_buf = vec![0; 1024];
-    let mut stderr_buf = vec![0; 1024];
-
-    let launcher_data = Arc::try_unwrap(launcher_data_arc).unwrap_or_else(|_| panic!());
-
+    let launcher_data = Arc::try_unwrap(launcher_data_arc)
+        .unwrap_or_else(|_| panic!());
     let terminator = launcher_data.terminator;
+    let data = launcher_data.data;
 
-    tokio::pin!(terminator);
-
-    loop {
-        tokio::select! {
-            read_len = stdout.read(&mut stdout_buf) => (launcher_data.on_stdout)(&launcher_data.data, &stdout_buf[..read_len?]).unwrap(),
-            read_len = stderr.read(&mut stderr_buf) => (launcher_data.on_stderr)(&launcher_data.data, &stderr_buf[..read_len?]).unwrap(),
-            _ = &mut terminator => {
-                running_task.kill().await?;
-                break;
-            },
-            exit_status = running_task.wait() => {
-                exit_status?.exit_ok()?;
-                break;
-            },
-        }
-    }
+    java_runtime.handle_io(&mut running_task, launcher_data.on_stdout, launcher_data.on_stderr, terminator, &data)
+        .await?;
 
     if !launching_parameter.keep_launcher_open {
         // Hide launcher window
