@@ -21,7 +21,7 @@ use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, Progre
 use crate::minecraft::rule_interpreter;
 use crate::minecraft::runtime::JavaRuntime;
 use crate::minecraft::version::LibraryDownloadInfo;
-use crate::utils::{download_file, zip_extract};
+use crate::utils::{download_file, sha1sum, zip_extract};
 
 use super::version::VersionProfile;
 
@@ -77,15 +77,21 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
         write!(class_path, "{}{}", &client_jar.absolutize().unwrap().to_str().unwrap(), OS.get_path_separator())?;
 
         // Download client jar
-        if !client_jar.exists() {
-            info!("Downloading client jar...");
+        let requires_download = if !client_jar.exists() {
+            true
+        } else {
+            let hash = sha1sum(&client_jar)?;
+            hash != client_download.sha1
+        };
+
+        if requires_download {
             launcher_data_arc.progress_update(ProgressUpdate::set_label("Downloading client..."));
 
             let retrieved_bytes = download_file(&client_download.url, |a, b| {
                 launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadClientJar, get_progress(0, a, b), get_max(1)));
             }).await?;
 
-            tokio::fs::write(&client_jar, retrieved_bytes).await?;
+            fs::write(&client_jar, retrieved_bytes).await?;
         }
     } else {
         return Err(LauncherError::InvalidVersionProfile("No client JAR downloads were specified.".to_string()).into());

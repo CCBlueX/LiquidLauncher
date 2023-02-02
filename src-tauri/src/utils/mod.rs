@@ -1,12 +1,13 @@
 pub mod os;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use log::debug;
 use async_zip::read::seek::ZipFileReader;
 use tokio::fs;
 use tokio::fs::File;
 use crate::error::LauncherError;
 use anyhow::Result;
+use sha1::{Sha1, Digest};
 
 pub(crate) fn get_maven_artifact_path(artifact_id: &String) -> Result<String> {
     let split = artifact_id.split(':').collect::<Vec<_>>();
@@ -81,4 +82,15 @@ pub async fn zip_extract(mut file: File, folder: &Path) -> Result<()> {
             .unwrap();
     }
     Ok(())
+}
+
+pub fn sha1sum(path: &PathBuf) -> Result<String> {
+    // get sha1 of library file and check if it matches
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = Sha1::new();
+    std::io::copy(&mut file, &mut hasher)?;
+    let hash = hasher.finalize();
+    let hex_hash = base16ct::lower::encode_string(&hash);
+
+    Ok(hex_hash)
 }

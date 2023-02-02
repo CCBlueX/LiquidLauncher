@@ -8,11 +8,10 @@ use void::Void;
 use os_info::{Bitness, Info};
 use std::collections::HashSet;
 use crate::error::LauncherError;
-use crate::utils::get_maven_artifact_path;
+use crate::utils::{get_maven_artifact_path, sha1sum};
 use std::sync::Arc;
 use crate::minecraft::launcher::LaunchingParameter;
 use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
-use sha1::{Sha1, Digest};
 
 // https://launchermeta.mojang.com/mc/game/version_manifest.json
 
@@ -502,7 +501,7 @@ impl LibraryDownloadInfo {
         let path = libraries_folder.to_path_buf();
         let library_path = path.join(&self.path);
         if library_path.exists() {
-            let hash = sha1sum(&library_path).await?;
+            let hash = sha1sum(&library_path)?;
             let sha1 = if let Some(sha1) = &self.sha1 {
                 Some(sha1.clone())
             } else {
@@ -539,18 +538,6 @@ impl LibraryDownloadInfo {
     }
 
 }
-
-async fn sha1sum(path: &PathBuf) -> Result<String> {
-    // get sha1 of library file and check if it matches
-    let mut file = std::fs::File::open(path)?;
-    let mut hasher = Sha1::new();
-    std::io::copy(&mut file, &mut hasher)?;
-    let hash = hasher.finalize();
-    let hex_hash = base16ct::lower::encode_string(&hash);
-
-    Ok(hex_hash)
-}
-
 
 #[derive(Deserialize)]
 pub struct Logging {
