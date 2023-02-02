@@ -1,16 +1,15 @@
-use anyhow::{bail, Result};
-use std::{
-    env::current_dir,
-    path::{Path, PathBuf},
-};
+use anyhow::Result;
+use std::{path::{Path, PathBuf}};
 use async_zip::read::seek::ZipFileReader;
-use tokio::fs::{create_dir_all, File, OpenOptions};
+use tokio::fs::{create_dir_all, OpenOptions};
 use tokio::io;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeek, BufReader};
 
 /// Extracts everything from the ZIP archive to the output directory
 ///
 /// Taken from https://github.com/Majored/rs-async-zip/blob/main/examples/file_extraction.rs
-pub async fn zip_extract(archive: File, out_dir: &Path) -> Result<()> {
+pub async fn zip_extract<R>(archive: R, out_dir: &Path) -> Result<()>
+    where R: AsyncRead + AsyncSeek + Unpin {
     let mut reader = ZipFileReader::new(archive).await?;
     for index in 0..reader.file().entries().len() {
         let entry = &reader.file().entries().get(index).unwrap().entry();
@@ -55,8 +54,14 @@ pub async fn zip_extract(archive: File, out_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-pub async fn tar_extract(archive: File, out_dir: &Path) -> Result<()> {
+pub async fn tar_gz_extract<R>(archive: R, out_dir: &Path) -> Result<()>
+    where R: AsyncRead + AsyncSeek + Unpin {
+    let mut decoder = async_compression::tokio::bufread::GzipDecoder::new(BufReader::new(archive));
+    let mut decoded_data: Vec<u8> = vec![];
+    decoder.read_to_end(&mut decoded_data).await?;
 
+    let mut ar = tokio_tar::Archive::new(&decoded_data[..]);
+    ar.unpack(out_dir).await?;
     Ok(())
 }
 

@@ -1,8 +1,5 @@
-use std::path::PathBuf;
 use log::debug;
-use crate::error::LauncherError;
 use anyhow::Result;
-use sha1::{Sha1, Digest};
 
 pub async fn download_file<F>(url: &str, on_progress: F) -> Result<Vec<u8>> where F : Fn(u64, u64) {
     debug!("Downloading file {:?}", url);

@@ -1,3 +1,4 @@
+use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Result};
@@ -5,7 +6,7 @@ use path_absolutize::Absolutize;
 use tokio::fs;
 use crate::app::api::ApiEndpoints;
 
-use crate::utils::{download_file, tar_extract, zip_extract};
+use crate::utils::{download_file, tar_gz_extract, zip_extract};
 use crate::utils::{BITNESS, Bitness, OperatingSystem, OS};
 
 /// Download specific JRE to runtimes
@@ -39,14 +40,14 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, on_progress: F) -> R
             .with_extension(if OS == OperatingSystem::WINDOWS { "zip" } else { "tar.gz" });
 
         let retrieved_bytes = download_file(&jre_source.download_url, on_progress).await?;
-        fs::write(&runtime_archive.as_path(), retrieved_bytes).await?;
+        let cursor = Cursor::new(&retrieved_bytes[..]);
 
-        let open_file = fs::File::open(&runtime_archive.as_path()).await?;
         match OS {
-            OperatingSystem::WINDOWS => zip_extract(open_file, runtime_path.as_path()).await?,
-            OperatingSystem::LINUX | OperatingSystem::OSX => tar_extract(open_file, runtime_path.as_path()).await?,
+            OperatingSystem::WINDOWS => zip_extract(cursor, runtime_path.as_path()).await?,
+            OperatingSystem::LINUX | OperatingSystem::OSX => tar_gz_extract(cursor, runtime_path.as_path()).await?,
             _ => bail!("Unsupported OS")
         }
+
         fs::remove_file(&runtime_archive).await?;
     }
 

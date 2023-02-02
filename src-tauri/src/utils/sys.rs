@@ -1,5 +1,4 @@
 use std::fmt::Display;
-
 use serde::Deserialize;
 use sysinfo::{RefreshKind, System, SystemExt};
 
