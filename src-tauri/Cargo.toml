@@ -14,7 +14,7 @@ tauri-build = {version = "1.2", features = [] }
 [dependencies]
 # Log
 log = "0.4.16"
-env_logger = "0.9.3"
+env_logger = "0.10.0"
 
 # Async IO
 tokio = { version = "1", features = ["full"] }
