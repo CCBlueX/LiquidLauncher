@@ -1,14 +1,14 @@
 use std::{sync::{Arc, Mutex}, thread};
 
 use env_logger::Env;
-use log::{info, error};
+use log::{error, info};
 use sysinfo::SystemExt;
 use tauri::{Manager, Window};
 
-use crate::{LAUNCHER_DIRECTORY, minecraft::{service::{Account, self}, launcher::{LaunchingParameter, LauncherData}, progress::ProgressUpdate, prelauncher}};
+use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, service::{self, Account}}};
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 
-use super::{app_data::LauncherOptions, api::{ApiEndpoints, Build, LoaderMod}};
+use super::{api::{ApiEndpoints, Build, LoaderMod}, app_data::LauncherOptions};
 
 struct RunnerInstance {
     terminator: tokio::sync::oneshot::Sender<()>,
@@ -282,7 +282,7 @@ pub fn gui_main() {
             // Applies blur to the window and make corners rounded
             #[cfg(target_os = "windows")]
             {
-                use window_vibrancy::{apply_acrylic, apply_rounded_corners, apply_blur};
+                use window_vibrancy::{apply_acrylic, apply_blur, apply_rounded_corners};
 
                 if let Err(e) = apply_acrylic(&window, None) {
                     error!("Failed to apply acrylic vibrancy: {:?}", e);

@@ -11,7 +11,6 @@ use futures::stream::{self, StreamExt};
 
 use log::*;
 use path_absolutize::*;
-use tokio::io::AsyncReadExt;
 use tokio::{fs, fs::OpenOptions};
 
 use crate::{LAUNCHER_VERSION, utils::os::OS};
