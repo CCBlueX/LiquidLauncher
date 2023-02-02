@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::{path::{Path, PathBuf}};
+use async_compression::tokio::bufread::GzipDecoder;
 use async_zip::read::seek::ZipFileReader;
 use tokio::fs::{create_dir_all, OpenOptions};
 use tokio::io;
@@ -56,7 +57,7 @@ pub async fn zip_extract<R>(archive: R, out_dir: &Path) -> Result<()>
 
 pub async fn tar_gz_extract<R>(archive: R, out_dir: &Path) -> Result<()>
     where R: AsyncRead + AsyncSeek + Unpin {
-    let mut decoder = async_compression::tokio::bufread::GzipDecoder::new(BufReader::new(archive));
+    let mut decoder = GzipDecoder::new(BufReader::new(archive));
     let mut decoded_data: Vec<u8> = vec![];
     decoder.read_to_end(&mut decoded_data).await?;
 
