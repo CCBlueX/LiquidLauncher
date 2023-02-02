@@ -1,7 +1,7 @@
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use path_absolutize::Absolutize;
 use tokio::fs;
 use crate::app::api::ApiEndpoints;
@@ -59,7 +59,7 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, on_progress: F) -> R
         path.push("bin");
         match OS {
             OperatingSystem::WINDOWS => path.push("javaw.exe"),
-            _ => path.push("javaw")
+            _ => path.push("java")
         }
 
         return Ok(path.absolutize()?.to_path_buf());
