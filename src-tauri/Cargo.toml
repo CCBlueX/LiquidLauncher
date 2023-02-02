@@ -34,7 +34,7 @@ open = "3.0.3"
 minceraft = { version = "0.2.1", features = ["auth"] }
 
 # FS libs
-zip = "0.6.2"
+zip = "0.6.4"
 async_zip = "0.0.7"
 path-absolutize = "3.0.14"
 
