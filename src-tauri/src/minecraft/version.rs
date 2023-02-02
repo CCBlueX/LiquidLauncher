@@ -534,6 +534,15 @@ impl LibraryDownloadInfo {
         let os = reqwest::get(&self.url).await?.error_for_status()?.bytes().await?;
         fs::write(&library_path, os).await?;
         info!("Downloaded {}", self.url);
+
+        // After downloading, check sha1
+        if let Some(sha1) = &self.sha1 {
+            let hash = sha1sum(&library_path)?;
+            if hash != *sha1 {
+                anyhow::bail!("sha1 of downloaded library {} doesn't match", name);
+            }
+        }
+
         Ok(library_path)
     }
 

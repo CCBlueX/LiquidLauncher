@@ -92,6 +92,12 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
             }).await?;
 
             fs::write(&client_jar, retrieved_bytes).await?;
+
+            // After downloading, check sha1
+            let hash = sha1sum(&client_jar)?;
+            if hash != client_download.sha1 {
+                anyhow::bail!("Client JAR download failed. SHA1 mismatch.");
+            }
         }
     } else {
         return Err(LauncherError::InvalidVersionProfile("No client JAR downloads were specified.".to_string()).into());
