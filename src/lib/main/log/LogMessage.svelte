@@ -10,5 +10,7 @@
         font-size: 16px;
         color: white;
         user-select: text;
+        word-break: normal;
+        overflow-wrap: anywhere;
     }
 </style>
