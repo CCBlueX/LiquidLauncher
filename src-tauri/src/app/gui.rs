@@ -2,11 +2,11 @@ use std::{sync::{Arc, Mutex}, thread};
 
 use env_logger::Env;
 use log::{error, info};
-use sysinfo::SystemExt;
 use tauri::{Manager, Window};
 
 use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, service::{self, Account}}};
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
+use crate::utils::os::percentage_of_total_memory;
 
 use super::{api::{ApiEndpoints, Build, LoaderMod}, app_data::LauncherOptions};
 
@@ -131,9 +131,8 @@ async fn run_client(build_id: i32, account_data: Account, options: LauncherOptio
         Account::OfflineAccount { name, uuid } => (name, "-".to_string(), uuid, "legacy".to_string())
     };
 
-    let sys = sysinfo::System::new_all();
     let parameters = LaunchingParameter {
-        memory: ((sys.total_memory() / 1000000) as f64 * (options.memory_percentage as f64 / 100.0)) as i64,
+        memory: percentage_of_total_memory(options.memory_percentage),
         custom_java_path: if !options.custom_java_path.is_empty() { Some(options.custom_java_path) } else { None },
         auth_player_name: account_name,
         auth_uuid: uuid,
@@ -234,6 +233,10 @@ async fn logout(account_data: Account) -> Result<(), String> {
     account_data.logout().await.map_err(|e| format!("unable to logout: {:?}", e))
 }
 
+#[tauri::command]
+async fn mem_percentage(memory_percentage: i32) -> i64 {
+    percentage_of_total_memory(memory_percentage)
+}
 
 #[tauri::command]
 async fn fetch_news() -> Result<Vec<News>, String> {
@@ -319,6 +322,7 @@ pub fn gui_main() {
             fetch_news,
             fetch_changelog,
             clear_data,
+            mem_percentage,
             terminate
         ])
         .run(tauri::generate_context!())

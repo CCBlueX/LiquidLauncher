@@ -1,6 +1,14 @@
 use std::fmt::Display;
 
 use serde::Deserialize;
+use sysinfo::{RefreshKind, System, SystemExt};
+
+/// Get the total memory of the system in bytes
+pub fn percentage_of_total_memory(memory_percentage: i32) -> i64 {
+    let sys = System::new_with_specifics(RefreshKind::new().with_memory());
+
+    ((sys.total_memory() / 1000000) as f64 * (memory_percentage as f64 / 100.0)) as i64
+}
 
 pub const OS: Os = if cfg!(windows) {
     Os::WINDOWS
