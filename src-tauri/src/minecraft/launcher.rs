@@ -17,7 +17,7 @@ use crate::{LAUNCHER_VERSION, utils::os::OS};
 use crate::app::api::LaunchManifest;
 use crate::error::LauncherError;
 use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
-use crate::minecraft::rule_interpreter;
+use crate::minecraft::{jre_downloader, rule_interpreter};
 use crate::minecraft::runtime::JavaRuntime;
 use crate::minecraft::version::LibraryDownloadInfo;
 use crate::utils::{download_file, sha1sum, zip_extract};
@@ -53,7 +53,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
             info!("Downloading JRE...");
             launcher_data_arc.progress_update(ProgressUpdate::set_label("Downloading JRE..."));
 
-            crate::minecraft::jre_downloader::jre_download(data, manifest.build.jre_version, &os_info, |a, b| {
+            jre_downloader::jre_download(data, manifest.build.jre_version, |a, b| {
                 launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadJRE, get_progress(0, a, b), get_max(1)));
             }).await?
         }

@@ -1,15 +1,15 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::Result;
-use os_info::{Bitness, Info, Type};
+use anyhow::{anyhow, bail, Result};
 use path_absolutize::Absolutize;
 use tokio::fs;
 use crate::app::api::ApiEndpoints;
 
-use crate::utils::{download_file, zip_extract};
+use crate::utils::{download_file, tar_extract, zip_extract};
+use crate::utils::os::{BITNESS, Bitness, OperatingSystem, OS};
 
 /// Download specific JRE to runtimes
-pub async fn jre_download<F>(data: &Path, jre_version: u32, os_info: &Info, on_progress: F) -> Result<PathBuf> where F : Fn(u64, u64) {
+pub async fn jre_download<F>(data: &Path, jre_version: u32, on_progress: F) -> Result<PathBuf> where F : Fn(u64, u64) {
     // runtimes/version_number_of_jre/...
     let runtime_path = data.join("runtimes")
         .join(jre_version.to_string());
@@ -17,14 +17,16 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, os_info: &Info, on_p
     // Download runtime
     if !runtime_path.exists() {
         // OS details
-        let os_name = match os_info.os_type() {
-            Type::Macos => "mac",
-            Type::Windows => "windows",
-            _ => "linux",
+        let os_name = match OS {
+            OperatingSystem::WINDOWS => "windows",
+            OperatingSystem::OSX => "mac",
+            OperatingSystem::LINUX => "linux",
+            OperatingSystem::UNKNOWN => bail!("Unknown OS")
         }.to_string();
-        let os_arch = match os_info.bitness() {
-            Bitness::X64 => "x64",
-            _ => "x32",
+        let os_arch = match BITNESS {
+            Bitness::Bit64 => "x64",
+            Bitness::Bit32 => "x32",
+            Bitness::UNKNOWN => bail!("Unknown bitness")
         }.to_string();
 
         // Request JRE source
@@ -33,15 +35,19 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, os_info: &Info, on_p
         // Download from JRE source and extract runtime files
         fs::create_dir_all(&runtime_path).await?;
 
-        let mut runtime_zip = runtime_path.clone();
-        runtime_zip.push("runtime.zip");
+        let runtime_archive = runtime_path.join("runtime")
+            .with_extension(if OS == OperatingSystem::WINDOWS { "zip" } else { "tar.gz" });
 
         let retrieved_bytes = download_file(&jre_source.download_url, on_progress).await?;
-        fs::write(&runtime_zip.as_path(), retrieved_bytes).await?;
+        fs::write(&runtime_archive.as_path(), retrieved_bytes).await?;
 
-        let open_file = fs::File::open(&runtime_zip.as_path()).await?;
-        zip_extract(open_file, runtime_path.as_path()).await?;
-        fs::remove_file(&runtime_zip).await?;
+        let open_file = fs::File::open(&runtime_archive.as_path()).await?;
+        match OS {
+            OperatingSystem::WINDOWS => zip_extract(open_file, runtime_path.as_path()).await?,
+            OperatingSystem::LINUX | OperatingSystem::OSX => tar_extract(open_file, runtime_path.as_path()).await?,
+            _ => bail!("Unsupported OS")
+        }
+        fs::remove_file(&runtime_archive).await?;
     }
 
     // Find JRE in runtime folder
@@ -50,8 +56,8 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, os_info: &Info, on_p
     if let Some(jre_folder) = files.next_entry().await? {
         let mut path = jre_folder.path();
         path.push("bin");
-        match os_info.os_type() {
-            Type::Windows => path.push("javaw.exe"),
+        match OS {
+            OperatingSystem::WINDOWS => path.push("javaw.exe"),
             _ => path.push("javaw")
         }
 

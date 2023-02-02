@@ -3,8 +3,10 @@ use std::path::Path;
 use std::sync::{Mutex, Arc};
 
 use anyhow::Result;
+use async_zip::read::mem::ZipFileReader;
 use log::*;
 use tokio::fs;
+use tokio::io::AsyncReadExt;
 
 use crate::app::api::{LaunchManifest, LoaderSubsystem, ModSource, LoaderMod};
 use crate::error::LauncherError;
@@ -112,15 +114,20 @@ pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifes
 
                     // Extract bytes
                     let final_file = if *extract {
-                        let mut archive = zip::ZipArchive::new(Cursor::new(retrieved_bytes)).unwrap();
+                        let reader = ZipFileReader::new(retrieved_bytes).await?;
 
-                        let file_name_to_extract = archive.file_names().find(|x| x.ends_with(".jar")).ok_or_else(|| LauncherError::InvalidVersionProfile("There is no JAR in the downloaded archive".to_string()))?.to_owned();
+                        // Find .JAR file in archive and get index of it
+                        let index_of_file_to_extract = reader.file().entries()
+                            .iter()
+                            .position(|x| x.entry().filename().ends_with(".jar"))
+                            .ok_or_else(|| LauncherError::InvalidVersionProfile("There is no JAR in the downloaded archive".to_string()))?;
+                        let entry = reader.file().entries()[index_of_file_to_extract].entry();
 
-                        let mut file_to_extract = archive.by_name(&file_name_to_extract)?;
+                        // Read file to extract
+                        let mut entry_reader = reader.entry(index_of_file_to_extract).await?;
 
-                        let mut output = Vec::with_capacity(file_to_extract.size() as usize);
-
-                        file_to_extract.read_to_end(&mut output)?;
+                        let mut output = Vec::with_capacity(entry.uncompressed_size() as usize);
+                        entry_reader.read_to_end(&mut output).await?;
 
                         output
                     } else {
