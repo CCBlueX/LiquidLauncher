@@ -1,11 +1,13 @@
 <script>
     import { fly } from "svelte/transition";
-    import VirtualList from "@sveltejs/svelte-virtual-list";
+    import VirtualList from "./VirtualList.svelte";
     import { createEventDispatcher } from "svelte";
     import ToggleSetting from "../../settings/ToggleSetting.svelte";
     import LogMessage from "./LogMessage.svelte";
 
     export let messages;
+
+    let autoScroll = true;
 
     const dispatch = createEventDispatcher();
 </script>
@@ -19,12 +21,12 @@
     </div>
 
     <div class="output">
-        <VirtualList items={messages} let:item>
+        <VirtualList items={messages} let:item {autoScroll}>
             <LogMessage text={item} />
         </VirtualList>
     </div>
 
-    <ToggleSetting title="Auto scroll" value={true} />
+    <ToggleSetting title="Auto scroll" bind:value={autoScroll} />
 </div>
 
 <style>
