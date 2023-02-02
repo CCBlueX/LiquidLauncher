@@ -2,7 +2,7 @@
     export let text;
 </script>
 
-<div class="message">{text}</div>
+<pre class="message">{text}</pre>
 
 <style>
     .message {
