@@ -101,6 +101,9 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     let libraries_folder = data.join("libraries");
     let natives_folder = data.join("natives");
     let natives_path = natives_folder.as_path();
+    if natives_folder.exists() {
+        fs::remove_dir_all(&natives_folder).await?;
+    }
     fs::create_dir_all(&natives_folder).await?;
 
     let libraries_to_download = version_profile.libraries.iter().map(|x| x.to_owned()).collect::<Vec<_>>();
@@ -145,7 +148,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
 
                 // Natives are not included in the classpath
                 return if library.natives.is_none() {
-                    return Ok(path.absolutize().unwrap().to_str().map(|x| x.to_string()))
+                    return Ok(path.absolutize()?.to_str().map(|x| x.to_string()))
                 } else {
                     Ok(None)
                 };
@@ -241,7 +244,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
                     "natives_directory" => output.push_str(&natives_folder.absolutize().unwrap().to_str().unwrap()),
                     "launcher_name" => output.push_str("LiquidLauncher"),
                     "launcher_version" => output.push_str(LAUNCHER_VERSION),
-                    "classpath" => output.push_str(&class_path[..class_path.len() - 1]),
+                    "classpath" => output.push_str(&class_path),
                     "user_properties" => output.push_str("{}"),
                     "clientid" => output.push_str(&launching_parameter.clientid),
                     "auth_xuid" => output.push_str(&launching_parameter.auth_xuid),
