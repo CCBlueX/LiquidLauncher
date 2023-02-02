@@ -17,8 +17,8 @@ use crate::{LAUNCHER_VERSION, utils::OS};
 use crate::app::api::LaunchManifest;
 use crate::error::LauncherError;
 use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
-use crate::minecraft::{jre_downloader, rule_interpreter};
-use crate::minecraft::runtime::JavaRuntime;
+use crate::minecraft::rule_interpreter;
+use crate::minecraft::java::{JavaRuntime, jre_downloader};
 use crate::minecraft::version::LibraryDownloadInfo;
 use crate::utils::{download_file, sha1sum, zip_extract};
 
