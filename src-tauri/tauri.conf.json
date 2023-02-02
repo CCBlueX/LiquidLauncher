@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "LiquidLauncher",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "tauri": {
     "allowlist": {
@@ -23,10 +23,11 @@
       },
       "externalBin": [],
       "icon": [
-        "icons/icon.ico"
+        "icons/icon.ico",
+        "icons/icon.png"
       ],
       "identifier": "net.ccbluex.liquidlauncher",
-      "longDescription": "",
+      "longDescription": "A hacked-client launcher for the game Minecraft",
       "macOS": {
         "entitlements": null,
         "exceptionDomain": "",
@@ -35,7 +36,7 @@
         "signingIdentity": null
       },
       "resources": [],
-      "shortDescription": "A minecraft cheat launcher",
+      "shortDescription": "A LiquidBounce launcher for Minecraft",
       "targets": "all",
       "windows": {
         "certificateThumbprint": null,
