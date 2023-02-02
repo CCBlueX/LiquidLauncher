@@ -5,9 +5,9 @@ use os_info::Info;
 use regex::Regex;
 
 use crate::minecraft::version::{Rule, RuleAction};
-use crate::utils::os::OS;
+use crate::utils::OS;
 
-pub(crate) fn check_condition(rules: &Vec<Rule>, features: &HashSet<String>, os_info: &Info) -> Result<bool> {
+pub fn check_condition(rules: &Vec<Rule>, features: &HashSet<String>, os_info: &Info) -> Result<bool> {
     if rules.is_empty() {
         return Ok(true);
     }

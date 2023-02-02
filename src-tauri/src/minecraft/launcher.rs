@@ -13,7 +13,7 @@ use log::*;
 use path_absolutize::*;
 use tokio::{fs, fs::OpenOptions};
 
-use crate::{LAUNCHER_VERSION, utils::os::OS};
+use crate::{LAUNCHER_VERSION, utils::OS};
 use crate::app::api::LaunchManifest;
 use crate::error::LauncherError;
 use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};

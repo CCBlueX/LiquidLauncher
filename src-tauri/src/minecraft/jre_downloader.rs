@@ -6,7 +6,7 @@ use tokio::fs;
 use crate::app::api::ApiEndpoints;
 
 use crate::utils::{download_file, tar_extract, zip_extract};
-use crate::utils::os::{BITNESS, Bitness, OperatingSystem, OS};
+use crate::utils::{BITNESS, Bitness, OperatingSystem, OS};
 
 /// Download specific JRE to runtimes
 pub async fn jre_download<F>(data: &Path, jre_version: u32, on_progress: F) -> Result<PathBuf> where F : Fn(u64, u64) {

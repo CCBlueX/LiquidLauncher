@@ -6,7 +6,7 @@ use tauri::{Manager, Window};
 
 use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, service::{self, Account}}};
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
-use crate::utils::os::percentage_of_total_memory;
+use crate::utils::percentage_of_total_memory;
 
 use super::{api::{ApiEndpoints, Build, LoaderMod}, app_data::LauncherOptions};
 
