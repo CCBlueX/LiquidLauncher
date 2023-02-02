@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt, marker::PhantomData, path::{Path, PathBuf}, str::FromStr};
 
 use anyhow::Result;
-use log::info;
+use log::{debug, info};
 use tokio::fs;
 use serde::{Deserialize, Deserializer, de::{self, MapAccess, Visitor}};
 use void::Void;
@@ -12,6 +12,7 @@ use crate::utils::get_maven_artifact_path;
 use std::sync::Arc;
 use crate::minecraft::launcher::LaunchingParameter;
 use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
+use sha1::{Sha1, Digest};
 
 // https://launchermeta.mojang.com/mc/game/version_manifest.json
 
@@ -485,24 +486,69 @@ impl From<&LibraryArtifact> for LibraryDownloadInfo {
 
 impl LibraryDownloadInfo {
 
+    async fn fetch_sha1(&self) -> Result<String> {
+        reqwest::get(&format!("{}{}", &self.url, ".sha1"))
+            .await?
+            .error_for_status()?
+            .text()
+            .await
+            .map_err(|e| anyhow::anyhow!(e))
+    }
+
     pub async fn download(&self, name: String, libraries_folder: &Path, progress: Arc<impl ProgressReceiver>) -> Result<PathBuf> {
+        info!("Downloading library {}, sha1: {:?}, size: {:?}", name, &self.sha1, &self.size);
+        debug!("Library download url: {}", &self.url);
+
         let path = libraries_folder.to_path_buf();
         let library_path = path.join(&self.path);
         if library_path.exists() {
-            return Ok(library_path);
+            let hash = sha1sum(&library_path).await?;
+            let sha1 = if let Some(sha1) = &self.sha1 {
+                Some(sha1.clone())
+            } else {
+                // Request sha1 from server
+                let sha1 = self.fetch_sha1().await
+                    .map(Some)
+                    .unwrap_or(None);
+
+                sha1
+            };
+
+            if let Some(sha1) = sha1 {
+                if hash == *sha1 {
+                    info!("Library {} already exists and matches sha1.", name);
+                    return Ok(library_path);
+                }
+            } else {
+                info!("Library {} already exists.", name);
+                return Ok(library_path);
+            }
+
+            info!("Library {} already exists but sha1 doesn't match, redownloading", name);
+            fs::remove_file(&library_path).await?;
         }
 
         fs::create_dir_all(&library_path.parent().unwrap()).await?;
 
         progress.progress_update(ProgressUpdate::set_label(format!("Downloading library {}", name)));
 
-        info!("Downloading {}", self.url);
         let os = reqwest::get(&self.url).await?.error_for_status()?.bytes().await?;
         fs::write(&library_path, os).await?;
         info!("Downloaded {}", self.url);
         Ok(library_path)
     }
 
+}
+
+async fn sha1sum(path: &PathBuf) -> Result<String> {
+    // get sha1 of library file and check if it matches
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = Sha1::new();
+    std::io::copy(&mut file, &mut hasher)?;
+    let hash = hasher.finalize();
+    let hex_hash = base16ct::lower::encode_string(&hash);
+
+    Ok(hex_hash)
 }
 
 

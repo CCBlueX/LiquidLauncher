@@ -60,7 +60,6 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
         }
     };
 
-
     // Launch class path for JRE
     let mut class_path = String::new();
 
