@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt, marker::PhantomData, path::{Path, PathBuf}, str::FromStr};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use log::{debug, info};
 use tokio::fs;
 use serde::{Deserialize, Deserializer, de::{self, MapAccess, Visitor}};
@@ -501,16 +501,33 @@ impl LibraryDownloadInfo {
         let path = libraries_folder.to_path_buf();
         let library_path = path.join(&self.path);
 
+        // Create parent directories
+        fs::create_dir_all(&library_path.parent().unwrap()).await?;
+
         // SHA1
         let sha1 = if let Some(sha1) = &self.sha1 {
             Some(sha1.clone())
         } else {
-            // Request sha1 from server
-            let sha1 = self.fetch_sha1().await
-                .map(Some)
-                .unwrap_or(None);
+            // Check if sha1 file exists
+            let sha1_path = path.join(&self.path).with_extension("sha1");
 
-            sha1
+            if sha1_path.exists() {
+                // If sha1 file exists, read it
+                let sha1 = fs::read_to_string(&sha1_path).await?;
+                Some(sha1)
+            } else {
+                // If sha1 file doesn't exist, fetch it
+                let sha1 = self.fetch_sha1().await
+                    .map(Some)
+                    .unwrap_or(None);
+
+                // Write sha1 file
+                if let Some(sha1) = &sha1 {
+                    fs::write(&sha1_path, &sha1).await?;
+                }
+
+                sha1
+            }
         };
 
         // Check if library already exists
@@ -534,9 +551,6 @@ impl LibraryDownloadInfo {
             info!("Library {} already exists but sha1 doesn't match, redownloading", name);
             fs::remove_file(&library_path).await?;
         }
-
-        // Create parent directories
-        fs::create_dir_all(&library_path.parent().unwrap()).await?;
 
         // Download library
         progress.progress_update(ProgressUpdate::set_label(format!("Downloading library {}", name)));
