@@ -500,43 +500,56 @@ impl LibraryDownloadInfo {
 
         let path = libraries_folder.to_path_buf();
         let library_path = path.join(&self.path);
+
+        // SHA1
+        let sha1 = if let Some(sha1) = &self.sha1 {
+            Some(sha1.clone())
+        } else {
+            // Request sha1 from server
+            let sha1 = self.fetch_sha1().await
+                .map(Some)
+                .unwrap_or(None);
+
+            sha1
+        };
+
+        // Check if library already exists
         if library_path.exists() {
+            // Check if sha1 matches
             let hash = sha1sum(&library_path)?;
-            let sha1 = if let Some(sha1) = &self.sha1 {
-                Some(sha1.clone())
-            } else {
-                // Request sha1 from server
-                let sha1 = self.fetch_sha1().await
-                    .map(Some)
-                    .unwrap_or(None);
 
-                sha1
-            };
-
-            if let Some(sha1) = sha1 {
+            if let Some(sha1) = &sha1 {
                 if hash == *sha1 {
+                    // If sha1 matches, return
                     info!("Library {} already exists and matches sha1.", name);
                     return Ok(library_path);
                 }
             } else {
+                // If sha1 is not available, assume it matches
                 info!("Library {} already exists.", name);
                 return Ok(library_path);
             }
 
+            // If sha1 doesn't match, remove the file
             info!("Library {} already exists but sha1 doesn't match, redownloading", name);
             fs::remove_file(&library_path).await?;
         }
 
+        // Create parent directories
         fs::create_dir_all(&library_path.parent().unwrap()).await?;
 
+        // Download library
         progress.progress_update(ProgressUpdate::set_label(format!("Downloading library {}", name)));
 
-        let os = reqwest::get(&self.url).await?.error_for_status()?.bytes().await?;
+        let os = reqwest::get(&self.url).await?
+            .error_for_status()?
+            .bytes()
+            .await?;
         fs::write(&library_path, os).await?;
         info!("Downloaded {}", self.url);
 
         // After downloading, check sha1
-        if let Some(sha1) = &self.sha1 {
+        if let Some(sha1) = &sha1 {
             let hash = sha1sum(&library_path)?;
             if hash != *sha1 {
                 anyhow::bail!("sha1 of downloaded library {} doesn't match", name);
