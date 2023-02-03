@@ -21,7 +21,7 @@
         display: block;
         padding: 16px;
         transition: background-color ease .2s;
-        font-family: "Gilroy", sans-serif;
+        font-family: "Roboto", sans-serif;
         cursor: pointer;
         width: 100%;
         font-weight: 600;

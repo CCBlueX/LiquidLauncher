@@ -89,7 +89,7 @@
         color: white;
         display: inline;
         width: min-content;
-        font-family: "Gilroy", sans-serif;
+        font-family: "Roboto", sans-serif;
         user-select: unset;
     }
 

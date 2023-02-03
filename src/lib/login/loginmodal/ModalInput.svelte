@@ -37,7 +37,7 @@
         background-color: transparent;
         border: none;
         font-size: 16px;
-        font-family: "Gilroy", sans-serif;
+        font-family: "Roboto", sans-serif;
         color: white;
     }
 </style>

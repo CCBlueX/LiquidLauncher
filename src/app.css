@@ -1,19 +1,19 @@
 @font-face {
-    font-family: "Gilroy";
+    font-family: "Roboto";
     font-weight: 600;
-    src: url("font/Gilroy-Bold.ttf");
+    src: url("font/Roboto-Bold.ttf");
 }
 
 @font-face {
-    font-family: "Gilroy";
+    font-family: "Roboto";
     font-weight: 500;
-    src: url("font/Gilroy-Medium.ttf");
+    src: url("font/Roboto-Medium.ttf");
 }
 
 @font-face {
-    font-family: "Gilroy";
+    font-family: "Roboto";
     font-weight: 400;
-    src: url("font/Gilroy-SemiBold.ttf");
+    src: url("font/Roboto-Regular.ttf");
 }
 
 * {
@@ -29,7 +29,7 @@
 
 body {
     background: transparent;
-    font-family: "Gilroy", sans-serif;
+    font-family: "Roboto", sans-serif;
     font-weight: 400;
     font-size: 14px;
     user-select: none;

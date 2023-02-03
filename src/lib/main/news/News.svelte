@@ -89,7 +89,7 @@
         height: 30px;
         transition: background-color ease .2s;
         padding: 0 10px;
-        font-family: "Gilroy", sans-serif;
+        font-family: "Roboto", sans-serif;
         cursor: pointer;
     }
 

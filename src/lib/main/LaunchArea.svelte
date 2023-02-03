@@ -91,7 +91,7 @@
         color: rgba(255, 255, 255, .5);
         overflow: auto;
         white-space: pre-line;
-        font-family: "Gilroy", sans-serif;
+        font-family: "Roboto", sans-serif;
         font-weight: 400;
         font-size: 12px;
         overflow-x: hidden;

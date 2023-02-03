@@ -24,7 +24,7 @@
         border: none;
         border-bottom: solid 1px #4677FF;
         color: white;
-        font-family: "Gilroy", sans-serif;
+        font-family: "Roboto", sans-serif;
         padding: 5px;
         border-radius: 3px;
         cursor: pointer;

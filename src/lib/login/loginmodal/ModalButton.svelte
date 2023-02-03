@@ -14,7 +14,7 @@
     .button {
         background-color: rgba(0, 0, 0, .26);
         border: none;
-        font-family: "Gilroy", sans-serif;
+        font-family: "Roboto", sans-serif;
         padding: 20px;
         color: white;
         font-size: 16px;

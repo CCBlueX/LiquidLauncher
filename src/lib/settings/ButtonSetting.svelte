@@ -11,7 +11,7 @@
 
 <style>
     .button {
-        font-family: "Gilroy", sans-serif;
+        font-family: "Roboto", sans-serif;
         color: white;
         font-size: 14px;
         border-radius: 6px;
