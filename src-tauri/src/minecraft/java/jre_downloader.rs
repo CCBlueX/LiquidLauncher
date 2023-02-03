@@ -36,9 +36,6 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, on_progress: F) -> R
         // Download from JRE source and extract runtime files
         fs::create_dir_all(&runtime_path).await?;
 
-        let runtime_archive = runtime_path.join("runtime")
-            .with_extension(if OS == OperatingSystem::WINDOWS { "zip" } else { "tar.gz" });
-
         let retrieved_bytes = download_file(&jre_source.download_url, on_progress).await?;
         let cursor = Cursor::new(&retrieved_bytes[..]);
 
@@ -47,12 +44,10 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, on_progress: F) -> R
             OperatingSystem::LINUX | OperatingSystem::OSX => tar_gz_extract(cursor, runtime_path.as_path()).await?,
             _ => bail!("Unsupported OS")
         }
-
-        fs::remove_file(&runtime_archive).await?;
     }
 
     // Find JRE in runtime folder
-    let mut files = tokio::fs::read_dir(&runtime_path).await?;
+    let mut files = fs::read_dir(&runtime_path).await?;
 
     if let Some(jre_folder) = files.next_entry().await? {
         let mut path = jre_folder.path();
@@ -61,7 +56,6 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, on_progress: F) -> R
             OperatingSystem::WINDOWS => path.push("javaw.exe"),
             _ => path.push("java")
         }
-
         return Ok(path.absolutize()?.to_path_buf());
     }
 
