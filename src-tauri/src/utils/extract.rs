@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, Context};
 use std::{path::{Path, PathBuf}};
 use async_compression::tokio::bufread::GzipDecoder;
 use async_zip::read::seek::ZipFileReader;
@@ -37,18 +37,12 @@ pub async fn zip_extract<R>(archive: R, out_dir: &Path) -> Result<()>
             if !parent.is_dir() {
                 create_dir_all(parent).await?;
             }
-
-            // Continue when file already exists
-            if path.exists() {
-                continue;
-            }
-
+            
             let mut writer = OpenOptions::new()
                 .write(true)
-                .create_new(true)
-                .open(&path)
-                .await
-                .expect("Failed to create extracted file");
+                .create(true)
+                .open(&path).await
+                .context("Failed to create extracted file")?;
             io::copy(&mut entry_reader, &mut writer).await?;
         }
     }
