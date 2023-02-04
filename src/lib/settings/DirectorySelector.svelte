@@ -1,0 +1,76 @@
+<script>
+    import { open as dialogOpen } from "@tauri-apps/api/dialog";
+    import { open as shellOpen } from "@tauri-apps/api/shell";
+
+    export let title;
+    export let placeholder;
+    export let value;
+
+    console.log(placeholder);
+
+    async function handleDirectorySelect(e) {
+        const selected = await dialogOpen({
+            directory: true,
+            multiple: false,
+            defaultPath: value || placeholder,
+        });
+
+        if (selected) {
+            value = selected;
+        }
+    }
+
+    function handleDirectoryOpen(e) {
+        shellOpen(value || placeholder);
+    }
+</script>
+
+<div class="text-setting">
+    <div class="title">{title}</div>
+    <div class="wrapper">
+        <input class="input" type="text" {placeholder} bind:value={value} />
+        <button type="button" class="button-open-directory" title="Select directory" on:click={handleDirectorySelect}>
+            <img src="img/icon/icon-directory-choose.svg" alt="choose">
+        </button>
+        <button type="button" class="button-open-directory" title="Open directory" on:click={handleDirectoryOpen}>
+            <img src="img/icon/icon-directory-open.svg" alt="open">
+        </button>
+    </div>
+</div>
+
+<style>
+    .title {
+        color: white;
+        margin-bottom: 5px;
+    }
+
+    .input {
+        width: 100%;
+        background-color: rgba(0, 0, 0, .26);
+        border: none;
+        border-bottom: solid 1px #4677FF;
+        color: white;
+        font-family: "Roboto", sans-serif;
+        padding: 5px;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+
+    .wrapper {
+        display: flex;
+        column-gap: 10px;
+    }
+
+    .button-open-directory {
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-items: center;
+        background-color: transparent;
+        border: none;
+    }
+
+    .button-open-directory img {
+        height: 20px;
+    }
+</style>

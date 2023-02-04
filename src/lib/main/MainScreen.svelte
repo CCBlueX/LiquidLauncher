@@ -21,6 +21,7 @@
     import TextStatus from "./statusbar/TextStatus.svelte";
     import { invoke } from "@tauri-apps/api/tauri";
     import { listen } from "@tauri-apps/api/event";
+    import DirectorySelector from "../settings/DirectorySelector.svelte";
 
     export let options;
 
@@ -209,13 +210,6 @@
         await invoke("terminate");
     }
 
-    function openDataFolder() {
-        invoke("open_data_folder", { options }).catch(e => {
-            alert("Failed to open data folder: " + e);
-            console.error(e)
-        });
-    }
-
     function clearData() {
         invoke("clear_data", { options }).then(() => {
             alert("Data cleared.");
@@ -240,21 +234,20 @@
 
 {#if settingsShown}
     <SettingsContainer title="Settings" on:hideSettings={hideSettings}>
-        <TextSetting title="JVM Location" placeholder="Internal" bind:value={options.customJavaPath} ></TextSetting>
+        <TextSetting title="JVM Location" placeholder="Internal" bind:value={options.customJavaPath} />
         <ToggleSetting title="Keep launcher running" bind:value={options.keepLauncherOpen} />
-        <RangeSetting title="Memory" min={20} max={100} bind:value={options.memoryPercentage} valueSuffix="%" step={1}></RangeSetting>
-        <RangeSetting title="Concurrent Downloads" min={1} max={50} bind:value={options.concurrentDownloads} valueSuffix="connections" step={1}></RangeSetting>
+        <RangeSetting title="Memory" min={20} max={100} bind:value={options.memoryPercentage} valueSuffix="%" step={1} />
+        <RangeSetting title="Concurrent Downloads" min={1} max={50} bind:value={options.concurrentDownloads} valueSuffix="connections" step={1} />
         <ButtonSetting text="Logout" on:click={() => dispatch("logout")} color="#4677FF" />
-        <TextSetting title="Data Location" placeholder={dataFolderPath} bind:value={options.customDataPath} ></TextSetting>
-        <ButtonSetting text="Open data folder" on:click={openDataFolder} color="#4677FF" />
+        <DirectorySelector title="Data Location" placeholder={dataFolderPath} bind:value={options.customDataPath} />
         <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
     </SettingsContainer>
 {/if}
 
 {#if versionSelectShown}
     <SettingsContainer title="Select version" on:hideSettings={hideVersionSelection}>
-        <SelectSetting title="Branch" items={branches.map(e => ({ value: e, text: e }))} bind:value={options.preferredBranch} on:change={requestBuilds}></SelectSetting>
-        <SelectSetting title="Build" items={[{ value: -1, text: "Latest" }, ...builds.filter(e => e.release || options.showNightlyBuilds).map(e => ({ value: e.buildId, text: e.lbVersion + " git-" + e.commitId.substring(0, 7) + " - " + e.date }))]} bind:value={options.preferredBuild} on:change={updateData}></SelectSetting>
+        <SelectSetting title="Branch" items={branches.map(e => ({ value: e, text: e }))} bind:value={options.preferredBranch} on:change={requestBuilds} />
+        <SelectSetting title="Build" items={[{ value: -1, text: "Latest" }, ...builds.filter(e => e.release || options.showNightlyBuilds).map(e => ({ value: e.buildId, text: e.lbVersion + " git-" + e.commitId.substring(0, 7) + " - " + e.date }))]} bind:value={options.preferredBuild} on:change={updateData} />
         <ToggleSetting title="Show nightly builds" bind:value={options.showNightlyBuilds} on:change={updateData} />
         <SettingWrapper title="Additional mods">
             {#each mods as m}
