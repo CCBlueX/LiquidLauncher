@@ -5,11 +5,15 @@
     windows_subsystem = "windows"
 )]
 
-use std::fs;
+use std::{fs, io};
 use once_cell::sync::Lazy;
 use anyhow::Result;
 use directories::ProjectDirs;
-use log::debug;
+use tracing::{debug, Level};
+use tracing::instrument::WithSubscriber;
+use tracing_subscriber::fmt::writer::MakeWriterExt;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 pub mod app;
 pub mod minecraft;
@@ -26,6 +30,28 @@ static LAUNCHER_DIRECTORY: Lazy<ProjectDirs> = Lazy::new(|| {
 });
 
 pub fn main() -> Result<()> {
+    use tracing_subscriber::{fmt, EnvFilter};
+
+    let log_folder = LAUNCHER_DIRECTORY.data_dir().join("logs");
+
+    let file_appender = tracing_appender::rolling::hourly(log_folder, "launcher.log");
+
+    let subscriber  = tracing_subscriber::registry()
+        .with(EnvFilter::from("liquidlauncher=debug"))
+        .with(
+            fmt::Layer::new()
+                .pretty()
+                .with_ansi(true)
+                .with_writer(io::stdout)
+        )
+        .with(
+            fmt::Layer::new()
+                .with_ansi(false)
+                .with_writer(file_appender)
+        );
+    tracing::subscriber::set_global_default(subscriber).expect("Unable to set a global subscriber");
+
+
     // application directory
     debug!("Creating launcher directories...");
     fs::create_dir_all(LAUNCHER_DIRECTORY.data_dir())?;
@@ -33,5 +59,6 @@ pub fn main() -> Result<()> {
 
     // app
     app::gui::gui_main();
-    return Ok(());
+
+    Ok(())
 }

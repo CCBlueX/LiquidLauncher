@@ -1,7 +1,6 @@
 use std::{sync::{Arc, Mutex}, thread};
 
-use env_logger::Env;
-use log::{error, info};
+use tracing::{error, info};
 use tauri::{Manager, Window};
 
 use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, service::{self, Account}}};
@@ -268,8 +267,6 @@ async fn clear_data() -> Result<(), String> {
 
 /// Runs the GUI and returns when the window is closed.
 pub fn gui_main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("liquidlauncher=debug")).init();
-
     tauri::Builder::default()
         .setup(|app| {
             let window = app.get_window("main").unwrap();

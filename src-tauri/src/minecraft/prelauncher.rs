@@ -3,7 +3,7 @@ use std::sync::{Mutex, Arc};
 
 use anyhow::Result;
 use async_zip::read::mem::ZipFileReader;
-use log::*;
+use tracing::*;
 use tokio::fs;
 use tokio::io::AsyncReadExt;
 

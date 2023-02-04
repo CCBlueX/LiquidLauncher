@@ -1,4 +1,4 @@
-use log::debug;
+use tracing::debug;
 use anyhow::Result;
 
 pub async fn download_file<F>(url: &str, on_progress: F) -> Result<Vec<u8>> where F : Fn(u64, u64) {

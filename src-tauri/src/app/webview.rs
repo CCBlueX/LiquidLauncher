@@ -1,7 +1,7 @@
 use std::{sync::{Arc, Mutex}, time::Duration};
 use serde::Deserialize;
 use anyhow::{Result};
-use log::{info, debug};
+use tracing::{info, debug};
 use tauri::{Manager};
 use tokio::time::sleep;
 use crate::{utils::download_file};

@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use anyhow::Result;
 use futures::stream::{self, StreamExt};
 
-use log::*;
+use tracing::*;
 use path_absolutize::*;
 use tokio::{fs, fs::OpenOptions};
 
