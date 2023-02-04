@@ -122,7 +122,7 @@ fn handle_progress(window: &Arc<std::sync::Mutex<Window>>, progress_update: Prog
 }
 
 #[tauri::command]
-async fn run_client(build_id: i32, account_data: Account, options: LauncherOptions, mods: Vec<LoaderMod>, window: Window, app_state: tauri::State<'_, AppState>) -> Result<(), String> {
+async fn run_client(build_id: u32, account_data: Account, options: LauncherOptions, mods: Vec<LoaderMod>, window: Window, app_state: tauri::State<'_, AppState>) -> Result<(), String> {
     let window_mutex = Arc::new(std::sync::Mutex::new(window));
 
     let (account_name, uuid, token, user_type) = match account_data {
@@ -246,7 +246,7 @@ async fn fetch_news() -> Result<Vec<News>, String> {
 }
 
 #[tauri::command]
-async fn fetch_changelog(build_id: i32) -> Result<Changelog, String> {
+async fn fetch_changelog(build_id: u32) -> Result<Changelog, String> {
     ApiEndpoints::changelog(build_id)
         .await
         .map_err(|e| format!("unable to fetch changelog: {:?}", e))

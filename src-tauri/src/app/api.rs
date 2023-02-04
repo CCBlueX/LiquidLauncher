@@ -86,7 +86,7 @@ impl ApiEndpoints {
     }
 
     /// Request launch manifest of specific build
-    pub async fn launch_manifest(build_id: i32) -> Result<LaunchManifest> {
+    pub async fn launch_manifest(build_id: u32) -> Result<LaunchManifest> {
         Self::request_from_endpoint(&format!("version/launch/{}", build_id)).await
     }
 
@@ -101,7 +101,7 @@ impl ApiEndpoints {
     }
 
     /// Request changelog of specified build
-    pub async fn changelog(build_id: i32) -> Result<Changelog> {
+    pub async fn changelog(build_id: u32) -> Result<Changelog> {
         Self::request_from_endpoint(&format!("version/changelog/{}", build_id)).await
     }
 

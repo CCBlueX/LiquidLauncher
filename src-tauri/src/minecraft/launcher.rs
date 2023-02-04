@@ -18,7 +18,7 @@ use crate::app::api::LaunchManifest;
 use crate::error::LauncherError;
 use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
 use crate::minecraft::rule_interpreter;
-use crate::minecraft::java::{JavaRuntime, jre_downloader};
+use crate::minecraft::java::{find_java_binary, JavaRuntime, jre_downloader};
 use crate::minecraft::version::LibraryDownloadInfo;
 use crate::utils::{download_file, sha1sum, zip_extract};
 
@@ -50,12 +50,21 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     let java_bin = match &launching_parameter.custom_java_path {
         Some(path) => PathBuf::from(path),
         None => {
-            info!("Downloading JRE...");
-            launcher_data_arc.progress_update(ProgressUpdate::set_label("Downloading JRE..."));
+            info!("Checking for JRE...");
+            launcher_data_arc.progress_update(ProgressUpdate::set_label("Checking for JRE..."));
 
-            jre_downloader::jre_download(data, manifest.build.jre_version, |a, b| {
-                launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadJRE, get_progress(0, a, b), get_max(1)));
-            }).await?
+            match find_java_binary(data, manifest.build.jre_version).await {
+                Ok(jre) => jre,
+                Err(e) => {
+                    error!("Failed to find JRE: {}", e);
+
+                    info!("Download JRE...");
+                    launcher_data_arc.progress_update(ProgressUpdate::set_label("Download JRE..."));
+                    jre_downloader::jre_download(data, manifest.build.jre_version, |a, b| {
+                        launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadJRE, get_progress(0, a, b), get_max(1)));
+                    }).await?
+                }
+            }
         }
     };
 
