@@ -1,5 +1,4 @@
 use std::{sync::{Arc, Mutex}, thread};
-use anyhow::bail;
 
 use tracing::{error, info};
 use tauri::{Manager, Window};
@@ -254,19 +253,6 @@ async fn fetch_changelog(build_id: u32) -> Result<Changelog, String> {
 }
 
 #[tauri::command]
-async fn open_data_folder(options: LauncherOptions) -> Result<(), String> {
-    let data_directory = if !options.custom_data_path.is_empty() {
-        Some(options.custom_data_path)
-    } else {
-        None
-    }.map(|x| x.into()).unwrap_or_else(|| LAUNCHER_DIRECTORY.data_dir().to_path_buf());
-
-    open::that(data_directory)
-        .map_err(|e| format!("unable to open folder: {:?}", e))?;
-    Ok(())
-}
-
-#[tauri::command]
 async fn default_data_folder_path() -> Result<String, String> {
     let data_directory = LAUNCHER_DIRECTORY.data_dir().to_str();
 
@@ -349,7 +335,6 @@ pub fn gui_main() {
             fetch_changelog,
             clear_data,
             mem_percentage,
-            open_data_folder,
             default_data_folder_path,
             terminate
         ])
