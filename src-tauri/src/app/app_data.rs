@@ -13,21 +13,20 @@ fn default_concurrent_downloads() -> i32 {
 pub(crate) struct LauncherOptions {
     #[serde(rename = "keepLauncherOpen")]
     pub keep_launcher_open: bool,
-    #[serde(rename = "customDataPath")]
+    #[serde(rename = "customDataPath", default)]
     pub custom_data_path: String,
     #[serde(rename = "showNightlyBuilds")]
     pub show_nightly_builds: bool,
     #[serde(rename = "memoryPercentage")]
     pub memory_percentage: i32,
-    #[serde(rename = "customJavaPath")]
+    #[serde(rename = "customJavaPath", default)]
     pub custom_java_path: String,
-    #[serde(rename = "customJavaArgs")]
+    #[serde(rename = "customJavaArgs", default)]
     pub custom_java_args: String,
     #[serde(rename = "preferredBranch")]
     pub preferred_branch: Option<String>,
     #[serde(rename = "preferredBuild")]
     pub preferred_build: Option<i32>,
-    // todo: might move into it's own file when there is support for multiple accounts which might sync up with the used client
     #[serde(rename = "currentAccount")]
     pub current_account: Option<Account>,
     #[serde(rename = "modStates", default)]
