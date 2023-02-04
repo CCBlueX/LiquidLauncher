@@ -3,12 +3,13 @@
 
     export let value;
     export let title;
+    export let disabled;
 
     const dispatch = createEventDispatcher();
 </script>
 
 <label class="toggle-setting">
-    <input class="checkbox" type="checkbox" bind:checked={value} on:change={e => dispatch("change", e)} />
+    <input class="checkbox" type="checkbox" bind:checked={value} disabled={disabled} on:change={e => dispatch("change", e)} />
     <span class="slider" />
 
     <div class="title">{title}</div>
@@ -65,5 +66,14 @@
     .checkbox:checked + .slider::before {
         transform: translateX(10px);
         background-color: #4677ff;
+    }
+
+    .checkbox:disabled + .slider {
+        background-color: #6d6363 !important;
+    }
+
+    .checkbox:disabled + .slider::before {
+        transform: translateX(10px);
+        background-color: #786d6d;
     }
 </style>
