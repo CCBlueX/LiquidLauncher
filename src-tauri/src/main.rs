@@ -9,11 +9,8 @@ use std::{fs, io};
 use once_cell::sync::Lazy;
 use anyhow::Result;
 use directories::ProjectDirs;
-use tracing::{debug, Level};
-use tracing::instrument::WithSubscriber;
-use tracing_subscriber::fmt::writer::MakeWriterExt;
+use tracing::{debug};
 use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
 
 pub mod app;
 pub mod minecraft;
