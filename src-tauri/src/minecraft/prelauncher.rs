@@ -20,15 +20,15 @@ use crate::utils::{download_file, get_maven_artifact_path};
 ///
 /// Prelaunching client
 ///
-pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, launching_parameter: LaunchingParameter, additional_mods: Vec<LoaderMod>, launcher_data: LauncherData<D>, window: Arc<Mutex<tauri::Window>>) -> Result<()> {
+pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, launching_parameter: LaunchingParameter, additional_mods: Vec<LoaderMod>, progress: LauncherData<D>, window: Arc<Mutex<tauri::Window>>) -> Result<()> {
     info!("Loading minecraft version manifest...");
     let mc_version_manifest = VersionManifest::download().await?;
 
     let build = &launch_manifest.build;
     let subsystem = &launch_manifest.subsystem;
 
-    launcher_data.progress_update(ProgressUpdate::set_max());
-    launcher_data.progress_update(ProgressUpdate::SetProgress(0));
+    progress.progress_update(ProgressUpdate::set_max());
+    progress.progress_update(ProgressUpdate::SetProgress(0));
 
     let data_directory = launching_parameter.custom_data_path
         .clone()
@@ -37,8 +37,10 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
 
     // Copy retrieve and copy mods from manifest
     clear_mods(&data_directory, &launch_manifest).await?;
-    retrieve_and_copy_mods(&data_directory, &launch_manifest, &launch_manifest.mods, &launcher_data, &window).await?;
-    retrieve_and_copy_mods(&data_directory, &launch_manifest, &additional_mods, &launcher_data, &window).await?;
+    retrieve_and_copy_mods(&data_directory, &launch_manifest, &launch_manifest.mods, &progress, &window).await?;
+    retrieve_and_copy_mods(&data_directory, &launch_manifest, &additional_mods, &progress, &window).await?;
+
+    copy_custom_mods(&data_directory, &launch_manifest, &progress).await?;
 
     info!("Loading version profile...");
     let manifest_url = match subsystem {
@@ -66,7 +68,7 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
 
     info!("Launching {}...", launch_manifest.build.commit_id);
 
-    launcher::launch(&data_directory, launch_manifest, version, launching_parameter, launcher_data, window).await?;
+    launcher::launch(&data_directory, launch_manifest, version, launching_parameter, progress, window).await?;
     Ok(())
 }
 
@@ -87,7 +89,7 @@ pub(crate) async fn clear_mods(data: &Path, manifest: &LaunchManifest) -> Result
     Ok(())
 }
 
-pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods: &Vec<LoaderMod>, progress: &impl ProgressReceiver, window: &Arc<Mutex<tauri::Window>>) -> Result<()> {
+pub async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods: &Vec<LoaderMod>, progress: &impl ProgressReceiver, window: &Arc<Mutex<tauri::Window>>) -> Result<()> {
     let mod_cache_path = data.join("mod_cache");
     let mods_path = data.join("gameDir").join(&manifest.build.branch).join("mods");
 
@@ -155,6 +157,26 @@ pub(crate) async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifes
 
         // Copy the mod.
         fs::copy(&current_mod_path, mods_path.join(format!("{}.jar", current_mod.name))).await?;
+    }
+
+    Ok(())
+
+}
+
+pub async fn copy_custom_mods(data: &Path, manifest: &LaunchManifest, progress: &impl ProgressReceiver) -> Result<()> {
+    let mod_cache_path = data.join("custom_mods").join(&manifest.build.branch);
+    let mods_path = data.join("gameDir").join(&manifest.build.branch).join("mods");
+
+    fs::create_dir_all(&mod_cache_path).await?;
+    fs::create_dir_all(&mods_path).await?;
+
+    // Copy all mods from custom_mods to mods
+    let mut mods_read = fs::read_dir(&mod_cache_path).await?;
+    while let Some(entry) = mods_read.next_entry().await? {
+        if entry.file_type().await?.is_file() {
+            progress.progress_update(ProgressUpdate::set_label(format!("Copied custom mod {}", entry.file_name().to_str().unwrap_or_default())));
+            fs::copy(entry.path(), mods_path.join(entry.file_name())).await?;
+        }
     }
 
     Ok(())
