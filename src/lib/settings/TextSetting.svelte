@@ -6,7 +6,7 @@
 
 <div class="text-setting">
     <div class="title">{title}</div>
-    <input class="input" type="text" {placeholder} {value} />
+    <input class="input" type="text" {placeholder} bind:value={value} />
 </div>
 
 <style>
