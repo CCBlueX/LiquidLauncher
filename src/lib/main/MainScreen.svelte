@@ -251,7 +251,10 @@
         <ToggleSetting title="Show nightly builds" bind:value={options.showNightlyBuilds} on:change={updateData} />
         <SettingWrapper title="Additional mods">
             {#each mods as m}
-                <ToggleSetting title={m.name} bind:value={m.enabled} on:change={updateModStates} />
+                {#if !m.required}
+                    <ToggleSetting title={m.name} bind:value={m.enabled} on:change={updateModStates} />
+                {/if}
+
             {/each}
         </SettingWrapper>
     </SettingsContainer>
