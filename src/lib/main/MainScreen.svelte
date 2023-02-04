@@ -210,7 +210,7 @@
     }
 
     function openDataFolder() {
-        invoke.catch(e => {
+        invoke("open_data_folder", { options }).catch(e => {
             alert("Failed to open data folder: " + e);
             console.error(e)
         });
