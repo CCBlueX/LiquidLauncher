@@ -1,8 +1,8 @@
 use std::{sync::{Arc, Mutex}, time::Duration};
 use serde::Deserialize;
-use anyhow::Result;
+use anyhow::{Result};
 use log::{info, debug};
-use tauri::Manager;
+use tauri::{Manager};
 use tokio::time::sleep;
 use crate::{utils::download_file};
 
@@ -55,6 +55,9 @@ pub(crate) async fn download_client<F>(url: &str, on_progress: F, window: &Arc<M
                 break received;
             }
         }
+
+        // check if the view is still open, is_visible will throw error when the window is closed
+        download_view.is_visible()?;
     };
 
     download_view.close().unwrap();
