@@ -1,3 +1,4 @@
 [submodule "tauri"]
 	path = tauri
 	url = https://github.com/tauri-apps/tauri.git
+	branch = feat/remote-ipc
