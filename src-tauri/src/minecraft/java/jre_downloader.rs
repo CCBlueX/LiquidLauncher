@@ -9,14 +9,9 @@ use crate::app::api::ApiEndpoints;
 use crate::utils::{download_file, tar_gz_extract, zip_extract};
 use crate::utils::{BITNESS, Bitness, OperatingSystem, OS};
 
-pub fn runtime(data: &Path, jre_version: u32) -> PathBuf {
-    // runtimes/version_number_of_jre/...
-    data.join("runtimes").join(jre_version.to_string())
-}
-
 /// Find java binary in JRE folder
-pub async fn find_java_binary(data: &Path, jre_version: u32) -> Result<PathBuf> {
-    let runtime_path = runtime(data, jre_version);
+pub async fn find_java_binary(runtimes_folder: &Path, jre_version: u32) -> Result<PathBuf> {
+    let runtime_path = runtimes_folder.join(format!("{}", jre_version));
 
     // Find JRE in runtime folder
     let mut files = fs::read_dir(&runtime_path).await?;
@@ -37,15 +32,15 @@ pub async fn find_java_binary(data: &Path, jre_version: u32) -> Result<PathBuf> 
 }
 
 /// Download specific JRE to runtimes
-pub async fn jre_download<F>(data: &Path, jre_version: u32, on_progress: F) -> Result<PathBuf> where F : Fn(u64, u64) {
-    let runtime_path = runtime(data, jre_version);
+pub async fn jre_download<F>(runtimes_folder: &Path, jre_version: u32, on_progress: F) -> Result<PathBuf> where F : Fn(u64, u64) {
+    let runtime_path = runtimes_folder.join(format!("{}", jre_version));
 
     if runtime_path.exists() {
         // Clear out folder
         fs::remove_dir_all(&runtime_path).await?;
     }
 
-    fs::create_dir(&runtime_path).await?;
+    fs::create_dir_all(&runtime_path).await?;
 
     // OS details
     let os_name = match OS {
@@ -77,6 +72,6 @@ pub async fn jre_download<F>(data: &Path, jre_version: u32, on_progress: F) -> R
     }
 
     // Find JRE afterwards
-    find_java_binary(data, jre_version).await
+    find_java_binary(runtimes_folder, jre_version).await
 }
 

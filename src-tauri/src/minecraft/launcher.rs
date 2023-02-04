@@ -47,26 +47,32 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     info!("Determined OS to be {} {}", os_info.os_type(), os_info.version());
 
     // JRE download
+    let runtimes_folder = data.join("runtimes");
+    if !runtimes_folder.exists() {
+        fs::create_dir(&runtimes_folder).await?;
+    }
+
     let java_bin = match &launching_parameter.custom_java_path {
         Some(path) => PathBuf::from(path),
         None => {
             info!("Checking for JRE...");
             launcher_data_arc.progress_update(ProgressUpdate::set_label("Checking for JRE..."));
 
-            match find_java_binary(data, manifest.build.jre_version).await {
+            match find_java_binary(&runtimes_folder, manifest.build.jre_version).await {
                 Ok(jre) => jre,
                 Err(e) => {
                     error!("Failed to find JRE: {}", e);
 
                     info!("Download JRE...");
                     launcher_data_arc.progress_update(ProgressUpdate::set_label("Download JRE..."));
-                    jre_downloader::jre_download(data, manifest.build.jre_version, |a, b| {
+                    jre_downloader::jre_download(&runtimes_folder, manifest.build.jre_version, |a, b| {
                         launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadJRE, get_progress(0, a, b), get_max(1)));
                     }).await?
                 }
             }
         }
     };
+    debug!("Java binary: {}", java_bin.to_str().unwrap());
 
     // Launch class path for JRE
     let mut class_path = String::new();
