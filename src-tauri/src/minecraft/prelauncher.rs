@@ -164,7 +164,7 @@ pub async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods
 }
 
 pub async fn copy_custom_mods(data: &Path, manifest: &LaunchManifest, progress: &impl ProgressReceiver) -> Result<()> {
-    let mod_cache_path = data.join("custom_mods").join(&manifest.build.branch);
+    let mod_cache_path = data.join("custom_mods").join(format!("{}-{}", manifest.build.branch, manifest.build.mc_version));
     let mods_path = data.join("gameDir").join(&manifest.build.branch).join("mods");
 
     fs::create_dir_all(&mod_cache_path).await?;
