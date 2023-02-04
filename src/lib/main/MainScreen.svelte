@@ -209,14 +209,29 @@
         await invoke("terminate");
     }
 
+    function openDataFolder() {
+        invoke.catch(e => {
+            alert("Failed to open data folder: " + e);
+            console.error(e)
+        });
+    }
+
     function clearData() {
-        invoke("clear_data").then(() => {
+        invoke("clear_data", { options }).then(() => {
             alert("Data cleared.");
         }).catch(e => {
             alert("Failed to clear data: " + e);
             console.error(e)
         });
     }
+
+    let dataFolderPath;
+    invoke("default_data_folder_path").then(result => {
+        dataFolderPath = result;
+    }).catch(e => {
+        alert("Failed to get data folder: " + e);
+        console.error(e)
+    });
 </script>
 
 {#if clientLogShown}
@@ -230,6 +245,8 @@
         <RangeSetting title="Memory" min={20} max={100} bind:value={options.memoryPercentage} valueSuffix="%" step={1}></RangeSetting>
         <RangeSetting title="Concurrent Downloads" min={1} max={50} bind:value={options.concurrentDownloads} valueSuffix="connections" step={1}></RangeSetting>
         <ButtonSetting text="Logout" on:click={() => dispatch("logout")} color="#4677FF" />
+        <TextSetting title="Data Location" placeholder={dataFolderPath} bind:value={options.customDataPath} ></TextSetting>
+        <ButtonSetting text="Open data folder" on:click={openDataFolder} color="#4677FF" />
         <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
     </SettingsContainer>
 {/if}

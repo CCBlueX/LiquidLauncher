@@ -13,6 +13,8 @@ fn default_concurrent_downloads() -> i32 {
 pub(crate) struct LauncherOptions {
     #[serde(rename = "keepLauncherOpen")]
     pub keep_launcher_open: bool,
+    #[serde(rename = "customDataPath")]
+    pub custom_data_path: String,
     #[serde(rename = "showNightlyBuilds")]
     pub show_nightly_builds: bool,
     #[serde(rename = "memoryPercentage")]
@@ -54,6 +56,7 @@ impl Default for LauncherOptions {
     fn default() -> Self {
         Self {
             keep_launcher_open: false,
+            custom_data_path: String::new(),
             show_nightly_builds: false,
             memory_percentage: 80, // 80% memory of computer allocated to game
             custom_java_path: String::new(),

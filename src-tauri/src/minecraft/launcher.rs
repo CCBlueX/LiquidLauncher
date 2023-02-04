@@ -304,6 +304,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
 
 pub struct LaunchingParameter {
     pub memory: i64,
+    pub custom_data_path: Option<String>,
     pub custom_java_path: Option<String>,
     pub auth_player_name: String,
     pub auth_uuid: String,

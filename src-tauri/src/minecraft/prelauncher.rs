@@ -30,10 +30,15 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
     launcher_data.progress_update(ProgressUpdate::set_max());
     launcher_data.progress_update(ProgressUpdate::SetProgress(0));
 
+    let data_directory = launching_parameter.custom_data_path
+        .clone()
+        .map(|x| x.into())
+        .unwrap_or_else(|| LAUNCHER_DIRECTORY.data_dir().to_path_buf());
+
     // Copy retrieve and copy mods from manifest
-    clear_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest).await?;
-    retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &launch_manifest.mods, &launcher_data, &window).await?;
-    retrieve_and_copy_mods(LAUNCHER_DIRECTORY.data_dir(), &launch_manifest, &additional_mods, &launcher_data, &window).await?;
+    clear_mods(&data_directory, &launch_manifest).await?;
+    retrieve_and_copy_mods(&data_directory, &launch_manifest, &launch_manifest.mods, &launcher_data, &window).await?;
+    retrieve_and_copy_mods(&data_directory, &launch_manifest, &additional_mods, &launcher_data, &window).await?;
 
     info!("Loading version profile...");
     let manifest_url = match subsystem {
@@ -61,7 +66,7 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
 
     info!("Launching {}...", launch_manifest.build.commit_id);
 
-    launcher::launch(LAUNCHER_DIRECTORY.data_dir(), launch_manifest, version, launching_parameter, launcher_data, window).await?;
+    launcher::launch(&data_directory, launch_manifest, version, launching_parameter, launcher_data, window).await?;
     Ok(())
 }
 
