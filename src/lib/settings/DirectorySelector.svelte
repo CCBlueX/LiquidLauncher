@@ -29,10 +29,10 @@
     <div class="title">{title}</div>
     <div class="wrapper">
         <input class="input" type="text" {placeholder} bind:value={value} />
-        <button type="button" class="button-open-directory" title="Select directory" on:click={handleDirectorySelect}>
+        <button type="button" class="button-directory" title="Select directory" on:click={handleDirectorySelect}>
             <img src="img/icon/icon-directory-choose.svg" alt="choose">
         </button>
-        <button type="button" class="button-open-directory" title="Open directory" on:click={handleDirectoryOpen}>
+        <button type="button" class="button-directory" title="Open directory" on:click={handleDirectoryOpen}>
             <img src="img/icon/icon-directory-open.svg" alt="open">
         </button>
     </div>
@@ -53,7 +53,6 @@
         font-family: "Roboto", sans-serif;
         padding: 5px;
         border-radius: 3px;
-        cursor: pointer;
     }
 
     .wrapper {
@@ -61,7 +60,7 @@
         column-gap: 10px;
     }
 
-    .button-open-directory {
+    .button-directory {
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -70,7 +69,7 @@
         border: none;
     }
 
-    .button-open-directory img {
+    .button-directory img {
         height: 20px;
     }
 </style>
