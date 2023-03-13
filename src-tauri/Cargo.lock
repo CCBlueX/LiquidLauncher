@@ -1635,7 +1635,7 @@ dependencies = [
  "futures",
  "minceraft",
  "once_cell",
- "open",
+ "open 4.0.0",
  "os_info",
  "path-absolutize",
  "rand 0.8.5",
@@ -2041,12 +2041,20 @@ checksum = "6f61fba1741ea2b3d6a1e3178721804bb716a68a6aeba1149b5d52e3d464ea66"
 
 [[package]]
 name = "open"
-version = "3.2.0"
+version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2078c0039e6a54a0c42c28faa984e115fb4c2d5bf2208f77d1961002df8576f8"
+checksum = "21ecf2487e799604735754d2c5896106785987b441b5aee58f242e4d4963179a"
 dependencies = [
  "pathdiff",
- "windows-sys 0.42.0",
+]
+
+[[package]]
+name = "open"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd61e3bf9d78956c72ee864bba52431f7f43994b21a17e9e72596a81bd61075b"
+dependencies = [
+ "pathdiff",
 ]
 
 [[package]]
@@ -3272,7 +3280,7 @@ dependencies = [
  "notify-rust",
  "objc",
  "once_cell",
- "open",
+ "open 3.4.0",
  "os_info",
  "os_pipe",
  "percent-encoding",
