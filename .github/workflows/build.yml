@@ -49,20 +49,10 @@ jobs:
         with:
           path: ./src-tauri/target
           key: ${{ runner.os }}-tauri-build-target-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache tauri CLI build
-        uses: actions/cache@v3
-        with:
-          path: ./tauri/tooling/cli/target
-          key: ${{ runner.os }}-tauri-cli-build-target-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: build tauri-cli
-        run: |
-          cd tauri/tooling/cli/node
-          yarn
-          yarn build
+      
       - name: install app dependencies and build it
         run: yarn && yarn build
+      
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

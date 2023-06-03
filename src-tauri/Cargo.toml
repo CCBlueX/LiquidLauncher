@@ -9,7 +9,7 @@ edition = "2021"
 rust-version = "1.57"
 
 [build-dependencies]
-tauri-build = {version = "1.2", features = [] }
+tauri-build = { version = "1.3", features = [] }
 
 [dependencies]
 # Log
@@ -30,7 +30,7 @@ void = "1"
 rand = "0.8.5"
 directories = "4.0"
 once_cell = "1.16.0"
-open = "3.0.3"
+open = "4.0.1"
 
 minceraft = { version = "0.2.1", features = ["auth"] }
 
@@ -43,7 +43,7 @@ path-absolutize = "3.0.14"
 
 # OS
 os_info = "3.5"
-sysinfo = "0.27.7"
+sysinfo = "0.28.4"
 
 # Data
 regex = "1.7.0"
@@ -52,10 +52,10 @@ uuid = { version = "1.2", features = ["serde", "v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 sha1 = "0.10.5"
-base16ct = {version = "0.1.1", features = ["alloc"] }
+base16ct = {version = "0.2.0", features = ["alloc"] }
 
 # UI library
-tauri = {version = "1.2", features = ["api-all", "updater"] }
+tauri = {version = "1.3", features = ["api-all", "updater"] }
 window-vibrancy = { git = "https://github.com/CCBlueX/window-vibrancy.git" }
 
 # HTTP library
@@ -73,7 +73,3 @@ default = [ "custom-protocol" ]
 # this feature is used used for production builds where `devPath` points to the filesystem
 # DO NOT remove this
 custom-protocol = [ "tauri/custom-protocol" ]
-
-[patch.crates-io]
-tauri = { git = "https://github.com/tauri-apps/tauri", branch = "feat/remote-ipc" }
-tauri-build = { git = "https://github.com/tauri-apps/tauri", branch = "feat/remote-ipc" }

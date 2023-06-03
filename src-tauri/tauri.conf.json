@@ -49,14 +49,16 @@
     },
     "security": {
       "csp": null,
-      "dangerousExternalCommandAccess": [
+      "dangerousRemoteDomainIpcAccess": [
           {
-            "url": "https://tauri.localhost/*",
-            "windows": ["main"]
+            "domain": "tauri.localhost",
+            "windows": ["main"],
+            "enableTauriAPI": true
           },
           {
-              "url": "https://dl.ccbluex.net/*",
-              "windows": ["client_download"]
+              "domain": "dl.ccbluex.net",
+              "windows": ["client_download"],
+              "enableTauriAPI": true
           }
       ]
     },
