@@ -17,10 +17,18 @@ pub async fn find_java_binary(runtimes_folder: &Path, jre_version: u32) -> Resul
     let mut files = fs::read_dir(&runtime_path).await?;
 
     if let Some(jre_folder) = files.next_entry().await? {
-        let jre_bin = jre_folder.path().join("bin");
+        let folder_path = jre_folder.path();
+
         let java_binary = match OS {
-            OperatingSystem::WINDOWS => jre_bin.join("javaw.exe"),
-            _ => jre_bin.join("java")
+            OperatingSystem::WINDOWS => {
+                folder_path.join("bin").join("javaw.exe")
+            }
+            OperatingSystem::OSX => {
+                folder_path.join("Contents").join("Home").join("bin").join("java")
+            }
+            _ => {
+                folder_path.join("bin").join("java")
+            }
         };
 
         if java_binary.exists() {
