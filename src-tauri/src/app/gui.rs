@@ -3,7 +3,7 @@ use std::{sync::{Arc, Mutex}, thread};
 use tracing::{error, info, debug};
 use tauri::{Manager, Window};
 
-use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, service::{self, Account}}, HTTP_CLIENT};
+use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, auth::{MinecraftAccount, self}}, HTTP_CLIENT};
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 use crate::utils::percentage_of_total_memory;
 
@@ -80,16 +80,16 @@ async fn request_mods(mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod
 }
 
 #[tauri::command]
-async fn login_offline(username: &str) -> Result<Account, String> {
-    let account = service::auth_offline(username.to_string())
+async fn login_offline(username: &str) -> Result<MinecraftAccount, String> {
+    let account = MinecraftAccount::auth_offline(username.to_string())
         .await;
 
     Ok(account)
 }
 
 #[tauri::command]
-async fn login_microsoft(window: tauri::Window) -> Result<Account, String> {
-    let account = service::auth_msa(|code| {
+async fn login_microsoft(window: tauri::Window) -> Result<MinecraftAccount, String> {
+    let account = MinecraftAccount::auth_msa(|code| {
         debug!("received code: {}", code);
 
         let _ = window.emit("microsoft_code", code);
@@ -126,13 +126,12 @@ fn handle_progress(window: &Arc<std::sync::Mutex<Window>>, progress_update: Prog
 }
 
 #[tauri::command]
-async fn run_client(build_id: u32, account_data: Account, options: LauncherOptions, mods: Vec<LoaderMod>, window: Window, app_state: tauri::State<'_, AppState>) -> Result<(), String> {
+async fn run_client(build_id: u32, account_data: MinecraftAccount, options: LauncherOptions, mods: Vec<LoaderMod>, window: Window, app_state: tauri::State<'_, AppState>) -> Result<(), String> {
     let window_mutex = Arc::new(std::sync::Mutex::new(window));
 
     let (account_name, uuid, token, user_type) = match account_data {
-        Account::MsaAccount { auth, .. } => (auth.name, auth.uuid, auth.token, "msa".to_string()),
-        Account::MojangAccount { name, token, uuid } => (name, token, uuid, "mojang".to_string()),
-        Account::OfflineAccount { name, uuid } => (name, "-".to_string(), uuid, "legacy".to_string())
+        MinecraftAccount::MsaAccount { auth, .. } => (auth.name, auth.uuid, auth.token, "msa".to_string()),
+        MinecraftAccount::OfflineAccount { name, uuid } => (name, "-".to_string(), uuid, "legacy".to_string())
     };
 
     let parameters = LaunchingParameter {
@@ -143,7 +142,7 @@ async fn run_client(build_id: u32, account_data: Account, options: LauncherOptio
         auth_uuid: uuid,
         auth_access_token: token,
         auth_xuid: "x".to_string(),
-        clientid: service::AZURE_CLIENT_ID.to_string(),
+        clientid: auth::AZURE_CLIENT_ID.to_string(),
         user_type,
         keep_launcher_open: options.keep_launcher_open,
         concurrent_downloads: options.concurrent_downloads,
@@ -220,14 +219,14 @@ async fn terminate(app_state: tauri::State<'_, AppState>) -> Result<(), String> 
 }
 
 #[tauri::command]
-async fn refresh(account_data: Account) -> Result<Account, String> {
+async fn refresh(account_data: MinecraftAccount) -> Result<MinecraftAccount, String> {
     let account = account_data.refresh().await
         .map_err(|e| format!("unable to refresh: {:?}", e))?;
     Ok(account)
 }
 
 #[tauri::command]
-async fn logout(account_data: Account) -> Result<(), String> {
+async fn logout(account_data: MinecraftAccount) -> Result<(), String> {
     account_data.logout().await.map_err(|e| format!("unable to logout: {:?}", e))
 }
 

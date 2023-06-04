@@ -3,7 +3,7 @@ use std::{path::Path, collections::HashMap};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
-use crate::minecraft::service::Account;
+use crate::minecraft::auth::MinecraftAccount;
 
 fn default_concurrent_downloads() -> i32 {
     10
@@ -28,7 +28,7 @@ pub(crate) struct LauncherOptions {
     #[serde(rename = "preferredBuild")]
     pub preferred_build: Option<i32>,
     #[serde(rename = "currentAccount")]
-    pub current_account: Option<Account>,
+    pub current_account: Option<MinecraftAccount>,
     #[serde(rename = "modStates", default)]
     pub mod_states: HashMap<String, bool>,
     #[serde(rename = "concurrentDownloads", default = "default_concurrent_downloads")]
