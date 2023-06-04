@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use serde::de::DeserializeOwned;
 
+use crate::HTTP_CLIENT;
 use crate::utils::get_maven_artifact_path;
 
 /// API endpoint url
@@ -31,7 +32,8 @@ impl ContentDelivery {
 
     /// Request JSON formatted data from content delivery
     pub async fn request_from_content_delivery<T: DeserializeOwned>(file: &str) -> Result<T> {
-        Ok(reqwest::get(format!("{}/{}/{}", CONTENT_DELIVERY, CONTENT_FOLDER, file)).await?
+        Ok(HTTP_CLIENT.get(format!("{}/{}/{}", CONTENT_DELIVERY, CONTENT_FOLDER, file))
+            .send().await?
             .error_for_status()?
             .json::<T>()
             .await?
@@ -107,7 +109,8 @@ impl ApiEndpoints {
 
     /// Request JSON formatted data from launcher API
     pub async fn request_from_endpoint<T: DeserializeOwned>(endpoint: &str) -> Result<T> {
-        Ok(reqwest::get(format!("{}/{}/{}", LAUNCHER_API, LAUNCHER_API_VERSION, endpoint)).await?
+        Ok(HTTP_CLIENT.get(format!("{}/{}/{}", LAUNCHER_API, LAUNCHER_API_VERSION, endpoint))
+            .send().await?
             .error_for_status()?
             .json::<T>()
             .await?

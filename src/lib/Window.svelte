@@ -3,6 +3,7 @@
     import LoginScreen from "./login/LoginScreen.svelte";
     import MainScreen from "./main/MainScreen.svelte";
     import { once } from "@tauri-apps/api/event";
+    import { appWindow } from "@tauri-apps/api/window";
 
     // Load options from file
     let options;
@@ -44,6 +45,13 @@
         options.currentAccount = null;
         options.store();
     }
+
+    invoke("check_online_status").then((result) => {
+        console.debug("online status", result);
+    }).catch(e => {
+        alert("You are offline! Please connect to the internet and restart the app.\n If this problem persists, please contact the developer.\n\n (Error: " + e + ")");
+        console.error(e);
+    });
 </script>
 
 <div class="window">

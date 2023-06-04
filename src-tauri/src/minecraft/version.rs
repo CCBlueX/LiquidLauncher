@@ -7,7 +7,7 @@ use serde::{Deserialize, Deserializer, de::{self, MapAccess, Visitor}};
 use void::Void;
 use os_info::{Bitness, Info};
 use std::collections::HashSet;
-use crate::error::LauncherError;
+use crate::{error::LauncherError, HTTP_CLIENT, utils::download_file_untracked};
 use crate::utils::{get_maven_artifact_path, sha1sum};
 use std::sync::Arc;
 use crate::minecraft::launcher::LaunchingParameter;
@@ -23,7 +23,12 @@ pub struct VersionManifest {
 impl VersionManifest {
 
     pub async fn download() -> Result<Self> {
-        Ok(reqwest::get("https://launchermeta.mojang.com/mc/game/version_manifest.json").await?.error_for_status()?.json::<VersionManifest>().await?)
+        let response = HTTP_CLIENT.get("https://launchermeta.mojang.com/mc/game/version_manifest.json")
+            .send().await?
+            .error_for_status()?;
+        let manifest = response.json::<VersionManifest>().await?;
+
+        Ok(manifest)
     }
 
 }
@@ -193,7 +198,7 @@ pub struct V21ArgumentDeclaration {
 impl VersionProfile {
     pub async fn load(url: &String) -> Result<Self> {
         dbg!(url);
-        Ok(reqwest::get(url).await?.error_for_status()?.json::<VersionProfile>().await?)
+        Ok(HTTP_CLIENT.get(url).send().await?.error_for_status()?.json::<VersionProfile>().await?)
     }
 }
 
@@ -298,7 +303,8 @@ impl AssetIndexLocation {
         
         if !asset_index.exists() {
             info!("Downloading assets index of {}", self.id);
-            fs::write(&asset_index, reqwest::get(&self.url).await?.error_for_status()?.bytes().await?).await?;
+            download_file_untracked(&self.url, &asset_index).await?;
+            info!("Downloaded {}", self.url);
         }
         
         let content = &*fs::read(&asset_index).await?;
@@ -334,8 +340,7 @@ impl AssetObject {
             progress.progress_update(ProgressUpdate::set_label(format!("Downloading asset object {}", self.hash)));
 
             info!("Downloading {}", self.hash);
-            let os = reqwest::get(&*format!("https://resources.download.minecraft.net/{}/{}", &self.hash[0..2], &self.hash)).await?.error_for_status()?.bytes().await?;
-            fs::write(asset_path, os).await?;
+            download_file_untracked(&*format!("https://resources.download.minecraft.net/{}/{}", &self.hash[0..2], &self.hash), asset_path).await?;
             info!("Downloaded {}", self.hash);
 
             Ok(true)
@@ -370,10 +375,8 @@ pub struct Download {
 impl Download {
 
     pub async fn download(&self, path: impl AsRef<Path>) -> Result<()> {
-        let path = path.as_ref().to_owned();
-        let os = reqwest::get(&self.url).await?.error_for_status()?.bytes().await?;
-        fs::write(path, os).await?;
-        info!("downloaded {}", self.url);
+        download_file_untracked(&self.url, path).await?;
+        info!("Downloaded {}", self.url);
         Ok(())
     }
 
@@ -486,8 +489,8 @@ impl From<&LibraryArtifact> for LibraryDownloadInfo {
 impl LibraryDownloadInfo {
 
     async fn fetch_sha1(&self) -> Result<String> {
-        reqwest::get(&format!("{}{}", &self.url, ".sha1"))
-            .await?
+        HTTP_CLIENT.get(&format!("{}{}", &self.url, ".sha1"))
+            .send().await?
             .error_for_status()?
             .text()
             .await
@@ -555,11 +558,7 @@ impl LibraryDownloadInfo {
         // Download library
         progress.progress_update(ProgressUpdate::set_label(format!("Downloading library {}", name)));
 
-        let os = reqwest::get(&self.url).await?
-            .error_for_status()?
-            .bytes()
-            .await?;
-        fs::write(&library_path, os).await?;
+        download_file_untracked(&self.url, &library_path).await?;
         info!("Downloaded {}", self.url);
 
         // After downloading, check sha1

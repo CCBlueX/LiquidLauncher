@@ -9,6 +9,7 @@ use std::{fs, io};
 use once_cell::sync::Lazy;
 use anyhow::Result;
 use directories::ProjectDirs;
+use reqwest::Client;
 use tracing::{debug};
 use tracing_subscriber::layer::SubscriberExt;
 
@@ -24,6 +25,22 @@ static LAUNCHER_DIRECTORY: Lazy<ProjectDirs> = Lazy::new(|| {
         Some(proj_dirs) => proj_dirs,
         None => panic!("no application directory")
     }
+});
+
+static APP_USER_AGENT: &str = concat!(
+    env!("CARGO_PKG_NAME"),
+    "/",
+    env!("CARGO_PKG_VERSION"),
+);
+
+/// HTTP Client with launcher agent
+static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
+    let client = reqwest::ClientBuilder::new()
+            .user_agent(APP_USER_AGENT)
+            .build()
+            .unwrap_or_else(|_| Client::new());
+    
+    client
 });
 
 pub fn main() -> Result<()> {

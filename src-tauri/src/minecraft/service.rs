@@ -8,7 +8,7 @@ use tokio::fs;
 use uuid::Uuid;
 
 use crate::error::AuthenticationError;
-use crate::LAUNCHER_DIRECTORY;
+use crate::{LAUNCHER_DIRECTORY, HTTP_CLIENT};
 
 const MOJANG_AUTH_SERVER: &str = "https://authserver.mojang.com";
 pub(crate) const AZURE_CLIENT_ID: &str = "0add8caf-2cc6-4546-b798-c3d171217dd9";
@@ -155,8 +155,8 @@ impl Account {
 pub async fn name_to_uuid(name: &String) -> Result<String> {
     // https://api.mojang.com/users/profiles/minecraft/<username>
 
-    let uuid_response = reqwest::get(format!("https://api.mojang.com/users/profiles/minecraft/{}", name))
-        .await?
+    let uuid_response = HTTP_CLIENT.get(format!("https://api.mojang.com/users/profiles/minecraft/{}", name))
+        .send().await?
         .json::<UuidResponse>().await?;
 
     match uuid_response {

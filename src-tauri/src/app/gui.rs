@@ -3,7 +3,7 @@ use std::{sync::{Arc, Mutex}, thread};
 use tracing::{error, info};
 use tauri::{Manager, Window};
 
-use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, service::{self, Account}}};
+use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, service::{self, Account}}, HTTP_CLIENT};
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 use crate::utils::percentage_of_total_memory;
 
@@ -15,6 +15,16 @@ struct RunnerInstance {
 
 struct AppState {
     runner_instance: Arc<Mutex<Option<RunnerInstance>>>
+}
+
+#[tauri::command]
+async fn check_online_status() -> Result<(), String> {
+    HTTP_CLIENT.get("https://api.liquidbounce.net/")
+        .send().await
+        .map_err(|e| format!("unable to connect to api.liquidbounce.net: {:}", e))?
+        .error_for_status()
+        .map_err(|e| format!("api.liquidbounce.net returned an error: {:}", e))?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -321,6 +331,7 @@ pub fn gui_main() {
         })
         .invoke_handler(tauri::generate_handler![
             open_url,
+            check_online_status,
             get_options,
             store_options,
             request_branches,
