@@ -8,8 +8,3 @@ pub enum LauncherError {
     UnknownTemplateParameter(String),
 }
 
-#[derive(Error, Debug)]
-pub enum AuthenticationError {
-    #[error("No {0} game license!")]
-    NoGameLicense(String),
-}
