@@ -50,6 +50,11 @@
         options.store();
     });
 
+    listen("microsoft_error", (e) => {
+        alert(e.payload);
+        console.debug("microsoft_error", e.payload);
+    });
+
     function linkMicrosoftOpen() {
         invoke("open_url", { url: "https://microsoft.com/link" })
     }

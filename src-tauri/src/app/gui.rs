@@ -91,13 +91,20 @@ async fn login_offline(username: &str) -> Result<Account, String> {
 fn login_microsoft(window: tauri::Window) -> Result<(), String> {
     // todo: rewrite library async
     thread::spawn(move || {
-        let account = service::auth_msa(|code| {
+        match service::auth_msa(|code| {
             info!("received code: {}", code);
 
             let _ = window.emit("microsoft_code", code);
-        }).unwrap(); // unwrap is fine cuz own thread
-
-        let _ = window.emit("microsoft_successful", account);
+        }) {
+            Ok(account) => {
+                info!("successfully logged in with microsoft account: {:?}", account);
+                let _ = window.emit("microsoft_successful", account);
+            }
+            Err(e) => {
+                error!("unable to login with microsoft account: {:?}", e);
+                let _ = window.emit("microsoft_error", format!("unable to login with microsoft account: {:?}", e));
+            }
+        }
     });
 
   Ok(())
