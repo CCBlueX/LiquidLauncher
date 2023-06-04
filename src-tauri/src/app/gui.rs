@@ -1,6 +1,6 @@
 use std::{sync::{Arc, Mutex}, thread};
 
-use tracing::{error, info};
+use tracing::{error, info, debug};
 use tauri::{Manager, Window};
 
 use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, service::{self, Account}}, HTTP_CLIENT};
@@ -88,26 +88,14 @@ async fn login_offline(username: &str) -> Result<Account, String> {
 }
 
 #[tauri::command]
-fn login_microsoft(window: tauri::Window) -> Result<(), String> {
-    // todo: rewrite library async
-    thread::spawn(move || {
-        match service::auth_msa(|code| {
-            info!("received code: {}", code);
+async fn login_microsoft(window: tauri::Window) -> Result<Account, String> {
+    let account = service::auth_msa(|code| {
+        debug!("received code: {}", code);
 
-            let _ = window.emit("microsoft_code", code);
-        }) {
-            Ok(account) => {
-                info!("successfully logged in with microsoft account: {:?}", account);
-                let _ = window.emit("microsoft_successful", account);
-            }
-            Err(e) => {
-                error!("unable to login with microsoft account: {:?}", e);
-                let _ = window.emit("microsoft_error", format!("unable to login with microsoft account: {:?}", e));
-            }
-        }
-    });
+        let _ = window.emit("microsoft_code", code);
+    }).await.map_err(|e| format!("unable to ms auth: {:?}", e))?;
 
-  Ok(())
+  Ok(account)
 }
 
 fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
@@ -225,24 +213,17 @@ async fn terminate(app_state: tauri::State<'_, AppState>) -> Result<(), String> 
         .map_err(|e| format!("unable to lock runner instance: {:?}", e))?;
 
     if let Some(inst) = lck.take() {
-        println!("Sending sigterm");
+        info!("Sending sigterm");
         inst.terminator.send(()).unwrap();
     }
     Ok(())
 }
 
 #[tauri::command]
-async fn refresh(account_data: Account, window: tauri::Window) -> Result<(), String> {
-    // todo: rewrite library async
-    thread::spawn(move || {
-        let account = account_data.refresh()
-            .map_err(|e| format!("unable to refresh: {:?}", e))
-            .unwrap();
-
-        let _ = window.emit("refreshed", account);
-    });
-
-    Ok(())
+async fn refresh(account_data: Account) -> Result<Account, String> {
+    let account = account_data.refresh().await
+        .map_err(|e| format!("unable to refresh: {:?}", e))?;
+    Ok(account)
 }
 
 #[tauri::command]

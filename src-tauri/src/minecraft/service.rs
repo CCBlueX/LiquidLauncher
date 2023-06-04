@@ -1,10 +1,11 @@
 
 use anyhow::{anyhow, Result};
-use minceraft::auth::Auth;
+use miners::auth::{Auth, self};
 use reqwest::Client;
 use serde_json::json;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
+use tracing::debug;
 use uuid::Uuid;
 
 use crate::error::AuthenticationError;
@@ -13,23 +14,24 @@ use crate::{LAUNCHER_DIRECTORY, HTTP_CLIENT};
 const MOJANG_AUTH_SERVER: &str = "https://authserver.mojang.com";
 pub(crate) const AZURE_CLIENT_ID: &str = "0add8caf-2cc6-4546-b798-c3d171217dd9";
 
-pub fn auth_msa<F>(on_code: F) -> Result<Account>
+pub async fn auth_msa<F>(on_code: F) -> Result<Account>
     where F: Fn(&String) {
-    let http = reqwest::blocking::Client::new();
-    let auth_file = LAUNCHER_DIRECTORY.data_dir().join("azure_authentication.cache");
-    let str_auth_file = auth_file.to_string_lossy().to_string();
-    let dc = minceraft::auth::DeviceCode::new(AZURE_CLIENT_ID, Some(&*str_auth_file), &http)?;
+    let auth_file = LAUNCHER_DIRECTORY.data_dir()
+        .join("azure_authentication.cache");
 
-    if let Some(inner) = &dc.inner { // login code
+    debug!("Auth file: {:?} (exists: {})", auth_file, auth_file.exists());
+    
+    let device_code = auth::DeviceCode::new(AZURE_CLIENT_ID, &auth_file, &HTTP_CLIENT.clone()).await?;
+
+    if let Some(inner) = &device_code.inner { // login code
         on_code(&inner.user_code);
-        println!("{}", inner.message);
     }
-
-    let auth = dc.authenticate(&http)?;
+    
+    debug!("Authenticating with Azure...");
+    let auth = device_code.authenticate(&HTTP_CLIENT.clone()).await?;
 
     Ok(Account::MsaAccount {
-        auth,
-        auth_file: str_auth_file
+        auth
     })
 }
 
@@ -99,8 +101,7 @@ pub enum Account {
     #[serde(rename = "Microsoft")]
     MsaAccount {
         #[serde(flatten)]
-        auth: Auth,
-        auth_file: String
+        auth: Auth
     },
     #[serde(rename = "Mojang")]
     MojangAccount {
@@ -117,21 +118,21 @@ pub enum Account {
 
 impl Account {
 
-    pub fn refresh(self) -> Result<Account> {
+    pub async fn refresh(self) -> Result<Account> {
         return match &self {
-            Account::MsaAccount { auth_file, .. } => {
-                let http = reqwest::blocking::Client::new();
-                let dc = minceraft::auth::DeviceCode::new(AZURE_CLIENT_ID, Some(auth_file), &http)?;
+            Account::MsaAccount { .. } => {
+                let auth_file = LAUNCHER_DIRECTORY.data_dir()
+                    .join("azure_authentication.cache");
+                let device_code = auth::DeviceCode::new(AZURE_CLIENT_ID, auth_file, &HTTP_CLIENT.clone()).await?;
 
-                if let Some(_inner) = &dc.inner { // login code
+                if let Some(_inner) = &device_code.inner { // login code
                     return Err(anyhow!("code required, please re-login!"));
                 }
 
-                let auth = dc.authenticate(&http)?;
+                let auth = device_code.authenticate(&HTTP_CLIENT.clone()).await?;
 
                 Ok(Account::MsaAccount {
-                    auth,
-                    auth_file: auth_file.clone()
+                    auth
                 })
             }
             Account::MojangAccount { .. } => Ok(self),
@@ -141,7 +142,9 @@ impl Account {
 
     pub async fn logout(&self) -> Result<()> {
         match self {
-            Account::MsaAccount { auth_file, .. } => {
+            Account::MsaAccount { .. } => {
+                let auth_file = LAUNCHER_DIRECTORY.data_dir()
+                    .join("azure_authentication.cache");
                 fs::remove_file(auth_file).await?;
             }
             Account::MojangAccount { .. } => {}

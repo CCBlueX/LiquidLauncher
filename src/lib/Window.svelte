@@ -2,8 +2,6 @@
     import { invoke } from "@tauri-apps/api";
     import LoginScreen from "./login/LoginScreen.svelte";
     import MainScreen from "./main/MainScreen.svelte";
-    import { once } from "@tauri-apps/api/event";
-    import { appWindow } from "@tauri-apps/api/window";
 
     // Load options from file
     let options;
@@ -25,13 +23,12 @@
         if (options.currentAccount !== null) {
             // This will be run in the background
             invoke("refresh", { accountData: options.currentAccount })
+                .then((account) => {
+                    console.debug("refreshed account data", account);
 
-            once("refreshed", (e) => {
-                console.debug("refreshed account data", e.payload);
-
-                options.currentAccount = e.payload;
-                options.store();
-            });
+                    options.currentAccount = account;
+                    options.store();
+                }).catch(e => console.error(e));
         }
     }).catch(e => console.error(e));
 

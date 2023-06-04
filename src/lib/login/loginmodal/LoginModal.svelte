@@ -31,8 +31,18 @@
             .catch(e => console.error(e));
     }
 
-    function handleMicrosoftLoginClick(e) {
-        invoke("login_microsoft");
+    function handleMicrosoftLoginClick(event) {
+        invoke("login_microsoft")
+            .then((account) => {
+                console.debug("microsoft authentication successful", account);
+
+                options.currentAccount = account;
+                options.store();
+            })
+            .catch(e => {
+                console.error("microsoft authentication error", e);
+                alert(e);
+            });
     }
 
     let microsoftCode;
@@ -41,18 +51,6 @@
         console.debug("microsoft_code", e.payload);
 
         microsoftCode = e.payload;
-    });
-
-    listen("microsoft_successful", (e) => {
-        console.debug("microsoft_successful", e.payload);
-
-        options.currentAccount = e.payload;
-        options.store();
-    });
-
-    listen("microsoft_error", (e) => {
-        alert(e.payload);
-        console.debug("microsoft_error", e.payload);
     });
 
     function linkMicrosoftOpen() {

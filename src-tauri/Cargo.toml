@@ -32,7 +32,7 @@ directories = "4.0"
 once_cell = "1.16.0"
 open = "4.0.1"
 
-minceraft = { version = "0.2.1", features = ["auth"] }
+miners = { git = "https://github.com/CCBlueX/mine-rs.git", features = ["auth"] }
 
 # FS libs
 async_zip = { version = "0.0.11", features = ["full"] }
