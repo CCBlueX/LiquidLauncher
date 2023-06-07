@@ -130,7 +130,7 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
     let window_mutex = Arc::new(std::sync::Mutex::new(window));
 
     let (account_name, uuid, token, user_type) = match account_data {
-        MinecraftAccount::MsaAccount { auth, .. } => (auth.name, auth.uuid, auth.token, "msa".to_string()),
+        MinecraftAccount::MsaAccount { name, uuid, token, .. } => (name, uuid, token, "msa".to_string()),
         MinecraftAccount::OfflineAccount { name, uuid } => (name, "-".to_string(), uuid, "legacy".to_string())
     };
 
@@ -221,7 +221,10 @@ async fn terminate(app_state: tauri::State<'_, AppState>) -> Result<(), String> 
 #[tauri::command]
 async fn refresh(account_data: MinecraftAccount) -> Result<MinecraftAccount, String> {
     let account = account_data.refresh().await
-        .map_err(|e| format!("unable to refresh: {:?}", e))?;
+        .map_err(|e| {
+            error!("unable to refresh: {:?}", e);
+            format!("unable to refresh: {:?}", e)
+        })?;
     Ok(account)
 }
 

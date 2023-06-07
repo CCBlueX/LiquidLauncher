@@ -1,10 +1,13 @@
 
 use anyhow::{anyhow, Result};
-use miners::auth::{Auth, self};
+use miners::auth::{self, MsAuth};
 
 use serde::{Deserialize, Serialize};
-use tokio::fs;
 use tracing::debug;
+
+use base64::{read::DecoderReader};
+use byteorder::{ReadBytesExt, LE};
+use std::{fs, io::Read, string::String};
 
 use crate::{LAUNCHER_DIRECTORY, HTTP_CLIENT};
 
@@ -16,8 +19,10 @@ pub(crate) const AZURE_CLIENT_ID: &str = "0add8caf-2cc6-4546-b798-c3d171217dd9";
 pub enum MinecraftAccount {
     #[serde(rename = "Microsoft")]
     MsaAccount {
-        #[serde(flatten)]
-        auth: Auth
+        name: String,
+        uuid: String,
+        token: String,
+        ms_auth: Option<MsAuth>,
     },
     #[serde(rename = "Offline")]
     OfflineAccount {
@@ -35,18 +40,8 @@ impl MinecraftAccount {
     /// 
     /// Returns a `MinecraftAccount::MsaAccount` if successful
     pub async fn auth_msa<F>(on_code: F) -> Result<Self> where F: Fn(&String) {
-        // TODO: This should be removed from the auth library and moved to be handled by the launcher itself.
-        //       The auth library should only handle the authentication, not the user interaction.
-        //       This will allow to store the MS Auth token in the launcher's config file, instead of the auth file.
-        //       The launcher should also be able to handle multiple accounts, not just one.
-        //       The auth library at the moment also does not support the previous auth file format, which is a problem and needs to be fixed before releasing the launcher.
-        let auth_file = LAUNCHER_DIRECTORY.data_dir()
-            .join("azure_authentication.cache");
-
-        debug!("Auth file: {:?} (exists: {})", auth_file, auth_file.exists());
-        
         // Request new device code from Azure
-        let device_code = auth::DeviceCode::new(AZURE_CLIENT_ID, &auth_file, &HTTP_CLIENT.clone()).await?;
+        let device_code = auth::DeviceCode::new(AZURE_CLIENT_ID, None, &HTTP_CLIENT.clone()).await?;
 
         // Display login code to user
         if let Some(inner) = &device_code.inner { // login code
@@ -60,8 +55,10 @@ impl MinecraftAccount {
 
         // Return account
         Ok(MinecraftAccount::MsaAccount {
-            auth
-            // TODO: Include MS Auth
+            name: auth.name,
+            uuid: auth.uuid,
+            token: auth.token,
+            ms_auth: Some(auth.ms_auth),
         })
     }
 
@@ -84,35 +81,38 @@ impl MinecraftAccount {
     /// Refresh access token if necessary
     pub async fn refresh(self) -> Result<MinecraftAccount> {
         return match &self {
-            MinecraftAccount::MsaAccount { .. } => {
-                let auth_file = LAUNCHER_DIRECTORY.data_dir()
-                    .join("azure_authentication.cache");
-                let device_code = auth::DeviceCode::new(AZURE_CLIENT_ID, auth_file, &HTTP_CLIENT.clone()).await?;
+            MinecraftAccount::MsaAccount { ms_auth, .. } => {
+                let ms_auth = match ms_auth {
+                    Some(ms_auth) => ms_auth.clone(),
+                    None => read_legacy_ms_auth()?
+                };
 
+                let device_code = auth::DeviceCode::new(AZURE_CLIENT_ID, Some(ms_auth), &HTTP_CLIENT.clone()).await?;
+
+                // This is unlikely to happen because we already define a microsoft authentication, but just in case...
                 if let Some(_inner) = &device_code.inner { // login code
                     return Err(anyhow!("code required, please re-login!"));
                 }
 
+                debug!("Refreshing auth...");
+
+                // Refreshed auth
                 let auth = device_code.authenticate(&HTTP_CLIENT.clone()).await?;
 
                 Ok(MinecraftAccount::MsaAccount {
-                    auth
+                    name: auth.name,
+                    uuid: auth.uuid,
+                    token: auth.token,
+                    ms_auth: Some(auth.ms_auth),
                 })
             }
+
             MinecraftAccount::OfflineAccount { .. } => Ok(self)
         }
     }
 
     /// Logout the account
     pub async fn logout(&self) -> Result<()> {
-        match self {
-            MinecraftAccount::MsaAccount { .. } => {
-                let auth_file = LAUNCHER_DIRECTORY.data_dir()
-                    .join("azure_authentication.cache");
-                fs::remove_file(auth_file).await?;
-            }
-            MinecraftAccount::OfflineAccount { .. } => {}
-        }
         Ok(())
     }
 
@@ -146,3 +146,42 @@ pub async fn uuid_of_username(username: &String) -> Result<String> {
     }
 }
 
+/// Support for reading legacy authentication files
+fn read_legacy_ms_auth() -> Result<MsAuth> {
+    let auth_file = LAUNCHER_DIRECTORY.data_dir()
+            .join("azure_authentication.cache");
+
+    debug!("Auth file: {:?} (exists: {})", auth_file, auth_file.exists());
+
+    if !auth_file.exists() {
+        return Err(anyhow!("auth file does not exist"));
+    }
+
+    let msa = read_from(&mut fs::File::open(auth_file)?)?;
+    debug!("Read legacy auth: {:?}", msa);
+    Ok(msa)
+}
+
+fn read_string_from(r: &mut impl Read) -> anyhow::Result<String> {
+    let len = r.read_u16::<LE>()?;
+    let mut buf = vec![0; len as usize];
+    r.read_exact(&mut buf)?;
+    Ok(String::from_utf8(buf)?)
+}
+
+pub fn read_from(r: &mut impl Read) -> anyhow::Result<MsAuth> {
+    let mut r = DecoderReader::new(r, base64::STANDARD);
+    let len = r.read_u16::<LE>()? as usize;
+    let mut buf = vec![0; len];
+    r.read_exact(&mut buf)?;
+    let mut buf = buf.as_slice();
+    let expires_after = buf.read_i64::<LE>()?;
+    let access_token = read_string_from(&mut buf)?;
+    let refresh_token = read_string_from(&mut buf)?;
+    Ok(MsAuth {
+        expires_in: 0,
+        access_token,
+        refresh_token,
+        expires_after,
+    })
+}
