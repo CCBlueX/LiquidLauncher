@@ -221,10 +221,7 @@ async fn terminate(app_state: tauri::State<'_, AppState>) -> Result<(), String> 
 #[tauri::command]
 async fn refresh(account_data: MinecraftAccount) -> Result<MinecraftAccount, String> {
     let account = account_data.refresh().await
-        .map_err(|e| {
-            error!("unable to refresh: {:?}", e);
-            format!("unable to refresh: {:?}", e)
-        })?;
+        .map_err(|e| format!("unable to refresh: {:?}", e))?;
     Ok(account)
 }
 
