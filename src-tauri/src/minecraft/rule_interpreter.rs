@@ -1,16 +1,19 @@
 use std::collections::HashSet;
 
 use anyhow::Result;
-use os_info::Info;
 use regex::Regex;
+use tracing::debug;
 
 use crate::minecraft::version::{Rule, RuleAction};
-use crate::utils::OS;
+use crate::utils::{OS, ARCHITECTURE, OS_VERSION};
 
-pub fn check_condition(rules: &Vec<Rule>, features: &HashSet<String>, os_info: &Info) -> Result<bool> {
+pub fn check_condition(rules: &Vec<Rule>, features: &HashSet<String>) -> Result<bool> {
     if rules.is_empty() {
         return Ok(true);
     }
+
+    let os_name = OS.get_simple_name()?;
+    let os_version = &*OS_VERSION.clone();
 
     let mut allow = false;
 
@@ -18,16 +21,16 @@ pub fn check_condition(rules: &Vec<Rule>, features: &HashSet<String>, os_info: &
         let mut rule_applies = true;
 
         if let Some(os_requirement) = &rule.os {
-            if os_requirement.name.as_ref().map_or(false, |x| x != OS.get_simple_name()) {
+            if os_requirement.name.as_ref().map_or(false, |x| x != os_name) {
                 rule_applies = false;
             }
             if let Some(arch) = &os_requirement.arch {
-                if !arch.is(&os_info.bitness())? {
+                if *arch != ARCHITECTURE {
                     rule_applies = false;
                 }
             }
             if let Some(version_regex) = &os_requirement.version {
-                if !Regex::new(version_regex)?.is_match(&os_info.version().to_string()) {
+                if !Regex::new(version_regex)?.is_match(&os_version) {
                     rule_applies = false;
                 }
             }

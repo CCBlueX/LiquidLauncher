@@ -5,9 +5,8 @@ use tracing::{debug, info};
 use tokio::fs;
 use serde::{Deserialize, Deserializer, de::{self, MapAccess, Visitor}};
 use void::Void;
-use os_info::{Bitness, Info};
 use std::collections::HashSet;
-use crate::{error::LauncherError, HTTP_CLIENT, utils::download_file_untracked};
+use crate::{error::LauncherError, HTTP_CLIENT, utils::{download_file_untracked, Architecture}};
 use crate::utils::{get_maven_artifact_path, sha1sum};
 use std::sync::Arc;
 use crate::minecraft::launcher::LaunchingParameter;
@@ -129,7 +128,7 @@ pub enum ArgumentDeclaration {
 
 impl ArgumentDeclaration {
 
-    pub(crate) fn add_jvm_args_to_vec(&self, command_arguments: &mut Vec<String>, parameter: &LaunchingParameter, features: &HashSet<String>, os_info: &Info) -> Result<()> {
+    pub(crate) fn add_jvm_args_to_vec(&self, command_arguments: &mut Vec<String>, parameter: &LaunchingParameter, features: &HashSet<String>) -> Result<()> {
         command_arguments.push(format!("-Xmx{}M", parameter.memory));
         command_arguments.push("-XX:+UnlockExperimentalVMOptions".to_string());
         command_arguments.push("-XX:+UseG1GC".to_string());
@@ -141,13 +140,13 @@ impl ArgumentDeclaration {
         match self {
             ArgumentDeclaration::V14(_) => command_arguments.append(&mut vec!["-Djava.library.path=${natives_directory}".to_string(), "-cp".to_string(), "${classpath}".to_string()]),
             ArgumentDeclaration::V21(decl) => {
-                ArgumentDeclaration::check_rules_and_add(command_arguments, &decl.arguments.jvm, features, os_info)?;
+                ArgumentDeclaration::check_rules_and_add(command_arguments, &decl.arguments.jvm, features)?;
             }
         }
 
         Ok(())
     }
-    pub(crate) fn add_game_args_to_vec(&self, command_arguments: &mut Vec<String>, features: &HashSet<String>, os_info: &Info) -> Result<()> {
+    pub(crate) fn add_game_args_to_vec(&self, command_arguments: &mut Vec<String>, features: &HashSet<String>) -> Result<()> {
         match self {
             ArgumentDeclaration::V14(decl) => {
                 command_arguments.extend(
@@ -159,17 +158,17 @@ impl ArgumentDeclaration {
                 );
             },
             ArgumentDeclaration::V21(decl) => {
-                ArgumentDeclaration::check_rules_and_add(command_arguments, &decl.arguments.game, features, os_info)?;
+                ArgumentDeclaration::check_rules_and_add(command_arguments, &decl.arguments.game, features)?;
             }
         }
 
         Ok(())
     }
 
-    fn check_rules_and_add(command_arguments: &mut Vec<String>, args: &Vec<Argument>, features: &HashSet<String>, os_info: &Info) -> Result<()> {
+    fn check_rules_and_add(command_arguments: &mut Vec<String>, args: &Vec<Argument>, features: &HashSet<String>) -> Result<()> {
         for argument in args {
             if let Some(rules) = &argument.rules {
-                if !crate::minecraft::rule_interpreter::check_condition(rules, &features, &os_info)? {
+                if !crate::minecraft::rule_interpreter::check_condition(rules, &features)? {
                     continue;
                 }
             }
@@ -424,7 +423,7 @@ pub struct Rule {
 pub struct OsRule {
     pub name: Option<String>,
     pub version: Option<String>,
-    pub arch: Option<OSArch>,
+    pub arch: Option<Architecture>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -433,24 +432,6 @@ pub enum RuleAction {
     Allow,
     #[serde(rename = "disallow")]
     Disallow
-}
-
-#[derive(Deserialize, Clone)]
-pub enum OSArch {
-    #[serde(rename = "x86")]
-    X32,
-    #[serde(rename = "x64")]
-    X64
-}
-
-impl OSArch {
-    pub(crate) fn is(&self, other: &Bitness) -> Result<bool> {
-        return Ok(match other {
-            Bitness::X32 => matches!(self, OSArch::X32),
-            Bitness::X64 => matches!(self, OSArch::X64),
-            _ => anyhow::bail!("failed to determine os bitness")
-        });
-    }
 }
 
 #[derive(Deserialize, Clone)]

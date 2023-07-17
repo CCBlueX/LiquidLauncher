@@ -13,7 +13,7 @@ use tracing::*;
 use path_absolutize::*;
 use tokio::{fs, fs::OpenOptions};
 
-use crate::{LAUNCHER_VERSION, utils::OS};
+use crate::{LAUNCHER_VERSION, utils::{OS, OS_VERSION}};
 use crate::app::api::LaunchManifest;
 use crate::error::LauncherError;
 use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
@@ -42,9 +42,8 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     let launcher_data_arc = Arc::new(launcher_data);
 
     let features: HashSet<String> = HashSet::new();
-    let os_info = os_info::get();
-
-    info!("Determined OS to be {} {}", os_info.os_type(), os_info.version());
+    
+    info!("Determined OS to be {} {}", OS, OS_VERSION.clone());
 
     // JRE download
     let runtimes_folder = data.join("runtimes");
@@ -88,7 +87,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
         let client_jar = client_folder.join(format!("{}.jar", &version_profile.id));
 
         // Add client jar to class path
-        write!(class_path, "{}{}", &client_jar.absolutize().unwrap().to_str().unwrap(), OS.get_path_separator())?;
+        write!(class_path, "{}{}", &client_jar.absolutize().unwrap().to_str().unwrap(), OS.get_path_separator()?)?;
 
         // Download client jar
         let requires_download = if !client_jar.exists() {
@@ -139,13 +138,13 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
             let data_clone = launcher_data_arc.clone();
             let folder_clone = libraries_folder.to_path_buf();
 
-            if !rule_interpreter::check_condition(&library.rules, &features, &os_info).unwrap_or(false) {
+            if !rule_interpreter::check_condition(&library.rules, &features).unwrap_or(false) {
                 return None;
             }
 
             Some(async move {
                 if let Some(natives) = &library.natives {
-                    if let Some(required_natives) = natives.get(OS.get_simple_name()) {
+                    if let Some(required_natives) = natives.get(OS.get_simple_name()?) {
                         if let Some(classifiers) = library.downloads.as_ref().and_then(|x| x.classifiers.as_ref()) {
                             if let Some(artifact) = classifiers.get(required_natives).map(LibraryDownloadInfo::from) {
                                 let path = artifact.download(library.name, folder_clone.as_path(), data_clone).await?;
@@ -177,7 +176,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     ).buffer_unordered(launching_parameter.concurrent_downloads as usize).collect().await;
     for x in class_paths {
         if let Some(library_path) = x? {
-            write!(class_path, "{}{}", &library_path, OS.get_path_separator())?;
+            write!(class_path, "{}{}", &library_path, OS.get_path_separator()?)?;
         }
     }
 
@@ -238,13 +237,13 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     let mut command_arguments = Vec::new();
 
     // JVM Args
-    version_profile.arguments.add_jvm_args_to_vec(&mut command_arguments, &launching_parameter, &features, &os_info)?;
+    version_profile.arguments.add_jvm_args_to_vec(&mut command_arguments, &launching_parameter, &features)?;
 
     // Main class
     command_arguments.push(version_profile.main_class.as_ref().ok_or_else(|| LauncherError::InvalidVersionProfile("Main class unspecified".to_string()))?.to_owned());
 
     // Game args
-    version_profile.arguments.add_game_args_to_vec(&mut command_arguments, &features, &os_info)?;
+    version_profile.arguments.add_game_args_to_vec(&mut command_arguments, &features)?;
 
     let mut mapped: Vec<String> = Vec::with_capacity(command_arguments.len());
 

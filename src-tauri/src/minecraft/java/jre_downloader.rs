@@ -6,8 +6,7 @@ use path_absolutize::Absolutize;
 use tokio::fs;
 use crate::app::api::ApiEndpoints;
 
-use crate::utils::{download_file, tar_gz_extract, zip_extract};
-use crate::utils::{BITNESS, Bitness, OperatingSystem, OS};
+use crate::utils::{download_file, tar_gz_extract, zip_extract, ARCHITECTURE, OperatingSystem, OS};
 
 /// Find java binary in JRE folder
 pub async fn find_java_binary(runtimes_folder: &Path, jre_version: u32) -> Result<PathBuf> {
@@ -20,15 +19,9 @@ pub async fn find_java_binary(runtimes_folder: &Path, jre_version: u32) -> Resul
         let folder_path = jre_folder.path();
 
         let java_binary = match OS {
-            OperatingSystem::WINDOWS => {
-                folder_path.join("bin").join("javaw.exe")
-            }
-            OperatingSystem::OSX => {
-                folder_path.join("Contents").join("Home").join("bin").join("java")
-            }
-            _ => {
-                folder_path.join("bin").join("java")
-            }
+            OperatingSystem::WINDOWS => folder_path.join("bin").join("javaw.exe"),
+            OperatingSystem::OSX => folder_path.join("Contents").join("Home").join("bin").join("java"),
+            _ => folder_path.join("bin").join("java")
         };
 
         if java_binary.exists() {
@@ -51,18 +44,8 @@ pub async fn jre_download<F>(runtimes_folder: &Path, jre_version: u32, on_progre
     fs::create_dir_all(&runtime_path).await?;
 
     // OS details
-    let os_name = match OS {
-        OperatingSystem::WINDOWS => "windows",
-        OperatingSystem::OSX => "mac",
-        OperatingSystem::LINUX => "linux",
-        OperatingSystem::UNKNOWN => bail!("Unknown OS")
-    }.to_string();
-
-    let os_arch = match BITNESS {
-        Bitness::Bit64 => "x64",
-        Bitness::Bit32 => "x32",
-        Bitness::UNKNOWN => bail!("Unknown bitness")
-    }.to_string();
+    let os_name = OS.get_adoptium_name()?.to_string();
+    let os_arch = ARCHITECTURE.get_simple_name()?.to_string();
 
     // Request JRE source
     let jre_source = ApiEndpoints::jre(&os_name, &os_arch, jre_version).await?;

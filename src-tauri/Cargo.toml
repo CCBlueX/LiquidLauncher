@@ -42,7 +42,7 @@ sanitize-filename = "0.4.0"
 path-absolutize = "3.0.14"
 
 # OS
-os_info = "3.5"
+os_info = "3"
 sysinfo = "0.28.4"
 
 # Data
