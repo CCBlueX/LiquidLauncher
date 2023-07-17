@@ -2,8 +2,9 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::sync::oneshot::Receiver;
 use tokio::process::{Child, Command};
-use anyhow::Result;
+use anyhow::{Result, bail};
 use tokio::io::AsyncReadExt;
+use tracing::debug;
 pub struct JavaRuntime(PathBuf);
 
 impl JavaRuntime {
@@ -47,7 +48,12 @@ impl JavaRuntime {
                     break;
                 },
                 exit_status = running_task.wait() => {
-                    exit_status?.exit_ok()?;
+                    let code = exit_status?.code().unwrap_or(7900); // 7900 = unwrap failed error code
+
+                    debug!("Process exited with code: {}", code);
+                    if code != 0 && code != -1073740791 { // -1073740791 = happens when the process is killed forcefully, we don't want to bail in this case
+                        bail!("Process exited with non-zero code: {}", code);
+                    }
                     break;
                 },
             }

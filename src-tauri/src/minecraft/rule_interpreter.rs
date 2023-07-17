@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use regex::Regex;
-use tracing::debug;
 
 use crate::minecraft::version::{Rule, RuleAction};
 use crate::utils::{OS, ARCHITECTURE, OS_VERSION};
