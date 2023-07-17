@@ -25,6 +25,21 @@ pub async fn find_java_binary(runtimes_folder: &Path, jre_version: u32) -> Resul
         };
 
         if java_binary.exists() {
+            // Check if the binary has execution permissions on linux and macOS
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+
+                let metadata = fs::metadata(&java_binary).await?;
+
+                if !metadata.permissions().mode() & 0o111 != 0 {
+                    // try to change permissions
+                    let mut permissions = metadata.permissions();
+                    permissions.set_mode(0o111);
+                    fs::set_permissions(&java_binary, permissions).await?;
+                }
+            }
+
             return Ok(java_binary.absolutize()?.to_path_buf());
         }
     }
