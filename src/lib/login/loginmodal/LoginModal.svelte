@@ -15,9 +15,9 @@
             return;
         }
 
-        let usernameRegex = /^[a-zA-Z0-9]+$/;
+        let usernameRegex = /^[a-zA-Z0-9_]+$/;
         if (!usernameRegex.test(offlineUsername)) {
-            alert("Username can only contain letters and numbers.");
+            alert("Username can only contain letters, numbers, and underscores.");
             return;
         }
 
