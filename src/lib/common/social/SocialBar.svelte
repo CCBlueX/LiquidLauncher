@@ -6,7 +6,7 @@
 <div class="social-bar">
     <ButtonIcon icon="nodebb" text="Forum" url="https://forums.ccbluex.net/"/>
     <ButtonIcon icon="github" text="GitHub" url="https://github.com/CCBlueX/"/>
-    <ButtonIcon icon="guilded" text="Guilded" url="https://github.com/ccbluex" />
+    <ButtonIcon icon="guilded" text="Guilded" url="https://guilded.gg/CCBlueX" />
     <ButtonIcon icon="twitter" text="Twitter" url="https://twitter.com/ccbluex"/>
     <ButtonIcon icon="youtube" text="YouTube" url="https://www.youtube.com/ccbluex" />
     <ButtonIconText icon="url" text="liquidbounce.net" url="https://liquidbounce.net" />
