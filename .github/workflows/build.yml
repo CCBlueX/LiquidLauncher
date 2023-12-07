@@ -1,6 +1,5 @@
 name: Build
 on:
-  workflow_dispatch:
   push:
     branches: [ tauri ]
 
@@ -21,7 +20,7 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 21
       
       - name: install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -62,16 +61,16 @@ jobs:
         if: matrix.platform == 'ubuntu-latest'
         with:
           name: liquidlauncher-linux
-          path: ./src-tauri/target/release/bundle/appimage/liquid-launcher_**.AppImage.*
+          path: ./src-tauri/target/release/bundle/appimage/liquidlauncher_**.AppImage.*
 
       - uses: actions/upload-artifact@v2
         if: matrix.platform == 'windows-latest'
         with:
           name: liquidlauncher-windows
-          path: ./src-tauri/target/release/bundle/msi/LiquidLauncher_**.msi.*
+          path: ./src-tauri/target/release/bundle/msi/liquidlauncher_**.msi.*
 
       - uses: actions/upload-artifact@v2
         if: matrix.platform == 'macos-latest'
         with:
           name: liquidlauncher-macos
-          path: ./src-tauri/target/release/bundle/macos/LiquidLauncher.app.tar.*
+          path: ./src-tauri/target/release/bundle/macos/liquidlauncher.app.tar.*
