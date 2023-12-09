@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "liquidlauncher",
-    "version": "0.1.8"
+    "version": "0.1.9"
   },
   "tauri": {
     "allowlist": {
@@ -16,10 +16,10 @@
     },
     "bundle": {
       "active": true,
-      "category": "Utility",
+      "category": "Game",
       "copyright": "CCBlueX",
-      "deb": {
-        "depends": []
+      "appimage": {
+        "bundleMediaFramework": true
       },
       "externalBin": [],
       "icon": [
@@ -30,6 +30,7 @@
         "icons/icon.ico"
       ],
       "identifier": "net.ccbluex.liquidlauncher",
+      "shortDescription": "A LiquidBounce launcher for Minecraft",
       "longDescription": "A LiquidBounce hacked-client launcher for the game Minecraft",
       "macOS": {
         "entitlements": null,
@@ -39,7 +40,6 @@
         "signingIdentity": null
       },
       "resources": [],
-      "shortDescription": "A LiquidBounce launcher for Minecraft",
       "targets": "all",
       "windows": {
         "certificateThumbprint": null,
