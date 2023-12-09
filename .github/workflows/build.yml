@@ -57,25 +57,25 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
       
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: matrix.platform == 'ubuntu-20.04'
         with:
           name: liquidlauncher-appimage-linux
           path: ./src-tauri/target/release/bundle/appimage/liquidlauncher_**.AppImage.*
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: matrix.platform == 'ubuntu-20.04'
         with:
           name: liquidlauncher-deb-linux
           path: ./src-tauri/target/release/bundle/deb/liquidlauncher_**.deb
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: matrix.platform == 'windows-latest'
         with:
           name: liquidlauncher-windows
           path: ./src-tauri/target/release/bundle/msi/liquidlauncher_**.msi.*
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: matrix.platform == 'macos-latest'
         with:
           name: liquidlauncher-macos
