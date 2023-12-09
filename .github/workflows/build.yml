@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-latest, windows-latest]
+        platform: [macos-latest, ubuntu-20.04, windows-latest]
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -26,7 +26,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       
       - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-latest'
+        if: matrix.platform == 'ubuntu-20.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
@@ -58,10 +58,16 @@ jobs:
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
       
       - uses: actions/upload-artifact@v2
-        if: matrix.platform == 'ubuntu-latest'
+        if: matrix.platform == 'ubuntu-20.04'
         with:
-          name: liquidlauncher-linux
+          name: liquidlauncher-appimage-linux
           path: ./src-tauri/target/release/bundle/appimage/liquidlauncher_**.AppImage.*
+
+      - uses: actions/upload-artifact@v2
+        if: matrix.platform == 'ubuntu-20.04'
+        with:
+          name: liquidlauncher-deb-linux
+          path: ./src-tauri/target/release/bundle/deb/liquidlauncher_**.deb
 
       - uses: actions/upload-artifact@v2
         if: matrix.platform == 'windows-latest'
