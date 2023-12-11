@@ -4,3 +4,4 @@
 /tauri
 
 .DS_Store
+.env
