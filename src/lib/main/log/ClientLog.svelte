@@ -3,6 +3,7 @@
     import VirtualList from "./VirtualList.svelte";
     import { createEventDispatcher } from "svelte";
     import ToggleSetting from "../../settings/ToggleSetting.svelte";
+    import ButtonSetting from "../../settings/ButtonSetting.svelte"
     import LogMessage from "./LogMessage.svelte";
 
     export let messages;
@@ -10,6 +11,33 @@
     let autoScroll = true;
 
     const dispatch = createEventDispatcher();
+
+    async function handleUploadSetting(e) {
+        const log = messages.join("");
+
+        if (await confirm("The entire log of this session will be uploaded. It may contain sensitive information like private chat messages. Are you sure you want to proceed?") !== true) {
+            return;
+        }
+
+        console.log("ok");
+
+        const response = await fetch("https://paste.ccbluex.net/api.php", {
+            body: `content=${log}`,
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            method: "POST"
+        });
+
+        const responseData = await response.text();
+
+        if (response.status !== 200) {
+            alert(`Failed to upload log: ${responseData}`);
+            return;
+        }
+
+        prompt("Your log is available at the following URL: ", responseData);
+    }
 </script>
 
 <div class="log" transition:fly={{ y: -10, duration: 200 }}>
@@ -26,7 +54,10 @@
         </VirtualList>
     </div>
 
-    <ToggleSetting title="Auto scroll" bind:value={autoScroll} />
+    <div class="settings">
+        <ButtonSetting text="Upload log" color="#4677FF" on:click={handleUploadSetting}></ButtonSetting>
+        <ToggleSetting title="Auto scroll" bind:value={autoScroll} />
+    </div>
 </div>
 
 <style>
@@ -44,6 +75,12 @@
         z-index: 1000;
         display: flex;
         flex-direction: column;
+    }
+
+    .settings {
+        display: flex;
+        gap: 20px;
+        align-items: center;
     }
 
     .output {
@@ -70,4 +107,3 @@
         cursor: pointer;
     }
 </style>
-
