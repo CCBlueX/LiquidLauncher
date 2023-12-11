@@ -19,8 +19,6 @@
             return;
         }
 
-        console.log("ok");
-
         const response = await fetch("https://paste.ccbluex.net/api.php", {
             body: `content=${log}`,
             headers: {
