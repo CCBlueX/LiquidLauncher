@@ -7,6 +7,7 @@ use tracing::debug;
 
 use base64::{read::DecoderReader};
 use byteorder::{ReadBytesExt, LE};
+use uuid::Uuid;
 use std::{fs, io::Read, string::String};
 
 use crate::{LAUNCHER_DIRECTORY, HTTP_CLIENT};
@@ -69,7 +70,7 @@ impl MinecraftAccount {
     pub async fn auth_offline(username: String) -> Self {
         // Request UUID from Mojang's API
         let uuid = uuid_of_username(&username).await
-            .unwrap_or_else(|_| "-".to_string());
+            .unwrap_or_else(|_| Uuid::new_v4().to_string());
 
         // Return offline account
         MinecraftAccount::OfflineAccount {
