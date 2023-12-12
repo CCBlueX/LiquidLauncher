@@ -9,7 +9,7 @@ use once_cell::sync::Lazy;
 use anyhow::Result;
 use directories::ProjectDirs;
 use reqwest::Client;
-use tracing::{debug};
+use tracing::debug;
 use tracing_subscriber::layer::SubscriberExt;
 
 pub mod app;

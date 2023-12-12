@@ -52,7 +52,7 @@ impl JavaRuntime {
 
                     debug!("Process exited with code: {}", code);
                     if code != 0 && code != -1073740791 { // -1073740791 = happens when the process is killed forcefully, we don't want to bail in this case
-                        bail!("Process exited with non-zero code: {}", code);
+                        bail!("Process exited with non-zero exit code: {}.", code);
                     }
                     break;
                 },

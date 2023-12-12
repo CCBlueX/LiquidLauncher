@@ -191,9 +191,12 @@
     });
 
     listen("client-error", (e) => {
-        alert(e.payload);
+        const message = e.payload;
+
+        console.error(message);
         clientLogShown = true;
-        console.error(e.payload);
+
+        alert(message);
     });
 
     function updateModStates() {

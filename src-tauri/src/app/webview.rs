@@ -1,10 +1,10 @@
 use std::{sync::{Arc, Mutex}, time::Duration};
 use serde::Deserialize;
-use anyhow::{Result};
+use anyhow::Result;
 use tracing::{info, debug};
-use tauri::{Manager};
+use tauri::Manager;
 use tokio::time::sleep;
-use crate::{utils::download_file};
+use crate::utils::download_file;
 
 pub(crate) async fn download_client<F>(url: &str, on_progress: F, window: &Arc<Mutex<tauri::Window>>) -> Result<Vec<u8>> where F : Fn(u64, u64){
     let app_handle = window.lock().unwrap().app_handle();
