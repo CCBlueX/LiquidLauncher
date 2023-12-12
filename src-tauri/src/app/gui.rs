@@ -161,7 +161,7 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
     info!("Loading launch manifest...");
     let launch_manifest = ApiEndpoints::launch_manifest(build_id)
         .await
-        .map_err(|e| format!("unable to request launch manifest: {:?}", e))?;
+        .map_err(|e| format!("failed to fetch launch manifest of build {}: {:?}", build_id, e))?;
 
     let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
 
