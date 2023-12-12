@@ -132,16 +132,7 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
 
     let (account_name, uuid, token, user_type) = match account_data {
         MinecraftAccount::MsaAccount { name, uuid, token, .. } => (name, uuid, token, "msa".to_string()),
-        MinecraftAccount::OfflineAccount { name, uuid } => {
-            // A UUID of length less than 2 is invalid, so we generate a new one
-            let uuid = if uuid.len() < 2 {
-                Uuid::new_v4().to_string()
-            } else {
-                uuid
-            };
-
-            (name, uuid, "-".to_string(), "legacy".to_string())
-        }
+        MinecraftAccount::OfflineAccount { name, uuid } => (name, uuid, "-".to_string(), "legacy".to_string())
     };
 
     // Random XUID

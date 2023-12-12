@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use miners::auth::{self, MsAuth};
 
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use tracing::{debug, warn};
 
 use base64::{read::DecoderReader};
 use byteorder::{ReadBytesExt, LE};
@@ -28,8 +28,21 @@ pub enum MinecraftAccount {
     #[serde(rename = "Offline")]
     OfflineAccount {
         name: String,
+        #[serde(deserialize_with = "check_uuid_format")]
         uuid: String
     }
+}
+
+fn check_uuid_format<'de, D>(deserializer: D) -> Result<String, D::Error> where D: serde::Deserializer<'de> {
+    let uuid = String::deserialize(deserializer)?;
+
+    // If the UUID is invalid, generate a new one
+    if uuid.len() < 2 {
+        warn!("Invalid UUID: {}, generating random new one.", uuid);
+        return Ok(Uuid::new_v4().to_string());
+    }
+
+    Ok(uuid)
 }
 
 impl MinecraftAccount {
