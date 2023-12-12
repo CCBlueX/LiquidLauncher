@@ -22,7 +22,7 @@ use crate::utils::{download_file, get_maven_artifact_path};
 ///
 pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, launching_parameter: LaunchingParameter, additional_mods: Vec<LoaderMod>, progress: LauncherData<D>, window: Arc<Mutex<tauri::Window>>) -> Result<()> {
     info!("Loading minecraft version manifest...");
-    let mc_version_manifest = VersionManifest::download().await?;
+    let mc_version_manifest = VersionManifest::fetch().await?;
 
     let build = &launch_manifest.build;
     let subsystem = &launch_manifest.subsystem;

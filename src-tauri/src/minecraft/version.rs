@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt, marker::PhantomData, path::{Path, PathBuf}, str::FromStr};
 
-use anyhow::Result;
+use anyhow::{Result, Context};
 use tracing::{debug, info};
 use tokio::fs;
 use serde::{Deserialize, Deserializer, de::{self, MapAccess, Visitor}};
@@ -21,11 +21,14 @@ pub struct VersionManifest {
 
 impl VersionManifest {
 
-    pub async fn download() -> Result<Self> {
+    pub async fn fetch() -> Result<Self> {
         let response = HTTP_CLIENT.get("https://launchermeta.mojang.com/mc/game/version_manifest.json")
-            .send().await?
-            .error_for_status()?;
-        let manifest = response.json::<VersionManifest>().await?;
+            .send().await
+            .context("Connection to https://launchermeta.mojang.com/ failed. Check your internet connection.")?
+            .error_for_status()
+            .context("https://launchermeta.mojang.com/ returned with an error code, try again later!")?;
+        let manifest = response.json::<VersionManifest>().await
+            .context("Failed to parse Version Manifest, Mojang Server responded with not valid format.")?;
 
         Ok(manifest)
     }
