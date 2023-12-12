@@ -195,8 +195,9 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
                         window_mutex.lock().unwrap().show().unwrap();
                     }
 
-                    window_mutex.lock().unwrap().emit("client-error", format!("Failed to launch client: {:?}", e)).unwrap();
-                    handle_stderr(&window_mutex, format!("Failed to launch client: {:?}", e).as_bytes()).unwrap();
+                    let message = format!("An error with the client occourd:\n{:?}", e);
+                    window_mutex.lock().unwrap().emit("client-error", format!("{}\n\nIf this error persists, upload your log with the button below and report it to GitHub.", message)).unwrap();
+                    handle_stderr(&window_mutex, message.as_bytes()).unwrap();
                 };
 
                 *copy_of_runner_instance.lock().map_err(|e| format!("unable to lock runner instance: {:?}", e)).unwrap()
