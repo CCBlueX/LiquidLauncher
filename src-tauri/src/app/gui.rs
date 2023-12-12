@@ -144,6 +144,9 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
         }
     };
 
+    // Random XUID
+    let xuid = Uuid::new_v4().to_string();
+
     let parameters = LaunchingParameter {
         memory: percentage_of_total_memory(options.memory_percentage),
         custom_data_path: if !options.custom_data_path.is_empty() { Some(options.custom_data_path) } else { None },
@@ -151,7 +154,7 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
         auth_player_name: account_name,
         auth_uuid: uuid,
         auth_access_token: token,
-        auth_xuid: "x".to_string(),
+        auth_xuid: xuid,
         clientid: auth::AZURE_CLIENT_ID.to_string(),
         user_type,
         keep_launcher_open: options.keep_launcher_open,
