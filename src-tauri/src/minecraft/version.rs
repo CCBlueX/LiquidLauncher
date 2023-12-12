@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt, marker::PhantomData, path::{Path, PathBuf}, str::FromStr};
 
 use anyhow::{Result, Context};
-use tracing::{debug, info};
+use tracing::{debug, info, field::debug};
 use tokio::fs;
 use serde::{Deserialize, Deserializer, de::{self, MapAccess, Visitor}};
 use void::Void;
@@ -199,8 +199,18 @@ pub struct V21ArgumentDeclaration {
 
 impl VersionProfile {
     pub async fn load(url: &String) -> Result<Self> {
-        dbg!(url);
-        Ok(HTTP_CLIENT.get(url).send().await?.error_for_status()?.json::<VersionProfile>().await?)
+        debug!("Loading version profile from {}", url);
+
+        let version_profile = HTTP_CLIENT.get(url)
+            .send()
+            .await
+            .context(format!("failed to pull version profile from {}", url))?
+            .error_for_status()
+            .context(format!("{} responded with error code.", url))?
+            .json::<VersionProfile>().await
+            .context(format!("{} responded with not valid format.", url))?;
+
+        Ok(version_profile)
     }
 }
 
