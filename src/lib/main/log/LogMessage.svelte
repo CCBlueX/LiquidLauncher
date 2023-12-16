@@ -11,6 +11,7 @@
         color: white;
         user-select: text;
         word-break: normal;
-        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+        word-wrap: break-word;
     }
 </style>

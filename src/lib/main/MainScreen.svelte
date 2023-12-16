@@ -44,15 +44,12 @@
     let progressBarProgress = 0;
     let progressBarLabel = "";
 
-    let javaWrapperExecutableName = "";
-
     listen("process-output", event => {
         log = [...log, event.payload];
     });
 
     listen("progress-update", event => {
         let progressUpdate = event.payload;
-        console.log(event);
 
         switch (progressUpdate.type) {
                 case "max": {
