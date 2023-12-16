@@ -36,7 +36,7 @@
         padding: 25px;
         border-radius: 6px;
         z-index: 1000;
-        max-height: calc(100% - 150px);
+        max-height: calc(100% - 140px);
         overflow: hidden;
         display: flex;
         flex-direction: column;

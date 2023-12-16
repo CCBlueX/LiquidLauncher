@@ -4,7 +4,7 @@ use tracing::{error, info, debug};
 use tauri::{Manager, Window};
 use uuid::Uuid;
 
-use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, auth::{MinecraftAccount, self}}, HTTP_CLIENT};
+use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, auth::{MinecraftAccount, self}}, HTTP_CLIENT, LAUNCHER_VERSION};
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 use crate::utils::percentage_of_total_memory;
 
@@ -16,6 +16,11 @@ struct RunnerInstance {
 
 struct AppState {
     runner_instance: Arc<Mutex<Option<RunnerInstance>>>
+}
+
+#[tauri::command]
+async fn get_launcher_version() -> Result<String, String> {
+    Ok(LAUNCHER_VERSION.to_string())
 }
 
 #[tauri::command]
@@ -339,7 +344,8 @@ pub fn gui_main() {
             clear_data,
             mem_percentage,
             default_data_folder_path,
-            terminate
+            terminate,
+            get_launcher_version
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

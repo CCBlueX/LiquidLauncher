@@ -22,6 +22,7 @@
     import { listen } from "@tauri-apps/api/event";
     import DirectorySelectorSetting from "../settings/DirectorySelectorSetting.svelte";
     import FileSelectorSetting from "../settings/FileSelectorSetting.svelte";
+    import LauncherVersion from "../settings/LauncherVersion.svelte";
 
     export let options;
 
@@ -43,6 +44,10 @@
     let progressBarMax = 0;
     let progressBarProgress = 0;
     let progressBarLabel = "";
+
+    let launcherVersion = "";
+
+    invoke("get_launcher_version").then(res => (launcherVersion = res));
 
     listen("process-output", event => {
         log = [...log, event.payload];
@@ -243,6 +248,7 @@
         <ButtonSetting text="Logout" on:click={() => dispatch("logout")} color="#4677FF" />
         <DirectorySelectorSetting title="Data Location" placeholder={dataFolderPath} bind:value={options.customDataPath} windowTitle="Select custom data directory" />
         <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
+        <LauncherVersion version={launcherVersion} />
     </SettingsContainer>
 {/if}
 
