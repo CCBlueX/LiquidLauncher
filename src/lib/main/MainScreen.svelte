@@ -9,7 +9,6 @@
     import SelectSetting from "../settings/SelectSetting.svelte";
     import SettingsContainer from "../settings/SettingsContainer.svelte";
     import SettingWrapper from "../settings/SettingWrapper.svelte";
-    import TextSetting from "../settings/TextSetting.svelte";
     import ToggleSetting from "../settings/ToggleSetting.svelte";
     import Account from "./Account.svelte";
     import ContentWrapper from "./ContentWrapper.svelte";
@@ -21,7 +20,8 @@
     import TextStatus from "./statusbar/TextStatus.svelte";
     import { invoke } from "@tauri-apps/api/tauri";
     import { listen } from "@tauri-apps/api/event";
-    import DirectorySelector from "../settings/DirectorySelector.svelte";
+    import DirectorySelectorSetting from "../settings/DirectorySelectorSetting.svelte";
+    import FileSelectorSetting from "../settings/FileSelectorSetting.svelte";
 
     export let options;
 
@@ -43,6 +43,8 @@
     let progressBarMax = 0;
     let progressBarProgress = 0;
     let progressBarLabel = "";
+
+    let javaWrapperExecutableName = "";
 
     listen("process-output", event => {
         log = [...log, event.payload];
@@ -237,12 +239,12 @@
 
 {#if settingsShown}
     <SettingsContainer title="Settings" on:hideSettings={hideSettings}>
-        <TextSetting title="JVM Location" placeholder="Internal" bind:value={options.customJavaPath} />
+        <FileSelectorSetting title="JVM Location" placeholder="Internal" bind:value={options.customJavaPath} filters={[{ name: "javaw", extensions: [] }]} windowTitle="Select custom Java wrapper" />
         <ToggleSetting title="Keep launcher running" bind:value={options.keepLauncherOpen} />
         <RangeSetting title="Memory" min={20} max={100} bind:value={options.memoryPercentage} valueSuffix="%" step={1} />
         <RangeSetting title="Concurrent Downloads" min={1} max={50} bind:value={options.concurrentDownloads} valueSuffix="connections" step={1} />
         <ButtonSetting text="Logout" on:click={() => dispatch("logout")} color="#4677FF" />
-        <DirectorySelector title="Data Location" placeholder={dataFolderPath} bind:value={options.customDataPath} />
+        <DirectorySelectorSetting title="Data Location" placeholder={dataFolderPath} bind:value={options.customDataPath} windowTitle="Select custom data directory" />
         <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
     </SettingsContainer>
 {/if}

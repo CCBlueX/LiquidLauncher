@@ -3,16 +3,16 @@
     import { open as shellOpen } from "@tauri-apps/api/shell";
 
     export let title;
+    export let windowTitle;
     export let placeholder;
     export let value;
-
-    console.log(placeholder);
 
     async function handleDirectorySelect(e) {
         const selected = await dialogOpen({
             directory: true,
             multiple: false,
             defaultPath: value || placeholder,
+            title: windowTitle,
         });
 
         if (selected) {
@@ -25,7 +25,7 @@
     }
 </script>
 
-<div class="text-setting">
+<div class="directory-selector-setting">
     <div class="title">{title}</div>
     <div class="wrapper">
         <input class="input" type="text" {placeholder} bind:value={value} />
