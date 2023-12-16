@@ -89,12 +89,7 @@
         color: white;
         display: inline;
         width: min-content;
-        font-family: "Roboto", sans-serif;
+        font-family: "Inter", sans-serif;
         user-select: unset;
-    }
-
-    .value-devider {
-        display: inline-block;
-        margin: 0 5px;
     }
 </style>

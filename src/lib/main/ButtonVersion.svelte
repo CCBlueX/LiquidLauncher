@@ -3,7 +3,7 @@
 
     export let icon;
     export let title;
-    export let date;
+    export let subtitle;
 
     const dispatch = createEventDispatcher();
 </script>
@@ -11,7 +11,7 @@
 <button class="button-version" on:click={e => dispatch("click", e)}>
     <img class="icon" src="img/icon/icon-version-{icon}.png" alt={title}>
     <div class="title">{title}</div>
-    <div class="date">{date}</div>
+    <div class="subtitle">{subtitle}</div>
 </button>
 
 <style>
@@ -39,7 +39,7 @@
         margin-bottom: 2px;
     }
 
-    .button-version .date {
+    .button-version .subtitle {
         font-size: 10px;
         color: rgba(255, 255, 255, .5);
     }

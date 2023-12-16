@@ -89,7 +89,7 @@
         height: 30px;
         transition: background-color ease .2s;
         padding: 0 10px;
-        font-family: "Roboto", sans-serif;
+        font-family: "Inter", sans-serif;
         cursor: pointer;
     }
 

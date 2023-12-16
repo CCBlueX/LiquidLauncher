@@ -37,7 +37,7 @@
         background-color: transparent;
         border: none;
         font-size: 16px;
-        font-family: "Roboto", sans-serif;
+        font-family: "Inter", sans-serif;
         color: white;
     }
 </style>

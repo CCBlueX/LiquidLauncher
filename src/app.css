@@ -1,19 +1,19 @@
 @font-face {
-    font-family: "Roboto";
+    font-family: "Inter";
     font-weight: 600;
-    src: url("font/Roboto-Bold.ttf");
+    src: url("font/Inter-Bold.ttf");
 }
 
 @font-face {
-    font-family: "Roboto";
+    font-family: "Inter";
     font-weight: 500;
-    src: url("font/Roboto-Medium.ttf");
+    src: url("font/Inter-Medium.ttf");
 }
 
 @font-face {
-    font-family: "Roboto";
+    font-family: "Inter";
     font-weight: 400;
-    src: url("font/Roboto-Regular.ttf");
+    src: url("font/Inter-Regular.ttf");
 }
 
 * {
@@ -29,7 +29,7 @@
 
 body {
     background: transparent;
-    font-family: "Roboto", sans-serif;
+    font-family: "Inter", sans-serif;
     font-weight: 400;
     font-size: 14px;
     user-select: none;

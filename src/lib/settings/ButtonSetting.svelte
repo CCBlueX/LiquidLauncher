@@ -11,7 +11,7 @@
 
 <style>
     .button {
-        font-family: "Roboto", sans-serif;
+        font-family: "Inter", sans-serif;
         color: white;
         font-size: 14px;
         border-radius: 6px;

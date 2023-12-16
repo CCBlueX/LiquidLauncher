@@ -33,8 +33,8 @@
     </pre>
 
     <div class="version-selector">
-        <ButtonVersion icon="lb" title={lbVersion.title} date={lbVersion.date} on:click={() => dispatch("showVersionSelect")} />
-        <ButtonVersion icon="mc" title={mcVersion.title} date={mcVersion.date} on:click={() => dispatch("showVersionSelect")} />
+        <ButtonVersion icon="lb" title={lbVersion.title} subtitle="LiquidBounce" on:click={() => dispatch("showVersionSelect")} />
+        <ButtonVersion icon="mc" title={mcVersion.title} subtitle="Minecraft" on:click={() => dispatch("showVersionSelect")} />
     </div> 
 
     {#if running}
@@ -91,7 +91,7 @@
         color: rgba(255, 255, 255, .5);
         overflow: auto;
         white-space: pre-line;
-        font-family: "Roboto", sans-serif;
+        font-family: "Inter", sans-serif;
         font-weight: 400;
         font-size: 12px;
         overflow-x: hidden;
