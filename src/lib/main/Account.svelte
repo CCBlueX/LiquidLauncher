@@ -9,7 +9,7 @@
 </script>
 
 <div class="account">
-    <object data="https://crafatar.com/avatars/{uuid}?size=100" type="image/png" class="avatar">
+    <object data="https://avatar.liquidbounce.net/avatar/{uuid}" type="image/png" class="avatar">
         <img src="img/steve.png" alt=avatar class="avatar"/>
     </object>
     <div class="details">
