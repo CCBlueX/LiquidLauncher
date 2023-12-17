@@ -16,14 +16,16 @@ Twitter: https://twitter.com/CCBlueX
         <td>
             <img src="gh_assets/screenshot-2.png">
         </td>
-        <td>
-            <img src="gh_assets/screenshot-3.png">
-        </td>
     </tr>
     <tr>
         <td>
+            <img src="gh_assets/screenshot-3.png">
+        </td>
+        <td>
             <img src="gh_assets/screenshot-4.png">
         </td>
+    </tr>
+    <tr>
         <td>
             <img src="gh_assets/screenshot-5.png">
         </td>
