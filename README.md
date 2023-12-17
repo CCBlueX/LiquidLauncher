@@ -8,9 +8,27 @@ YouTube: https://youtube.com/CCBlueX \
 Twitter: https://twitter.com/CCBlueX
 
 ## Screenshots
-![Login](gh_assets/screenshot-1.png)
-
-![Main](gh_assets/screenshot-2.png)
+<table>
+    <tr>
+        <td>
+            <img src="gh_assets/screenshot-1.png">
+        </td>
+        <td>
+            <img src="gh_assets/screenshot-2.png">
+        </td>
+        <td>
+            <img src="gh_assets/screenshot-3.png">
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img src="gh_assets/screenshot-4.png">
+        </td>
+        <td>
+            <img src="gh_assets/screenshot-5.png">
+        </td>
+    </tr>
+</table>
 
 ## Issues
 If you notice any bugs or missing features, you can let us know by opening an issue [here](https://github.com/CCBlueX/LiquidLauncher/issues).
