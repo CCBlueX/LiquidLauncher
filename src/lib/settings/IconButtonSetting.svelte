@@ -7,7 +7,7 @@
     const dispatch = createEventDispatcher();
 </script>
 
-<button class="button" type="button" on:click={e => dispatch("click", e)}>
+<button class="button" type="button" on:click={() => dispatch("click")}>
     <img class="icon" src="img/icon/{icon}.svg" alt={icon}>    
     <span>{text}</span>
 </button>

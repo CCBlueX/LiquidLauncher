@@ -147,7 +147,7 @@ async fn get_custom_mods(branch: &str, mc_version: &str) -> Result<Vec<LoaderMod
             // todo: pull name from JAR manifest
             let file_name_without_extension = file_name.replace(".jar", "");
             
-            mods.push(LoaderMod { required: true, enabled: true, name: file_name_without_extension, source: ModSource::Local { file_name } });
+            mods.push(LoaderMod { required: false, enabled: true, name: file_name_without_extension, source: ModSource::Local { file_name } });
         }
     }
 
@@ -163,9 +163,8 @@ async fn install_custom_mod(branch: &str, mc_version: &str, path: PathBuf) -> Re
         fs::create_dir_all(&mod_cache_path).await.unwrap();
     }
 
-    if let Some(path) = path.file_name() {
-        let file_name = path.to_str().unwrap();
-        let dest_path = mod_cache_path.join(file_name);
+    if let Some(file_name) = path.file_name() {
+        let dest_path = mod_cache_path.join(file_name.to_str().unwrap());
 
         fs::copy(path, dest_path).await
             .map_err(|e| format!("unable to copy custom mod: {:?}", e))?;

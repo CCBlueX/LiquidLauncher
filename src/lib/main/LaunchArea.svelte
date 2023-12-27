@@ -33,8 +33,8 @@
     </pre>
 
     <div class="version-selector">
-        <ButtonVersion icon="lb" title={lbVersion.title} subtitle="LiquidBounce" on:click={() => dispatch("showVersionSelect")} />
-        <ButtonVersion icon="mc" title={mcVersion.title} subtitle="Minecraft" on:click={() => dispatch("showVersionSelect")} />
+        <ButtonVersion icon="lb" title={lbVersion} subtitle="LiquidBounce" on:click={() => dispatch("showVersionSelect")} />
+        <ButtonVersion icon="mc" title={mcVersion} subtitle="Minecraft" on:click={() => dispatch("showVersionSelect")} />
     </div> 
 
     {#if running}

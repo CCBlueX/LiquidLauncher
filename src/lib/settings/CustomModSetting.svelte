@@ -1,13 +1,16 @@
 <script>
+    import { createEventDispatcher } from "svelte";
     import ToggleSetting from "./ToggleSetting.svelte";
 
     export let value;
     export let title;
+
+    const dispatch = createEventDispatcher();
 </script>
 
 <div class="custom-mod-setting">
-    <ToggleSetting {value} {title} disabled={false} />
-    <button class="button-delete">
+    <ToggleSetting bind:value={value} {title} disabled={false} on:change />
+    <button class="button-delete" on:click={() => dispatch("delete", { name: title })}>
         <img src="img/icon/icon-button-close.svg" alt="delete" title="Remove mod">
     </button>
 </div>

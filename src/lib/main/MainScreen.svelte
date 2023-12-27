@@ -25,6 +25,7 @@
     import LauncherVersion from "../settings/LauncherVersion.svelte";
     import IconButtonSetting from "../settings/IconButtonSetting.svelte";
     import CustomModSetting from "../settings/CustomModSetting.svelte";
+    import { open as dialogOpen } from "@tauri-apps/api/dialog";
 
     export let options;
 
@@ -87,8 +88,15 @@
         return builds.find((build) => build.buildId === options.preferredBuild);
     }
 
-    let lbVersion = {};
-    let mcVersion = {};
+    let lbVersion = "";
+    let mcVersion = "";
+    let branch = "";
+
+    let additionalModsTitle = "";
+
+    $: {
+        additionalModsTitle = `Additional mods for ${branch} ${mcVersion}`;
+    }
 
     let mods = [];
     let customMods = [];
@@ -116,14 +124,9 @@
         let b = getBuild();
         console.debug("Updating build data", b);
 
-        lbVersion = {
-            date: b.date,
-            title: b.lbVersion
-        };
-        mcVersion = {
-            date: "", // todo: No date for MC version
-            title: b.mcVersion
-        };
+        branch = b.branch;
+        lbVersion = b.lbVersion;
+        mcVersion = b.mcVersion;
 
         // Update changelog
         invoke("fetch_changelog", { buildId: b.buildId })
@@ -159,11 +162,10 @@
 
         invoke("get_custom_mods", { branch, mcVersion })
             .then(result => {
-                console.log("Fetched custom mods", result);
                 customMods = result;
 
                 if (branchOptions) {
-                    mods.forEach(mod => {
+                    customMods.forEach(mod => {
                         mod.enabled = branchOptions.customModStates[mod.name] ?? mod.enabled;
                     });
                 }
@@ -207,6 +209,8 @@
 
         let build = getBuild();
         console.debug("Running build", build);
+
+        console.log([...mods, ...customMods])
         await invoke("run_client", { buildId: build.buildId, accountData: options.currentAccount, options: options, mods: [...mods, ...customMods] });
     }
 
@@ -234,7 +238,12 @@
             return map;
         }, {});
 
-        console.debug("Updated mod states", branchOptions.modStates);
+        branchOptions.customModStates = customMods.reduce(function(map, mod) {
+            map[mod.name] = mod.enabled;
+            return map;
+        }, {});
+
+        console.log("Updated mod states", branchOptions);
         options.branchOptions[options.preferredBranch] = branchOptions;
         options.store();
     }
@@ -259,6 +268,30 @@
         alert("Failed to get data folder: " + e);
         console.error(e)
     });
+
+    async function handleCustomModDelete(e) {
+        const { branch, mcVersion, subsystem } = getBuild();
+
+        await invoke("delete_custom_mod", { branch, mcVersion, modName: `${e.detail.name}.jar` });
+
+        requestMods(branch, mcVersion, subsystem);
+    }
+
+    async function handleInstallMod(e) {
+        const { branch, mcVersion, subsystem } = getBuild();
+
+        const selected = await dialogOpen({
+            directory: false,
+            multiple: false,
+            filters: [{ name: "", extensions: ["jar"] }],
+            title: "Select a custom mod to install"
+        });
+
+        if (selected) {
+            await invoke("install_custom_mod", { branch, mcVersion, path: selected });
+            requestMods(branch, mcVersion, subsystem);
+        }
+    }
 </script>
 
 {#if clientLogShown}
@@ -288,13 +321,13 @@
                 <ToggleSetting title={m.name} bind:value={m.enabled} disabled={m.required} on:change={updateModStates} />
             {/each}
         </SettingWrapper>
-        <SettingWrapper title="Additional mods for nextgen-1.20.4">
+        <SettingWrapper title={additionalModsTitle}>
             <div slot="title-element">
-                <IconButtonSetting text="Install" icon="icon-plus" />
+                <IconButtonSetting text="Install" icon="icon-plus" on:click={handleInstallMod} />
             </div>
 
             {#each customMods as m}
-                <CustomModSetting title={m.name} value={m.enabled} on:change={updateModStates} />
+                <CustomModSetting title={m.name} bind:value={m.enabled} on:change={updateModStates} on:delete={handleCustomModDelete} />
             {/each}
         </SettingWrapper>
     </SettingsContainer>
