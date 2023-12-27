@@ -73,6 +73,7 @@
         z-index: 1000;
         display: flex;
         flex-direction: column;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     }
 
     .settings {
