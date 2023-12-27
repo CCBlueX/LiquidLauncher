@@ -242,7 +242,7 @@
 {#if settingsShown}
     <SettingsContainer title="Settings" on:hideSettings={hideSettings}>
         <FileSelectorSetting title="JVM Location" placeholder="Internal" bind:value={options.customJavaPath} filters={[{ name: "javaw", extensions: [] }]} windowTitle="Select custom Java wrapper" />
-        <ToggleSetting title="Keep launcher running" bind:value={options.keepLauncherOpen} />
+        <ToggleSetting title="Keep launcher running" disabled={false} bind:value={options.keepLauncherOpen} />
         <RangeSetting title="Memory" min={20} max={100} bind:value={options.memoryPercentage} valueSuffix="%" step={1} />
         <RangeSetting title="Concurrent Downloads" min={1} max={50} bind:value={options.concurrentDownloads} valueSuffix="connections" step={1} />
         <ButtonSetting text="Logout" on:click={() => dispatch("logout")} color="#4677FF" />
@@ -256,11 +256,11 @@
     <SettingsContainer title="Select version" on:hideSettings={hideVersionSelection}>
         <SelectSetting title="Branch" items={branches.map(e => ({ value: e, text: e }))} bind:value={options.preferredBranch} on:change={requestBuilds} />
         <SelectSetting title="Build" items={[{ value: -1, text: "Latest" }, ...builds.filter(e => e.release || options.showNightlyBuilds).map(e => ({ value: e.buildId, text: e.lbVersion + " git-" + e.commitId.substring(0, 7) + " - " + e.date }))]} bind:value={options.preferredBuild} on:change={updateData} />
-        <ToggleSetting title="Show nightly builds" bind:value={options.showNightlyBuilds} on:change={updateData} />
+        <ToggleSetting title="Show nightly builds" bind:value={options.showNightlyBuilds} disabled={false} on:change={updateData} />
         <SettingWrapper title="Recommended mods">
             {#each mods as m}
                 {#if !m.required}
-                    <ToggleSetting title={m.name} bind:value={m.enabled} on:change={updateModStates} />
+                    <ToggleSetting title={m.name} bind:value={m.enabled} disabled={false} on:change={updateModStates} />
                 {/if}
 
             {/each}

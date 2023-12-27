@@ -54,7 +54,7 @@
 
     <div class="settings">
         <ButtonSetting text="Upload log" color="#4677FF" on:click={handleUploadSetting}></ButtonSetting>
-        <ToggleSetting title="Auto scroll" bind:value={autoScroll} />
+        <ToggleSetting title="Auto scroll" disabled={false} bind:value={autoScroll} />
     </div>
 </div>
 
