@@ -48,10 +48,18 @@ pub(crate) struct LauncherOptions {
     pub preferred_build: Option<i32>,
     #[serde(rename = "currentAccount")]
     pub current_account: Option<MinecraftAccount>,
-    #[serde(rename = "modStates", default)]
-    pub mod_states: HashMap<String, bool>,
+    #[serde(rename = "branchOptions", default)]
+    pub branch_options: HashMap<String, BranchOptions>,
     #[serde(rename = "concurrentDownloads", default = "default_concurrent_downloads")]
     pub concurrent_downloads: i32
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub(crate) struct BranchOptions {
+    #[serde(rename = "modStates", default)]
+    pub mod_states: HashMap<String, bool>,
+    #[serde(rename = "customModStates", default)]
+    pub custom_mod_states: HashMap<String, bool>,
 }
 
 impl LauncherOptions {
@@ -82,7 +90,7 @@ impl Default for LauncherOptions {
             preferred_branch: None,
             preferred_build: None,
             current_account: None,
-            mod_states: HashMap::new(),
+            branch_options: HashMap::new(),
             concurrent_downloads: 10
         }
     }

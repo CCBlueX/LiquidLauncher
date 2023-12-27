@@ -137,18 +137,21 @@
             })
             .catch(e => console.error(e));
 
-        requestMods(b.mcVersion, b.subsystem);
+        requestMods(b.branch, b.mcVersion, b.subsystem);
     }
 
     /// Request mods from API server
-    function requestMods(mcVersion, subsystem) {
+    function requestMods(branch, mcVersion, subsystem) {
         invoke("request_mods", { mcVersion, subsystem })
             .then(result => {
                 mods = result;
 
-                mods.forEach(mod => {
-                    mod.enabled = options.modStates[mod.name] ?? mod.enabled;
-                });
+                const branchOptions = options.branchOptions[branch];
+                if (branchOptions) {
+                    mods.forEach(mod => {
+                        mod.enabled = branchOptions.modStates[mod.name] ?? mod.enabled;
+                    });
+                }
             })
             .catch(e => console.error(e));
     }
@@ -206,12 +209,18 @@
     });
 
     function updateModStates() {
-        options.modStates = mods.reduce(function(map, mod) {
+        const branchOptions = options.branchOptions[options.preferredBranch] ?? {
+            modStates: {},
+            customModStates: {}
+        };
+
+        branchOptions.modStates = mods.reduce(function(map, mod) {
             map[mod.name] = mod.enabled;
             return map;
         }, {});
 
-        console.debug("Updated mod states", options.modStates);
+        console.debug("Updated mod states", branchOptions.modStates);
+        options.branchOptions[options.preferredBranch] = branchOptions;
         options.store();
     }
 
