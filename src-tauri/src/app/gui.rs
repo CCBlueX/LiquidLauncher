@@ -17,8 +17,10 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
  
-use std::{sync::{Arc, Mutex}, thread};
+use std::{sync::{Arc, Mutex}, thread, path::{Path, PathBuf}};
 
+use anyhow::bail;
+use tokio::fs;
 use tracing::{error, info, debug};
 use tauri::{Manager, Window};
 use uuid::Uuid;
@@ -121,6 +123,71 @@ async fn login_microsoft(window: tauri::Window) -> Result<MinecraftAccount, Stri
     }).await.map_err(|e| format!("unable to ms auth: {:?}", e))?;
 
   Ok(account)
+}
+
+#[tauri::command]
+async fn get_custom_mods(branch: String, mc_version: String) -> Result<Vec<String>, String> {
+    let data = LAUNCHER_DIRECTORY.data_dir();
+    let mod_cache_path = data.join("custom_mods").join(format!("{}-{}", branch, mc_version));
+
+    if !mod_cache_path.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut mods = vec![];
+    let mut mods_read = fs::read_dir(&mod_cache_path).await
+        .map_err(|e| format!("unable to read custom mods: {:?}", e))?;
+
+    while let Some(entry) = mods_read.next_entry().await
+        .map_err(|e| format!("unable to read custom mods: {:?}", e))? {
+        if entry.file_type().await
+            .map_err(|e| format!("unable to read custom mods: {:?}", e))?
+            .is_file() {
+            mods.push(entry.file_name().into_string().unwrap());
+        }
+    }
+
+    Ok(mods)
+}
+
+#[tauri::command]
+async fn install_custom_mod(branch: String, mc_version: String, path: PathBuf) -> Result<(), String> {
+    let data = LAUNCHER_DIRECTORY.data_dir();
+    let mod_cache_path = data.join("custom_mods").join(format!("{}-{}", branch, mc_version));
+
+    if !mod_cache_path.exists() {
+        fs::create_dir_all(&mod_cache_path).await.unwrap();
+    }
+
+    if let Some(path) = path.file_name() {
+        let file_name = path.to_str().unwrap();
+        let dest_path = mod_cache_path.join(file_name);
+
+        fs::copy(path, dest_path).await
+            .map_err(|e| format!("unable to copy custom mod: {:?}", e))?;
+        return Ok(());
+    }
+    
+    return Err("unable to copy custom mod: invalid path".to_string());
+}
+
+#[tauri::command]
+async fn delete_custom_mod(branch: String, mc_version: String, mod_name: String) -> Result<(), String> {
+    let data = LAUNCHER_DIRECTORY.data_dir();
+    let mod_cache_path = data.join("custom_mods").join(format!("{}-{}", branch, mc_version));
+
+    if !mod_cache_path.exists() {
+        return Ok(());
+    }
+
+    let mod_path = mod_cache_path.join(mod_name);
+
+    if mod_path.exists() {
+        fs::remove_file(mod_path).await
+            .map_err(|e| format!("unable to delete custom mod: {:?}", e))?;
+    }
+
+    Ok(())
 }
 
 fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
@@ -364,7 +431,10 @@ pub fn gui_main() {
             mem_percentage,
             default_data_folder_path,
             terminate,
-            get_launcher_version
+            get_launcher_version,
+            get_custom_mods,
+            install_custom_mod,
+            delete_custom_mod
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
