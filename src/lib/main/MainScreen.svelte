@@ -242,11 +242,11 @@
 {#if settingsShown}
     <SettingsContainer title="Settings" on:hideSettings={hideSettings}>
         <FileSelectorSetting title="JVM Location" placeholder="Internal" bind:value={options.customJavaPath} filters={[{ name: "javaw", extensions: [] }]} windowTitle="Select custom Java wrapper" />
-        <ToggleSetting title="Keep launcher running" disabled={false} bind:value={options.keepLauncherOpen} />
+        <DirectorySelectorSetting title="Data Location" placeholder={dataFolderPath} bind:value={options.customDataPath} windowTitle="Select custom data directory" />
         <RangeSetting title="Memory" min={20} max={100} bind:value={options.memoryPercentage} valueSuffix="%" step={1} />
         <RangeSetting title="Concurrent Downloads" min={1} max={50} bind:value={options.concurrentDownloads} valueSuffix="connections" step={1} />
+        <ToggleSetting title="Keep launcher running" disabled={false} bind:value={options.keepLauncherOpen} />
         <ButtonSetting text="Logout" on:click={() => dispatch("logout")} color="#4677FF" />
-        <DirectorySelectorSetting title="Data Location" placeholder={dataFolderPath} bind:value={options.customDataPath} windowTitle="Select custom data directory" />
         <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
         <LauncherVersion version={launcherVersion} />
     </SettingsContainer>
