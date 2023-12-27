@@ -223,7 +223,7 @@ pub struct LoaderMod {
 ///
 /// JSON struct of ModSource (the method to be used for downloading the mod)
 ///
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(tag = "type")]
 pub enum ModSource {
     #[serde(rename = "skip")]
@@ -232,6 +232,9 @@ pub enum ModSource {
     #[serde(rename = "repository")]
     #[serde(rename_all = "camelCase")]
     Repository { repository: String, artifact: String },
+    #[serde(rename = "local")]
+    #[serde(rename_all = "camelCase")]
+    Local { file_name: String }
 }
 
 impl ModSource {
@@ -239,7 +242,8 @@ impl ModSource {
         Ok(
             match self {
                 ModSource::SkipAd { artifact_name, .. } => format!("{}.jar", artifact_name),
-                ModSource::Repository { repository: _repository, artifact } => get_maven_artifact_path(artifact)?
+                ModSource::Repository { repository: _repository, artifact } => get_maven_artifact_path(artifact)?,
+                ModSource::Local { file_name } => file_name.clone(),
             }
         )
     }

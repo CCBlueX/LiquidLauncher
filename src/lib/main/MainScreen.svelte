@@ -91,6 +91,7 @@
     let mcVersion = {};
 
     let mods = [];
+    let customMods = [];
 
     /// Request builds from API server
     function requestBuilds() {
@@ -142,14 +143,28 @@
 
     /// Request mods from API server
     function requestMods(branch, mcVersion, subsystem) {
-        invoke("request_mods", { mcVersion, subsystem })
+        const branchOptions = options.branchOptions[branch];
+
+        invoke("request_mods", { branch, mcVersion, subsystem })
             .then(result => {
                 mods = result;
 
-                const branchOptions = options.branchOptions[branch];
                 if (branchOptions) {
                     mods.forEach(mod => {
                         mod.enabled = branchOptions.modStates[mod.name] ?? mod.enabled;
+                    });
+                }
+            })
+            .catch(e => console.error(e));
+
+        invoke("get_custom_mods", { branch, mcVersion })
+            .then(result => {
+                console.log("Fetched custom mods", result);
+                customMods = result;
+
+                if (branchOptions) {
+                    mods.forEach(mod => {
+                        mod.enabled = branchOptions.customModStates[mod.name] ?? mod.enabled;
                     });
                 }
             })
@@ -192,7 +207,7 @@
 
         let build = getBuild();
         console.debug("Running build", build);
-        await invoke("run_client", { buildId: build.buildId, accountData: options.currentAccount, options: options, mods: mods });
+        await invoke("run_client", { buildId: build.buildId, accountData: options.currentAccount, options: options, mods: [...mods, ...customMods] });
     }
 
     listen("client-exited", () => {
@@ -270,20 +285,17 @@
         <ToggleSetting title="Show nightly builds" bind:value={options.showNightlyBuilds} disabled={false} on:change={updateData} />
         <SettingWrapper title="Recommended mods">
             {#each mods as m}
-                {#if !m.required}
-                    <ToggleSetting title={m.name} bind:value={m.enabled} disabled={false} on:change={updateModStates} />
-                {/if}
-
+                <ToggleSetting title={m.name} bind:value={m.enabled} disabled={m.required} on:change={updateModStates} />
             {/each}
         </SettingWrapper>
         <SettingWrapper title="Additional mods for nextgen-1.20.4">
             <div slot="title-element">
                 <IconButtonSetting text="Install" icon="icon-plus" />
             </div>
-            <CustomModSetting title="Iris" value={true} />
-            <CustomModSetting title="Classy Creepers" value={true} />
-            <CustomModSetting title="Axolotl" value={false} />
-            <CustomModSetting title="Advanced Snek" value={true} />
+
+            {#each customMods as m}
+                <CustomModSetting title={m.name} value={m.enabled} on:change={updateModStates} />
+            {/each}
         </SettingWrapper>
     </SettingsContainer>
 {/if}

@@ -29,7 +29,7 @@ use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingPa
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 use crate::utils::percentage_of_total_memory;
 
-use super::{api::{ApiEndpoints, Build, LoaderMod}, app_data::LauncherOptions};
+use super::{api::{ApiEndpoints, Build, LoaderMod, ModSource}, app_data::LauncherOptions};
 
 struct RunnerInstance {
     terminator: tokio::sync::oneshot::Sender<()>,
@@ -98,7 +98,7 @@ async fn request_builds(branch: &str) -> Result<Vec<Build>, String> {
 }
 
 #[tauri::command]
-async fn request_mods(mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod>, String> {
+async fn request_mods(branch: &str, mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod>, String> {
     let mods = ApiEndpoints::mods(&mc_version, &subsystem)
         .await
         .map_err(|e| format!("unable to request mods: {:?}", e))?;
@@ -126,7 +126,7 @@ async fn login_microsoft(window: tauri::Window) -> Result<MinecraftAccount, Stri
 }
 
 #[tauri::command]
-async fn get_custom_mods(branch: String, mc_version: String) -> Result<Vec<String>, String> {
+async fn get_custom_mods(branch: &str, mc_version: &str) -> Result<Vec<LoaderMod>, String> {
     let data = LAUNCHER_DIRECTORY.data_dir();
     let mod_cache_path = data.join("custom_mods").join(format!("{}-{}", branch, mc_version));
 
@@ -138,12 +138,16 @@ async fn get_custom_mods(branch: String, mc_version: String) -> Result<Vec<Strin
     let mut mods_read = fs::read_dir(&mod_cache_path).await
         .map_err(|e| format!("unable to read custom mods: {:?}", e))?;
 
-    while let Some(entry) = mods_read.next_entry().await
-        .map_err(|e| format!("unable to read custom mods: {:?}", e))? {
-        if entry.file_type().await
-            .map_err(|e| format!("unable to read custom mods: {:?}", e))?
-            .is_file() {
-            mods.push(entry.file_name().into_string().unwrap());
+    while let Some(entry) = mods_read.next_entry().await.map_err(|e| format!("unable to read custom mods: {:?}", e))? {
+        let file_type = entry.file_type().await
+            .map_err(|e| format!("unable to read custom mods: {:?}", e))?;
+        let file_name = entry.file_name().to_str().unwrap().to_string();
+
+        if file_type.is_file() && file_name.ends_with(".jar") {
+            // todo: pull name from JAR manifest
+            let file_name_without_extension = file_name.replace(".jar", "");
+            
+            mods.push(LoaderMod { required: true, enabled: true, name: file_name_without_extension, source: ModSource::Local { file_name } });
         }
     }
 
@@ -151,7 +155,7 @@ async fn get_custom_mods(branch: String, mc_version: String) -> Result<Vec<Strin
 }
 
 #[tauri::command]
-async fn install_custom_mod(branch: String, mc_version: String, path: PathBuf) -> Result<(), String> {
+async fn install_custom_mod(branch: &str, mc_version: &str, path: PathBuf) -> Result<(), String> {
     let data = LAUNCHER_DIRECTORY.data_dir();
     let mod_cache_path = data.join("custom_mods").join(format!("{}-{}", branch, mc_version));
 
@@ -172,7 +176,7 @@ async fn install_custom_mod(branch: String, mc_version: String, path: PathBuf) -
 }
 
 #[tauri::command]
-async fn delete_custom_mod(branch: String, mc_version: String, mod_name: String) -> Result<(), String> {
+async fn delete_custom_mod(branch: &str, mc_version: &str, mod_name: &str) -> Result<(), String> {
     let data = LAUNCHER_DIRECTORY.data_dir();
     let mod_cache_path = data.join("custom_mods").join(format!("{}-{}", branch, mc_version));
 

@@ -59,8 +59,6 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
     retrieve_and_copy_mods(&data_directory, &launch_manifest, &launch_manifest.mods, &progress, &window).await?;
     retrieve_and_copy_mods(&data_directory, &launch_manifest, &additional_mods, &progress, &window).await?;
 
-    copy_custom_mods(&data_directory, &launch_manifest, &progress).await?;
-
     info!("Loading version profile...");
     let manifest_url = match subsystem {
         LoaderSubsystem::Fabric { manifest, .. } => manifest
@@ -110,10 +108,15 @@ pub(crate) async fn clear_mods(data: &Path, manifest: &LaunchManifest) -> Result
 
 pub async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods: &Vec<LoaderMod>, progress: &impl ProgressReceiver, window: &Arc<Mutex<tauri::Window>>) -> Result<()> {
     let mod_cache_path = data.join("mod_cache");
-    let mods_path = data.join("gameDir").join(&manifest.build.branch).join("mods");
+    let mod_custom_path = data.join("custom_mods")
+        .join(format!("{}-{}", manifest.build.branch, manifest.build.mc_version));
+    let mods_path = data.join("gameDir")
+        .join(&manifest.build.branch)
+        .join("mods");
 
     fs::create_dir_all(&mod_cache_path).await?;
     fs::create_dir_all(&mods_path).await?;
+    fs::create_dir_all(&mod_custom_path).await?;
 
     // Download and copy mods
     let max = get_max(mods.len());
@@ -121,6 +124,13 @@ pub async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods
     for (mod_idx, current_mod) in mods.iter().enumerate() {
         // Skip mods that are not needed
         if !current_mod.required && !current_mod.enabled {
+            continue;
+        }
+
+        if let ModSource::Local { file_name } = &current_mod.source {
+            // Copy the mod.
+            fs::copy(mod_custom_path.join(file_name), mods_path.join(file_name)).await?;
+            progress.progress_update(ProgressUpdate::set_label(format!("Copied custom mod {}", current_mod.name)));
             continue;
         }
 
@@ -170,32 +180,13 @@ pub async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods
                     }).await?;
 
                     fs::write(&current_mod_path, retrieved_bytes).await?;
-                }
+                },
+                _ => warn!("unsupported mod source: {:?}", current_mod.source),
             }
         }
 
         // Copy the mod.
         fs::copy(&current_mod_path, mods_path.join(format!("{}.jar", current_mod.name))).await?;
-    }
-
-    Ok(())
-
-}
-
-pub async fn copy_custom_mods(data: &Path, manifest: &LaunchManifest, progress: &impl ProgressReceiver) -> Result<()> {
-    let mod_cache_path = data.join("custom_mods").join(format!("{}-{}", manifest.build.branch, manifest.build.mc_version));
-    let mods_path = data.join("gameDir").join(&manifest.build.branch).join("mods");
-
-    fs::create_dir_all(&mod_cache_path).await?;
-    fs::create_dir_all(&mods_path).await?;
-
-    // Copy all mods from custom_mods to mods
-    let mut mods_read = fs::read_dir(&mod_cache_path).await?;
-    while let Some(entry) = mods_read.next_entry().await? {
-        if entry.file_type().await?.is_file() {
-            progress.progress_update(ProgressUpdate::set_label(format!("Copied custom mod {}", entry.file_name().to_str().unwrap_or_default())));
-            fs::copy(entry.path(), mods_path.join(entry.file_name())).await?;
-        }
     }
 
     Ok(())
