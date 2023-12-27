@@ -38,7 +38,7 @@ miners = { git = "https://github.com/CCBlueX/mine-rs.git", features = ["auth"] }
 # FS libs
 async_zip = { version = "0.0.11", features = ["full"] }
 tokio-tar = "0.3.0"
-async-compression = { version= "0.3.15", features = ["gzip"] }
+async-compression = { version= "0.4.5", features = ["gzip"] }
 sanitize-filename = "0.4.0"
 path-absolutize = "3.0.14"
 
