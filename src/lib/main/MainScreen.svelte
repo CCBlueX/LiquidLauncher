@@ -23,6 +23,8 @@
     import DirectorySelectorSetting from "../settings/DirectorySelectorSetting.svelte";
     import FileSelectorSetting from "../settings/FileSelectorSetting.svelte";
     import LauncherVersion from "../settings/LauncherVersion.svelte";
+    import IconButtonSetting from "../settings/IconButtonSetting.svelte";
+    import CustomModSetting from "../settings/CustomModSetting.svelte";
 
     export let options;
 
@@ -264,6 +266,15 @@
                 {/if}
 
             {/each}
+        </SettingWrapper>
+        <SettingWrapper title="Additional mods for nextgen-1.20.4">
+            <div slot="title-element">
+                <IconButtonSetting text="Install" icon="icon-plus" />
+            </div>
+            <CustomModSetting title="Iris" value={true} />
+            <CustomModSetting title="Classy Creepers" value={true} />
+            <CustomModSetting title="Axolotl" value={false} />
+            <CustomModSetting title="Advanced Snek" value={true} />
         </SettingWrapper>
     </SettingsContainer>
 {/if}
