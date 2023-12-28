@@ -98,8 +98,13 @@
             // The find() method returns a value of the first element in the array that satisfies the provided testing function. Otherwise undefined is returned.
             return builds.find(e => e.release || options.showNightlyBuilds);
         }
+        
+        let build = builds.find((build) => build.buildId === options.preferredBuild);
+        if (!build) {
+            return builds[0];
+        }
 
-        return builds.find((build) => build.buildId === options.preferredBuild);
+        return build;
     }
 
     function hideSettings() {
