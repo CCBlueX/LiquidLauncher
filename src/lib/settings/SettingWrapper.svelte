@@ -26,6 +26,9 @@
     .wrapped-settings {
         background-color: rgba(0, 0, 0, 0.26);
         border-radius: 6px;
+    }
+
+    .wrapped-settings:not(:empty) {
         padding: 10px;
         border-bottom: solid 1px #4677ff;
         display: grid;
