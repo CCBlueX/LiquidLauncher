@@ -233,7 +233,6 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
                         if downloaded {
                             // the progress bar is only being updated when a asset has been downloaded to improve speeds
                             data_clone.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadAssets, curr, asset_max));
-                            data_clone.progress_update(ProgressUpdate::set_label(format!("Downloaded asset {}", hash)));
                         }
                     },
                     Err(err) => error!("Unable to download asset {}: {:?}", hash, err)
