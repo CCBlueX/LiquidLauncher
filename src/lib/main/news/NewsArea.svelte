@@ -1,15 +1,15 @@
 <script>
     import SocialBar from "../../common/social/SocialBar.svelte";
     import News from "./News.svelte";
-    import {invoke} from "@tauri-apps/api/tauri";
+    import { invoke } from "@tauri-apps/api/tauri";
 
-    let news = []
+    let news = [];
 
     invoke("fetch_news")
         .then((onlineNews) => {
             news = onlineNews;
         })
-        .catch(e => console.error(e));
+        .catch((e) => console.error(e));
 </script>
 
 <div class="news-area">
@@ -20,7 +20,7 @@
     </div>
 
     <button class="button-scroll">
-        <img class="icon" src="img/icon/icon-news-scroll.svg" alt="scroll">
+        <img class="icon" src="img/icon/icon-news-scroll.svg" alt="scroll" />
     </button>
 
     <div class="social-bar-wrapper">

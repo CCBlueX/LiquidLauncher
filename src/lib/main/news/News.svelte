@@ -8,7 +8,7 @@
     export let url;
     export let description;
 
-    function handleClick() {
+    function handleShowNews(e) {
         invoke("open_url", { url: url });
     }
 </script>
@@ -23,7 +23,7 @@
             <div class="date">{new Date(date).toLocaleDateString()}</div>
         </div>
         <div class="description">{description}</div>
-        <button class="button-show-news" type="button" on:click={handleClick}>Read more</button>
+        <button class="button-show-news" type="button" on:click={handleShowNews}>Read more</button>
     </div>
 </div>
 

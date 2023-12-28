@@ -7,49 +7,37 @@
 
     export let options;
 
-    let offlineUsername = "";
+    let offlineUsername;
+    let microsoftCode = null;
 
-    function handleOfflineLoginClick(e) {
+    async function handleOfflineLoginClick(e) {
         if (offlineUsername.length > 16 || offlineUsername.length < 1) {
             alert("Username must be between 1 and 16 characters long.");
             return;
         }
 
-        let usernameRegex = /^[a-zA-Z0-9_]+$/;
+        const usernameRegex = /^[a-zA-Z0-9_]+$/;
         if (!usernameRegex.test(offlineUsername)) {
             alert("Username can only contain letters, numbers, and underscores.");
             return;
         }
 
-        invoke("login_offline", { username: offlineUsername })
-            .then((accountData) => {
-                console.debug("login_offline", accountData)
-
-                options.currentAccount = accountData;
-                options.store();
-            })
-            .catch(e => console.error(e));
+        const accountData = await invoke("login_offline", { username: offlineUsername });
+        options.currentAccount = accountData;
+        options.store();
     }
 
-    function handleMicrosoftLoginClick(event) {
-        invoke("login_microsoft")
-            .then((account) => {
-                console.debug("microsoft authentication successful", account);
-
-                options.currentAccount = account;
-                options.store();
-            })
-            .catch(e => {
-                console.error("microsoft authentication error", e);
-                alert(e);
-            });
+    async function handleMicrosoftLoginClick(e) {
+        try {
+            const accountData = await invoke("login_microsoft");
+            options.currentAccount = accountData;
+            options.store();
+        } catch (err) {
+            alert(err);
+        }
     }
-
-    let microsoftCode;
 
     listen("microsoft_code", (e) => {
-        console.debug("microsoft_code", e.payload);
-
         microsoftCode = e.payload;
     });
 
@@ -63,7 +51,7 @@
 </script>
 
 <div class="modal">
-    {#if microsoftCode == null}
+    {#if !microsoftCode}
         <div class="title">Log in</div>
 
         <ModalInput placeholder="Username" icon="person" characterLimit={16} bind:value={offlineUsername} />

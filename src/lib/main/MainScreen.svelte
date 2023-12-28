@@ -31,26 +31,44 @@
 
     const dispatch = createEventDispatcher();
 
-    let versionInfo = {
-        bannerUrl: "https://liquidbounce.net/LiquidLauncher/img/b73.jpg",
-        title: "Loading...",
-        date: "Loading...",
-        description: "Loading...",
-    };
+    let defaultDataFolder = "";
 
     let settingsShown = false;
     let versionSelectShown = false;
     let clientLogShown = false;
 
-    let log = [];
+    let clientRunning = false;
 
-    let progressBarMax = 0;
-    let progressBarProgress = 0;
-    let progressBarLabel = "";
+    let versionInfo = {
+        bannerUrl: "img/banner.png", // TODO: placeholder image
+        title: "Loading...",
+        date: "Loading...",
+        description: "Loading...",
+    };
+
+    let progressBar = {
+        max: 0,
+        value: 0,
+        text: ""
+    };
+    
+    let recommendedMods = [];
+    let customMods = [];
+    let branches = [];
+    let builds = [];
+    let currentBuild = {};
 
     let launcherVersion = "";
 
-    invoke("get_launcher_version").then(res => (launcherVersion = res));
+    let additionalModsTitle = "";
+    $: {
+        additionalModsTitle = `Additional mods for ${currentBuild.branch} ${currentBuild.mcVersion}`;
+    }
+
+    let log = [];
+
+    invoke("get_launcher_version")
+        .then(res => (launcherVersion = res));
 
     listen("process-output", event => {
         log = [...log, event.payload];
@@ -60,24 +78,20 @@
         let progressUpdate = event.payload;
 
         switch (progressUpdate.type) {
-                case "max": {
-                    progressBarMax = progressUpdate.value;
-                    break;
-                }
-                case "progress": {
-                    progressBarProgress = progressUpdate.value;
-                    break;
-                }
-                case "label": {
-                    progressBarLabel = progressUpdate.value;
-                    break;
-                }
+            case "max": {
+                progressBar.max = progressUpdate.value;
+                break;
             }
+            case "progress": {
+                progressBar.value = progressUpdate.value;
+                break;
+            }
+            case "label": {
+                progressBar.text = progressUpdate.value;
+                break;
+            }
+        }
     });
-
-    let branches = [];
-
-    let builds = [];
 
     function getBuild() {
         if (options.preferredBuild === -1) { // -1 = latest
@@ -88,89 +102,97 @@
         return builds.find((build) => build.buildId === options.preferredBuild);
     }
 
-    let lbVersion = "";
-    let mcVersion = "";
-    let branch = "";
-
-    let additionalModsTitle = "";
-
-    $: {
-        additionalModsTitle = `Additional mods for ${branch} ${mcVersion}`;
+    function hideSettings() {
+        settingsShown = false;
+        options.store();
     }
 
-    let mods = [];
-    let customMods = [];
+    function hideVersionSelection() {
+        versionSelectShown = false;
+        options.store();
+    }
+
+    function updateModStates() {
+        const branchOptions = {
+            modStates: {},
+            customModStates: {}
+        };
+
+        for (const mod of recommendedMods) {
+            branchOptions.modStates[mod.name] = mod.enabled;
+        }
+
+        for (const mod of customMods) {
+            branchOptions.customModStates[mod.name] = mod.enabled;
+        }
+
+        options.branchOptions[options.preferredBranch] = branchOptions;
+        options.store();
+    }
 
     /// Request builds from API server
-    function requestBuilds() {
-        invoke("request_builds", { branch: options.preferredBranch })
-            .then(result => {
-                builds = result;
+    async function requestBuilds() {
+        const requestedBuilds = await invoke("request_builds", { branch: options.preferredBranch });
+        requestedBuilds.forEach(build => {
+            const date = new Date(build.date);
+            build.date = date.toLocaleString();
+            build.dateDay = date.toLocaleDateString();
+        });
 
-                // Format date for user readability
-                builds.forEach(build => {
-                    let date = new Date(build.date);
-                    build.date = date.toLocaleString();
-                    build.dateDay = date.toLocaleDateString();
-                });
+        builds = requestedBuilds;
 
-                updateData();
-            })
-            .catch(e => console.error(e));
+        await updateData();
     }
 
     /// Update build data
-    function updateData() {
-        let b = getBuild();
-        console.debug("Updating build data", b);
-
-        branch = b.branch;
-        lbVersion = b.lbVersion;
-        mcVersion = b.mcVersion;
+    async function updateData() {
+        currentBuild = getBuild();
 
         // Update changelog
-        invoke("fetch_changelog", { buildId: b.buildId })
-            .then(result => {
-                console.log("Fetched changelog data", result);
-                versionInfo = {
-                    bannerUrl: "https://liquidbounce.net/LiquidLauncher/img/b73.jpg",
-                    title: "LiquidBounce " + b.lbVersion + " for Minecraft " + b.mcVersion,
-                    date: b.dateDay,
-                    description: result.changelog,
-                };
-            })
-            .catch(e => console.error(e));
+        const changelog = await invoke("fetch_changelog", { buildId: currentBuild.buildId });
+        versionInfo = {
+            bannerUrl: "img/banner.png",
+            title: `LiquidBounce ${currentBuild.lbVersion} for Minecraft ${currentBuild.mcVersion}`,
+            date: currentBuild.dateDay,
+            description: changelog.changelog
+        };
 
-        requestMods(b.branch, b.mcVersion, b.subsystem);
+        requestMods();
     }
 
     /// Request mods from API server
-    function requestMods(branch, mcVersion, subsystem) {
+    async function requestMods() {
+        const { branch, mcVersion, subsystem } = currentBuild; 
         const branchOptions = options.branchOptions[branch];
 
-        invoke("request_mods", { branch, mcVersion, subsystem })
-            .then(result => {
-                mods = result;
+        recommendedMods = await invoke("request_mods", { branch, mcVersion, subsystem });
+        customMods = await invoke("get_custom_mods", { branch, mcVersion });
 
-                if (branchOptions) {
-                    mods.forEach(mod => {
-                        mod.enabled = branchOptions.modStates[mod.name] ?? mod.enabled;
-                    });
-                }
-            })
-            .catch(e => console.error(e));
+        if (branchOptions) {
+            recommendedMods = recommendedMods.map(mod => {
+                return { ...mod, enabled: branchOptions.modStates[mod.name] ?? mod.enabled };
+            });
 
-        invoke("get_custom_mods", { branch, mcVersion })
-            .then(result => {
-                customMods = result;
+            customMods = customMods.map(mod => {
+                return { ...mod, enabled: branchOptions.customModStates[mod.name] ?? mod.enabled };
+            });
+        }
+    }
 
-                if (branchOptions) {
-                    customMods.forEach(mod => {
-                        mod.enabled = branchOptions.customModStates[mod.name] ?? mod.enabled;
-                    });
-                }
-            })
-            .catch(e => console.error(e));
+    async function runClient() {
+        console.log("Client started");
+        log = [];
+        clientRunning = true;
+
+        let build = getBuild();
+        console.debug("Running build", build);
+
+        console.log([...recommendedMods, ...customMods])
+        await invoke("run_client", { buildId: build.buildId, accountData: options.currentAccount, options: options, mods: [...recommendedMods, ...customMods] });
+    }
+    
+    async function terminateClient() {
+        await invoke("terminate");
     }
 
     // Request branches from API server
@@ -190,67 +212,16 @@
         })
         .catch(e => console.error(e));
 
-    function hideSettings() {
-        settingsShown = false;
-        options.store();
-    }
-
-    function hideVersionSelection() {
-        versionSelectShown = false;
-        options.store();
-    }
-
-    let clientRunning = false;
-
-    async function runClient() {
-        console.log("Client started");
-        log = [];
-        clientRunning = true;
-
-        let build = getBuild();
-        console.debug("Running build", build);
-
-        console.log([...mods, ...customMods])
-        await invoke("run_client", { buildId: build.buildId, accountData: options.currentAccount, options: options, mods: [...mods, ...customMods] });
-    }
-
     listen("client-exited", () => {
         clientRunning = false;
     });
 
     listen("client-error", (e) => {
         const message = e.payload;
-
-        console.error(message);
         clientLogShown = true;
 
         alert(message);
     });
-
-    function updateModStates() {
-        const branchOptions = options.branchOptions[options.preferredBranch] ?? {
-            modStates: {},
-            customModStates: {}
-        };
-
-        branchOptions.modStates = mods.reduce(function(map, mod) {
-            map[mod.name] = mod.enabled;
-            return map;
-        }, {});
-
-        branchOptions.customModStates = customMods.reduce(function(map, mod) {
-            map[mod.name] = mod.enabled;
-            return map;
-        }, {});
-
-        console.log("Updated mod states", branchOptions);
-        options.branchOptions[options.preferredBranch] = branchOptions;
-        options.store();
-    }
-
-    async function terminateClient() {
-        await invoke("terminate");
-    }
 
     function clearData() {
         invoke("clear_data", { options }).then(() => {
@@ -261,24 +232,23 @@
         });
     }
 
-    let dataFolderPath;
     invoke("default_data_folder_path").then(result => {
-        dataFolderPath = result;
+        defaultDataFolder = result;
     }).catch(e => {
         alert("Failed to get data folder: " + e);
-        console.error(e)
+        console.error(e);
     });
 
     async function handleCustomModDelete(e) {
-        const { branch, mcVersion, subsystem } = getBuild();
+        const { branch, mcVersion } = currentBuild;
 
         await invoke("delete_custom_mod", { branch, mcVersion, modName: `${e.detail.name}.jar` });
 
-        requestMods(branch, mcVersion, subsystem);
+        requestMods();
     }
 
     async function handleInstallMod(e) {
-        const { branch, mcVersion, subsystem } = getBuild();
+        const { branch, mcVersion } = currentBuild;
 
         const selected = await dialogOpen({
             directory: false,
@@ -289,7 +259,7 @@
 
         if (selected) {
             await invoke("install_custom_mod", { branch, mcVersion, path: selected });
-            requestMods(branch, mcVersion, subsystem);
+            requestMods();
         }
     }
 </script>
@@ -301,7 +271,7 @@
 {#if settingsShown}
     <SettingsContainer title="Settings" on:hideSettings={hideSettings}>
         <FileSelectorSetting title="JVM Location" placeholder="Internal" bind:value={options.customJavaPath} filters={[{ name: "javaw", extensions: [] }]} windowTitle="Select custom Java wrapper" />
-        <DirectorySelectorSetting title="Data Location" placeholder={dataFolderPath} bind:value={options.customDataPath} windowTitle="Select custom data directory" />
+        <DirectorySelectorSetting title="Data Location" placeholder={defaultDataFolder} bind:value={options.customDataPath} windowTitle="Select custom data directory" />
         <RangeSetting title="Memory" min={20} max={100} bind:value={options.memoryPercentage} valueSuffix="%" step={1} />
         <RangeSetting title="Concurrent Downloads" min={1} max={50} bind:value={options.concurrentDownloads} valueSuffix="connections" step={1} />
         <ToggleSetting title="Keep launcher running" disabled={false} bind:value={options.keepLauncherOpen} />
@@ -317,7 +287,7 @@
         <SelectSetting title="Build" items={[{ value: -1, text: "Latest" }, ...builds.filter(e => e.release || options.showNightlyBuilds).map(e => ({ value: e.buildId, text: e.lbVersion + " git-" + e.commitId.substring(0, 7) + " - " + e.date }))]} bind:value={options.preferredBuild} on:change={updateData} />
         <ToggleSetting title="Show nightly builds" bind:value={options.showNightlyBuilds} disabled={false} on:change={updateData} />
         <SettingWrapper title="Recommended mods">
-            {#each mods as m}
+            {#each recommendedMods as m}
                 <ToggleSetting title={m.name} bind:value={m.enabled} disabled={m.required} on:change={updateModStates} />
             {/each}
         </SettingWrapper>
@@ -340,7 +310,7 @@
             {#if !clientRunning}
                 <TextStatus text="Welcome back, {options.currentAccount.name}." />
             {:else}
-                <ProgressStatus value={progressBarProgress} max={progressBarMax} text={progressBarLabel} />
+                <ProgressStatus {...progressBar} />
             {/if}
         </StatusBar>
         <Account username={options.currentAccount.name} uuid={options.currentAccount.uuid} accountType={options.currentAccount.type} on:showSettings={() => settingsShown = true} />
@@ -348,7 +318,7 @@
     </TitleBar>
 
     <ContentWrapper>
-        <LaunchArea {versionInfo} {lbVersion} {mcVersion} on:showVersionSelect={() => versionSelectShown = true} on:showClientLog={() => clientLogShown = true} on:launch={runClient} on:terminate={terminateClient} running={clientRunning} />
+        <LaunchArea {versionInfo} lbVersion={currentBuild.lbVersion} mcVersion={currentBuild.mcVersion} on:showVersionSelect={() => versionSelectShown = true} on:showClientLog={() => clientLogShown = true} on:launch={runClient} on:terminate={terminateClient} running={clientRunning} />
         <NewsArea />
     </ContentWrapper>
 </VerticalFlexWrapper>

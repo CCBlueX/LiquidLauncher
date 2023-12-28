@@ -9,7 +9,7 @@
 </script>
 
 <div class="account">
-    <object data="https://avatar.liquidbounce.net/avatar/{uuid}" type="image/png" class="avatar">
+    <object data="https://avatar.liquidbounce.net/avatar/{uuid}" type="image/png" class="avatar" aria-label="avatar">
         <img src="img/steve.png" alt=avatar class="avatar"/>
     </object>
     <div class="details">

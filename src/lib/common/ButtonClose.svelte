@@ -1,13 +1,12 @@
 <script>
-    import { invoke } from "@tauri-apps/api/tauri";
     import { appWindow } from "@tauri-apps/api/window";
 
-    function closeWindow() {
+    function handleClick() {
         appWindow.close();
     }
 </script>
 
-<button class="button-close" type="button" on:click={closeWindow}>
+<button class="button-close" type="button" on:click={handleClick}>
     <img class="icon" src="img/icon/icon-button-close.svg" alt="close">
 </button>
 
