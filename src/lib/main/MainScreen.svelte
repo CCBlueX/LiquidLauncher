@@ -252,13 +252,17 @@
 
         const selected = await dialogOpen({
             directory: false,
-            multiple: false,
+            multiple: true,
             filters: [{ name: "", extensions: ["jar"] }],
             title: "Select a custom mod to install"
         });
 
+
         if (selected) {
-            await invoke("install_custom_mod", { branch, mcVersion, path: selected });
+            for (const path of selected) {
+                await invoke("install_custom_mod", { branch, mcVersion, path });
+            }
+
             requestMods();
         }
     }
