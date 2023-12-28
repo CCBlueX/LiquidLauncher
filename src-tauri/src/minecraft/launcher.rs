@@ -298,6 +298,8 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
 
     let mut running_task = java_runtime.execute(mapped, &game_dir).await?;
 
+    launcher_data_arc.progress_update(ProgressUpdate::set_label("Running..."));
+
     if !launching_parameter.keep_launcher_open {
         // Hide launcher window
         window.lock().unwrap().hide().unwrap();
