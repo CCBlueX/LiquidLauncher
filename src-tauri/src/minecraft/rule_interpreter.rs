@@ -1,8 +1,7 @@
-
 /*
  * This file is part of LiquidLauncher (https://github.com/CCBlueX/LiquidLauncher)
  *
- * Copyright (c) 2015 - 2023 CCBlueX
+ * Copyright (c) 2015 - 2024 CCBlueX
  *
  * LiquidLauncher is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
-
+ 
 use std::collections::HashSet;
 
 use anyhow::Result;
