@@ -59,7 +59,12 @@
             "enableTauriAPI": true
           },
           {
-              "domain": "dl.ccbluex.net",
+            "domain": "dl.ccbluex.net",
+            "windows": ["client_download"],
+            "enableTauriAPI": true
+          },
+          {
+              "domain": "dl.liquidbounce.net",
               "windows": ["client_download"],
               "enableTauriAPI": true
           }
