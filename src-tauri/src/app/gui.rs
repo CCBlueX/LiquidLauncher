@@ -17,9 +17,8 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
  
-use std::{sync::{Arc, Mutex}, thread, path::{Path, PathBuf}};
+use std::{sync::{Arc, Mutex}, thread, path::PathBuf};
 
-use anyhow::bail;
 use tokio::fs;
 use tracing::{error, info, debug};
 use tauri::{Manager, Window};
