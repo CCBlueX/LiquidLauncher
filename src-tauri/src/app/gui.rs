@@ -384,6 +384,8 @@ pub fn gui_main() {
             #[cfg(target_os = "macos")]
             {
                 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+
+                info!("window_vibrancy:: Applying vibrancy");
                 if let Err(e) = apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None) {
                     error!("Failed to apply vibrancy: {:?}", e);
                 }
@@ -394,6 +396,7 @@ pub fn gui_main() {
             {
                 use window_vibrancy::{apply_acrylic, apply_blur, apply_rounded_corners};
 
+                info!("window_vibrancy:: Applying acrylic vibrancy");
                 if let Err(e) = apply_acrylic(&window, None) {
                     error!("Failed to apply acrylic vibrancy: {:?}", e);
 
@@ -402,6 +405,7 @@ pub fn gui_main() {
                     }
                 }
 
+                info!("window_vibrancy:: Applying rounded corners");
                 if let Err(e) = apply_rounded_corners(&window) {
                     error!("Failed to apply rounded corners: {:?}", e);
                     
@@ -409,6 +413,7 @@ pub fn gui_main() {
                 }
             }
 
+            info!("Successfully setup window");
             Ok(())
         })
         .manage(AppState { 

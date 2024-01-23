@@ -20,7 +20,7 @@
 use std::{collections::HashMap, fmt, marker::PhantomData, path::{Path, PathBuf}, str::FromStr};
 
 use anyhow::{Result, Context};
-use tracing::{debug, info, field::debug};
+use tracing::{debug, info};
 use tokio::fs;
 use serde::{Deserialize, Deserializer, de::{self, MapAccess, Visitor}};
 use void::Void;
