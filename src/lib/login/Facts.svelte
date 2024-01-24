@@ -8,12 +8,12 @@
         },
         {
             title: "Free & Open Source",
-            description: "LiquidBounce's source code is publicly available."
+            description: "LiquidBounce's source code is publicly available on Github."
         },
         {
             title: "Extensible",
             description: "LiquidBounce's JavaScript API allows users to write their own modules and commands."
-        }
+        },
     ];
 
     let currentFact = 0;
