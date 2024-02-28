@@ -2124,7 +2124,7 @@ dependencies = [
  "futures",
  "miners",
  "once_cell",
- "open 4.2.0",
+ "open 5.0.2",
  "os_info",
  "path-absolutize",
  "rand 0.8.5",
@@ -2701,9 +2701,9 @@ dependencies = [
 
 [[package]]
 name = "open"
-version = "4.2.0"
+version = "5.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a083c0c7e5e4a8ec4176346cf61f67ac674e8bfb059d9226e1c54a96b377c12"
+checksum = "eedff767bc49d336bff300224f73307ae36963c843e38dc9312a22171b012cbc"
 dependencies = [
  "is-wsl",
  "libc",
