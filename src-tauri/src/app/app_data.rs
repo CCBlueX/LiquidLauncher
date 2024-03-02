@@ -42,10 +42,10 @@ pub(crate) struct LauncherOptions {
     pub custom_java_path: String,
     #[serde(rename = "customJavaArgs", default)]
     pub custom_java_args: String,
-    #[serde(rename = "preferredBranch")]
-    pub preferred_branch: Option<String>,
-    #[serde(rename = "preferredBuild")]
-    pub preferred_build: Option<i32>,
+    #[serde(rename = "selectedBranch")]
+    pub selected_branch: Option<String>,
+    #[serde(rename = "selectedBuild")]
+    pub selected_build: Option<i32>,
     #[serde(rename = "currentAccount")]
     pub current_account: Option<MinecraftAccount>,
     #[serde(rename = "branchOptions", default)]
@@ -87,8 +87,8 @@ impl Default for LauncherOptions {
             memory_percentage: 80, // 80% memory of computer allocated to game
             custom_java_path: String::new(),
             custom_java_args: String::new(),
-            preferred_branch: None,
-            preferred_build: None,
+            selected_branch: None,
+            selected_build: None,
             current_account: None,
             branch_options: HashMap::new(),
             concurrent_downloads: 10

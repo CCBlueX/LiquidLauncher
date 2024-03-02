@@ -94,12 +94,12 @@
     });
 
     function getBuild() {
-        if (options.preferredBuild === -1) { // -1 = latest
+        if (options.selectedBuild === -1) { // -1 = latest
             // The find() method returns a value of the first element in the array that satisfies the provided testing function. Otherwise undefined is returned.
             return builds.find(e => e.release || options.showNightlyBuilds);
         }
         
-        let build = builds.find((build) => build.buildId === options.preferredBuild);
+        let build = builds.find((build) => build.buildId === options.selectedBuild);
         if (!build) {
             return builds[0];
         }
@@ -131,13 +131,13 @@
             branchOptions.customModStates[mod.name] = mod.enabled;
         }
 
-        options.branchOptions[options.preferredBranch] = branchOptions;
+        options.branchOptions[options.selectedBranch] = branchOptions;
         options.store();
     }
 
     /// Request builds from API server
     async function requestBuilds() {
-        const requestedBuilds = await invoke("request_builds", { branch: options.preferredBranch });
+        const requestedBuilds = await invoke("request_builds", { branch: options.selectedBranch });
         requestedBuilds.forEach(build => {
             const date = new Date(build.date);
             build.date = date.toLocaleString();
@@ -207,9 +207,9 @@
             branches = result.branches;
 
             // Default to first branch and latest build
-            if (options.preferredBranch === null) {
-                options.preferredBranch = result.defaultBranch;
-                options.preferredBuild = -1;
+            if (options.selectedBranch === null) {
+                options.selectedBranch = result.defaultBranch;
+                options.selectedBuild = -1;
             }
 
             // request builds of branch
@@ -292,8 +292,8 @@
 
 {#if versionSelectShown}
     <SettingsContainer title="Select version" on:hideSettings={hideVersionSelection}>
-        <SelectSetting title="Branch" items={branches.map(e => ({ value: e, text: e }))} bind:value={options.preferredBranch} on:change={requestBuilds} />
-        <SelectSetting title="Build" items={[{ value: -1, text: "Latest" }, ...builds.filter(e => e.release || options.showNightlyBuilds).map(e => ({ value: e.buildId, text: e.lbVersion + " git-" + e.commitId.substring(0, 7) + " - " + e.date }))]} bind:value={options.preferredBuild} on:change={updateData} />
+        <SelectSetting title="Branch" items={branches.map(e => ({ value: e, text: e }))} bind:value={options.selectedBranch} on:change={requestBuilds} />
+        <SelectSetting title="Build" items={[{ value: -1, text: "Latest" }, ...builds.filter(e => e.release || options.showNightlyBuilds).map(e => ({ value: e.buildId, text: e.lbVersion + " git-" + e.commitId.substring(0, 7) + " - " + e.date }))]} bind:value={options.selectedBuild} on:change={updateData} />
         <ToggleSetting title="Show nightly builds" bind:value={options.showNightlyBuilds} disabled={false} on:change={updateData} />
         <SettingWrapper title="Recommended mods">
             {#each recommendedMods as m}
