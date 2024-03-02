@@ -25,7 +25,7 @@ use std::process::exit;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use futures::stream::{self, StreamExt};
 
 use tracing::*;
@@ -90,7 +90,11 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
             }
         }
     };
+    
     debug!("Java binary: {}", java_bin.to_str().unwrap());
+    if !java_bin.exists() {
+        bail!("Java binary not found");
+    }
 
     // Launch class path for JRE
     let mut class_path = String::new();
@@ -128,7 +132,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
             // After downloading, check sha1
             let hash = sha1sum(&client_jar)?;
             if hash != client_download.sha1 {
-                anyhow::bail!("Client JAR download failed. SHA1 mismatch.");
+                bail!("Client JAR download failed. SHA1 mismatch.");
             }
         }
     } else {
