@@ -97,7 +97,7 @@ async fn request_builds(branch: &str) -> Result<Vec<Build>, String> {
 }
 
 #[tauri::command]
-async fn request_mods(branch: &str, mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod>, String> {
+async fn request_mods(mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod>, String> {
     let mods = ApiEndpoints::mods(&mc_version, &subsystem)
         .await
         .map_err(|e| format!("unable to request mods: {:?}", e))?;

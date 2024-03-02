@@ -24,6 +24,7 @@ use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use serde::de::DeserializeOwned;
 
+use crate::minecraft::java::JavaDistribution;
 use crate::HTTP_CLIENT;
 use crate::utils::get_maven_artifact_path;
 
@@ -116,11 +117,6 @@ impl ApiEndpoints {
         Self::request_from_endpoint(&format!("version/mods/{}/{}", mc_version, subsystem)).await
     }
 
-    /// Request download of specified JRE for specific OS and architecture
-    pub async fn jre(os_name: &String, os_arch: &String, jre_version: u32) -> Result<JreSource> {
-        Self::request_from_endpoint(&format!("version/jre/{}/{}/{}", os_name, os_arch, jre_version)).await
-    }
-
     /// Request changelog of specified build
     pub async fn changelog(build_id: u32) -> Result<Changelog> {
         Self::request_from_endpoint(&format!("version/changelog/{}", build_id)).await
@@ -170,6 +166,8 @@ pub struct Build {
     pub date: DateTime<Utc>,
     pub message: String,
     pub url: String,
+    #[serde(rename(serialize = "jreDistribution"), default)]
+    pub jre_distribution: JavaDistribution,
     #[serde(rename(serialize = "jreVersion"))]
     pub jre_version: u32,
     #[serde(flatten)]
@@ -259,13 +257,4 @@ pub enum LoaderSubsystem {
     Fabric { manifest: String, mod_directory: String },
     #[serde(rename = "forge")]
     Forge { manifest: String, mod_directory: String  },
-}
-
-///
-/// JSON struct of JRE source
-///
-#[derive(Deserialize)]
-pub struct JreSource {
-    pub version: u32,
-    pub download_url: String
 }

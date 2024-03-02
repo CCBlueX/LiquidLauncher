@@ -170,7 +170,7 @@
         const { branch, mcVersion, subsystem } = currentBuild; 
         const branchOptions = options.branchOptions[branch];
 
-        recommendedMods = await invoke("request_mods", { branch, mcVersion, subsystem });
+        recommendedMods = await invoke("request_mods", { mcVersion, subsystem });
         customMods = await invoke("get_custom_mods", { branch, mcVersion });
 
         if (branchOptions) {
