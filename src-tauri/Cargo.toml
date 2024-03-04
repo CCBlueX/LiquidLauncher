@@ -31,7 +31,7 @@ void = "1"
 rand = "0.8.5"
 directories = "4.0"
 once_cell = "1.16.0"
-open = "4.0.1"
+open = "5.1.1"
 
 miners = { git = "https://github.com/CCBlueX/mine-rs.git", features = ["auth"] }
 
