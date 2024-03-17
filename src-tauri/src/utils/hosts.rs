@@ -1,4 +1,5 @@
 use anyhow::{bail, Result};
+use tracing::error;
 
 const HOSTS_PATH: &str = "C:\\Windows\\System32\\drivers\\etc\\hosts";
 
@@ -30,6 +31,11 @@ pub async fn check_hosts_file() -> Result<()> {
         .collect::<Vec<_>>();
     
     if !flagged_entries.is_empty() {
+        // Open the hosts file in the user's default text editor using admin
+        if let Err(e) = open::with_detached(HOSTS_PATH, "notepad") {
+            error!("Failed to open hosts file: {}", e);
+        }
+
         bail!(
             "The hosts file has been modified to block the Minecraft authentication server.\n\
             \n\
