@@ -46,7 +46,7 @@ pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, laun
         use crate::utils::check_hosts_file;
 
         info!("Checking hosts file...");
-        check_hosts_file().await?;
+        check_hosts_file(&window).await?;
     }
     
     info!("Loading minecraft version manifest...");

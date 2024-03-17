@@ -1,5 +1,5 @@
 <script>
-    import { invoke } from "@tauri-apps/api";
+    import { invoke } from "@tauri-apps/api/core";
     import LoginScreen from "./login/LoginScreen.svelte";
     import MainScreen from "./main/MainScreen.svelte";
 
@@ -64,7 +64,7 @@
             <LoginScreen bind:options />
         {/if}
     {:else}
-        <h1>Loading options...</h1>
+        <h1>The launcher is loading...</h1>
     {/if}
 
 </div>

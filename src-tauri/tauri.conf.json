@@ -1,96 +1,92 @@
 {
-  "build": {
-    "beforeBuildCommand": "npm run build",
-    "beforeDevCommand": "npm run dev",
-    "devPath": "http://localhost:5173",
-    "distDir": "../dist",
-    "withGlobalTauri": true
-  },
-  "package": {
     "productName": "liquidlauncher",
-    "version": "0.2.2"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": true
+    "version": "0.2.2",
+    "identifier": "net.ccbluex.liquidlauncher",
+    "build": {
+        "beforeBuildCommand": "npm run build",
+        "beforeDevCommand": "npm run dev",
+        "devUrl": "http://localhost:5173",
+        "frontendDist": "../dist"
+    },
+    "app": {
+        "withGlobalTauri": true,
+        "windows": [
+            {
+                "title": "LiquidLauncher",
+                "width": 1000,
+                "minWidth": 1000,
+                "height": 670,
+                "minHeight": 670,
+                "resizable": true,
+                "fullscreen": false,
+                "transparent": true,
+                "decorations": false,
+                "center": true,
+                "windowEffects": {
+                    "effects": [
+                        "acrylic"
+                    ]
+                },
+                "shadow": true
+            }
+        ]
     },
     "bundle": {
-      "active": true,
-      "category": "Game",
-      "copyright": "CCBlueX",
-      "appimage": {
-        "bundleMediaFramework": true
-      },
-      "externalBin": [],
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "identifier": "net.ccbluex.liquidlauncher",
-      "shortDescription": "A LiquidBounce launcher for Minecraft",
-      "longDescription": "A LiquidBounce hacked-client launcher for the game Minecraft",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
-      "resources": [],
-      "targets": "all",
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": "",
-        "webviewInstallMode": {
-          "type": "embedBootstrapper"
+        "active": true,
+        "category": "Game",
+        "copyright": "CCBlueX",
+        "publisher": "CCBlueX",
+        "externalBin": [],
+        "icon": [
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/128x128@2x.png",
+            "icons/icon.icns",
+            "icons/icon.ico"
+        ],
+        "shortDescription": "A LiquidBounce launcher for Minecraft",
+        "longDescription": "A LiquidBounce hacked-client launcher for the game Minecraft",
+        "license": "GPL-3.0",
+        "licenseFile": "LICENSE",
+        "resources": [],
+        "targets": [
+            "updater",
+            "msi",
+            "appimage",
+            "deb",
+            "appimage"
+        ],
+        "windows": {
+            "certificateThumbprint": null,
+            "digestAlgorithm": "sha256",
+            "timestampUrl": "",
+            "webviewInstallMode": {
+                "type": "embedBootstrapper"
+            }
+        },
+        "linux": {
+            "appimage": {
+                "bundleMediaFramework": true
+            }
+        },
+        "macOS": {
+            "entitlements": null,
+            "exceptionDomain": "",
+            "frameworks": [],
+            "providerShortName": null,
+            "signingIdentity": null
         }
-      }
     },
-    "security": {
-      "csp": null,
-      "dangerousRemoteDomainIpcAccess": [
-          {
-            "domain": "tauri.localhost",
-            "windows": ["main"],
-            "enableTauriAPI": true
-          },
-          {
-            "domain": "dl.ccbluex.net",
-            "windows": ["client_download"],
-            "enableTauriAPI": true
-          },
-          {
-              "domain": "dl.liquidbounce.net",
-              "windows": ["client_download"],
-              "enableTauriAPI": true
-          }
-      ]
-    },
-    "updater": {
-      "active": true,
-      "endpoints": [
-        "https://api.liquidbounce.net/api/v1/launcher/releases/{{target}}/{{current_version}}"
-      ],
-      "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU1QkM5MTlDREQ4NkEzNjMKUldSam80YmRuSkc4NVNxS2MzYVZPN1I4a283RkdsS0lPTjVjRWlxQ1JhdzFZUkRtc0c1eEtqSzQK"
-    },
-    "windows": [
-      {
-        "title": "LiquidLauncher",
-        "width": 1000,
-        "minWidth": 1000,
-        "height": 670,
-        "minHeight": 670,
-        "resizable": true,
-        "fullscreen": false,
-        "transparent": true,
-        "decorations": false,
-        "center": true
-      }
-    ]
-  }
+    "plugins": {
+        "updater": {
+            "active": true,
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU1QkM5MTlDREQ4NkEzNjMKUldSam80YmRuSkc4NVNxS2MzYVZPN1I4a283RkdsS0lPTjVjRWlxQ1JhdzFZUkRtc0c1eEtqSzQK",
+            "endpoints": [
+              "https://api.liquidbounce.net/api/v1/launcher/releases/{{target}}/{{current_version}}"
+            ],
+            "windows": {
+                "installMode": "basicUi"
+            }
+        }
+    }
 }

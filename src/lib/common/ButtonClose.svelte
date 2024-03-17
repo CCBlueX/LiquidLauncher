@@ -1,8 +1,8 @@
 <script>
-    import { appWindow } from "@tauri-apps/api/window";
+    import { exit } from "@tauri-apps/plugin-process";
 
-    function handleClick() {
-        appWindow.close();
+    async function handleClick() {
+        await exit(0);
     }
 </script>
 

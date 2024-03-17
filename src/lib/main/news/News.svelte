@@ -1,6 +1,7 @@
 <script>
-    import { invoke } from "@tauri-apps/api/tauri";
-
+    import { invoke } from "@tauri-apps/api/core";
+    import { open } from "@tauri-apps/plugin-shell";
+    
     export let bannerText;
     export let title;
     export let date;
@@ -8,8 +9,8 @@
     export let url;
     export let description;
 
-    function handleShowNews(e) {
-        invoke("open_url", { url: url });
+    async function handleShowNews(e) {
+        await open(url);
     }
 </script>
 

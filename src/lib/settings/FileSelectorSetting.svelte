@@ -1,5 +1,5 @@
 <script>
-    import { open as dialogOpen } from "@tauri-apps/api/dialog";
+    import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
 
     export let title;
     export let placeholder;

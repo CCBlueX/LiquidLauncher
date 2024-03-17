@@ -10,7 +10,7 @@ edition = "2021"
 rust-version = "1.71.1"
 
 [build-dependencies]
-tauri-build = { version = "1.4", features = [] }
+tauri-build = { version = "2.0.0-beta.9", features = [] }
 
 [dependencies]
 # Log
@@ -31,7 +31,6 @@ void = "1"
 rand = "0.8.5"
 directories = "4.0"
 once_cell = "1.16.0"
-open = "4.0.1"
 
 miners = { git = "https://github.com/CCBlueX/mine-rs.git", features = ["auth"] }
 
@@ -56,8 +55,11 @@ sha1 = "0.10.5"
 base16ct = {version = "0.2.0", features = ["alloc"] }
 
 # UI library
-tauri = {version = "1.5", features = ["api-all", "updater"] }
-window-vibrancy = { git = "https://github.com/CCBlueX/window-vibrancy.git" }
+tauri = { version = "2.0.0-beta", features = [] }
+tauri-plugin-process = "2.0.0-beta"
+tauri-plugin-dialog = "2.0.0-beta"
+tauri-plugin-shell = "2.0.0-beta"
+tauri-plugin-updater = "2.0.0-beta"
 
 # HTTP library
 reqwest = { version = "0.11", features = ["json"] }
@@ -70,14 +72,6 @@ toml = "0.7.2"
 # Support for the old authentication file
 base64 = { version = "0.13" }
 byteorder = { version = "1.4" }
-
-[features]
-# by default Tauri runs in production mode
-# when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
-default = [ "custom-protocol" ]
-# this feature is used used for production builds where `devPath` points to the filesystem
-# DO NOT remove this
-custom-protocol = [ "tauri/custom-protocol" ]
 
 [profile.release]
 strip = true

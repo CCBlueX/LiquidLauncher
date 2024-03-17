@@ -1,12 +1,14 @@
+use std::sync::{Arc, Mutex};
+
 use anyhow::{bail, Result};
-use tracing::error;
+use tauri_plugin_shell::ShellExt;
 
 const HOSTS_PATH: &str = "C:\\Windows\\System32\\drivers\\etc\\hosts";
 
 /// We have noticed many user have modified the hosts file to block the Minecraft authentication server.
 /// This is likely by using a third-party program. Because LiquidLauncher requires access to the authentication server, we have to modify the hosts file to allow access.
 /// we need to check the hosts file and alert the user if it has been modified.
-pub async fn check_hosts_file() -> Result<()> {
+pub async fn check_hosts_file(window: &Arc<Mutex<tauri::Window>>) -> Result<()> {
     // Check if the hosts file has been modified
     let hosts_file = tokio::fs::read_to_string(HOSTS_PATH).await?;
 
@@ -31,10 +33,9 @@ pub async fn check_hosts_file() -> Result<()> {
         .collect::<Vec<_>>();
     
     if !flagged_entries.is_empty() {
-        // Open the hosts file in the user's default text editor using admin
-        if let Err(e) = open::with_detached(HOSTS_PATH, "notepad") {
-            error!("Failed to open hosts file: {}", e);
-        }
+        // Open guide on how to remove the entries
+        window.lock().unwrap()
+            .shell().open("https://liquidbounce.net/docs/Tutorials/Fixing%20hosts%20file%20issues", None)?;
 
         bail!(
             "The hosts file has been modified to block the Minecraft authentication server.\n\

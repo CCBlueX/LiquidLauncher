@@ -54,13 +54,6 @@ async fn check_online_status() -> Result<(), String> {
 }
 
 #[tauri::command]
-fn open_url(url: &str) -> Result<(), String> {
-    open::that(url)
-        .map_err(|e| format!("unable to open url: {:?}", e))?;
-    Ok(())
-}
-
-#[tauri::command]
 async fn get_options() -> Result<LauncherOptions, String> {
     let config_dir = LAUNCHER_DIRECTORY.config_dir();
     let options = LauncherOptions::load(config_dir).await.unwrap_or_default(); // default to basic options if unable to load
@@ -378,49 +371,14 @@ async fn clear_data(options: LauncherOptions) -> Result<(), String> {
 /// Runs the GUI and returns when the window is closed.
 pub fn gui_main() {
     tauri::Builder::default()
-        .setup(|app| {
-            let window = app.get_window("main").unwrap();
-
-            #[cfg(target_os = "macos")]
-            {
-                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
-
-                info!("window_vibrancy:: Applying vibrancy");
-                if let Err(e) = apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None) {
-                    error!("Failed to apply vibrancy: {:?}", e);
-                }
-            }
-            
-            // Applies blur to the window and make corners rounded
-            #[cfg(target_os = "windows")]
-            {
-                use window_vibrancy::{apply_acrylic, apply_blur, apply_rounded_corners};
-
-                info!("window_vibrancy:: Applying acrylic vibrancy");
-                if let Err(e) = apply_acrylic(&window, None) {
-                    error!("Failed to apply acrylic vibrancy: {:?}", e);
-
-                    if let Err(e) = apply_blur(&window) {
-                        error!("Failed to apply blur vibrancy: {:?}", e);
-                    }
-                }
-
-                info!("window_vibrancy:: Applying rounded corners");
-                if let Err(e) = apply_rounded_corners(&window) {
-                    error!("Failed to apply rounded corners: {:?}", e);
-                    
-                    // todo: fallback to HTML corners
-                }
-            }
-
-            info!("Successfully setup window");
-            Ok(())
-        })
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState { 
             runner_instance: Arc::new(Mutex::new(None))
         })
         .invoke_handler(tauri::generate_handler![
-            open_url,
             check_online_status,
             get_options,
             store_options,
