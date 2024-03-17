@@ -40,6 +40,15 @@ use crate::utils::{download_file, get_maven_artifact_path};
 /// Prelaunching client
 ///
 pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, launching_parameter: LaunchingParameter, additional_mods: Vec<LoaderMod>, progress: LauncherData<D>, window: Arc<Mutex<tauri::Window>>) -> Result<()> {
+    // Check hosts
+    #[cfg(windows)]
+    {
+        use crate::utils::check_hosts_file;
+
+        info!("Checking hosts file...");
+        check_hosts_file().await?;
+    }
+    
     info!("Loading minecraft version manifest...");
     let mc_version_manifest = VersionManifest::fetch().await?;
 
@@ -184,10 +193,10 @@ pub async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods
 
                     retrieved_bytes
                 },
-                _ => warn!("unsupported mod source: {:?}", current_mod.source),
+                _ => bail!("unsupported mod source: {:?}", current_mod.source),
             };
 
-            fs::write(&current_mod_path, contents).await?
+            fs::write(&current_mod_path, contents).await
                 .with_context(|| format!("Failed to write mod {}", current_mod.name))?;
         }
 

@@ -288,7 +288,7 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
                         window_mutex.lock().unwrap().show().unwrap();
                     }
 
-                    let message = format!("An error with the client occourd:\n{:?}", e);
+                    let message = format!("An error occourd:\n\n{:?}", e);
                     window_mutex.lock().unwrap().emit("client-error", format!("{}\n\nIf this error persists, upload your log with the button below and report it to GitHub.", message)).unwrap();
                     handle_stderr(&window_mutex, message.as_bytes()).unwrap();
                 };

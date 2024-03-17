@@ -22,6 +22,8 @@ mod extract;
 mod download;
 mod maven;
 mod checksum;
+#[cfg(windows)]
+mod hosts;
 
 pub use {
     sys::*,
@@ -31,3 +33,5 @@ pub use {
     checksum::*,
 };
 
+#[cfg(windows)]
+pub use hosts::*;

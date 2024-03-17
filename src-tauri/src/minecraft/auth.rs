@@ -26,7 +26,7 @@ use tracing::{debug, warn};
 use base64::{read::DecoderReader};
 use byteorder::{ReadBytesExt, LE};
 use uuid::Uuid;
-use std::{fs, io::Read, string::String};
+use std::{fs, io::Read};
 
 use crate::{LAUNCHER_DIRECTORY, HTTP_CLIENT};
 
