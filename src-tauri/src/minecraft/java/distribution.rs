@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum JavaDistribution {
-    #[serde(rename = "temurin", alias = "termurin")] // typo in the API
+    #[serde(rename = "temurin")]
     Temurin,
     #[serde(rename = "graalvm")]
     GraalVM,
