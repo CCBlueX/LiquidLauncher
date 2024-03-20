@@ -55,9 +55,8 @@
 
     </div>
 
-    {#if options !== undefined }
-        <!-- TODO: Animation? -->
-        {#if options.currentAccount !== null }
+    {#if options }
+        {#if options.currentAccount }
             <MainScreen bind:options on:logout={logout} />
         {:else}
             <LoginScreen bind:options />
