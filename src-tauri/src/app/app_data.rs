@@ -40,8 +40,6 @@ pub(crate) struct LauncherOptions {
     pub memory_percentage: i32,
     #[serde(rename = "customJavaPath", default)]
     pub custom_java_path: String,
-    #[serde(rename = "customJavaArgs", default)]
-    pub custom_java_args: String,
     #[serde(rename = "selectedBranch")]
     pub selected_branch: Option<String>,
     #[serde(rename = "selectedBuild")]
@@ -86,7 +84,6 @@ impl Default for LauncherOptions {
             show_nightly_builds: false,
             memory_percentage: 80, // 80% memory of computer allocated to game
             custom_java_path: String::new(),
-            custom_java_args: String::new(),
             selected_branch: None,
             selected_build: None,
             current_account: None,
