@@ -17,8 +17,6 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
  
-use core::convert::AsRef;
-
 use serde::Serialize;
 
 #[derive(Debug)]

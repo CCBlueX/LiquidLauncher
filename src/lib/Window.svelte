@@ -1,7 +1,18 @@
 <script>
-    import { invoke } from "@tauri-apps/api";
+    import { invoke } from "@tauri-apps/api/core";
     import LoginScreen from "./login/LoginScreen.svelte";
     import MainScreen from "./main/MainScreen.svelte";
+    import { check } from "@tauri-apps/plugin-updater";
+    import { relaunch } from "@tauri-apps/plugin-process";
+
+    check().then((result) => {
+        console.debug("Update Check Result", result);
+        if (result && result.available) {
+            result.downloadAndInstall().then(() => {
+                relaunch().catch(e => console.error(e));
+            }).catch(e => console.error("Download and Install Failed", e));
+        }
+    }).catch(e => console.error("Update Check Failed", e));
 
     // Load options from file
     let options;
@@ -10,26 +21,14 @@
         options = result;
 
         // Debug options - might be interesting to see what's in there
-        console.debug("read options", options);
+        console.debug("Options", options);
 
         // Easy way to store options
         options.store = function() {
-            console.debug("storing options", options);
+            console.debug("Storing options...", options);
             invoke("store_options", { options })
                 .catch(e => console.error(e));
         };
-
-        // Refresh the current account if it exists
-        if (options.currentAccount !== null) {
-            // This will be run in the background
-            invoke("refresh", { accountData: options.currentAccount })
-                .then((account) => {
-                    console.debug("refreshed account data", account);
-
-                    options.currentAccount = account;
-                    options.store();
-                }).catch(e => console.error(e));
-        }
     }).catch(e => console.error(e));
 
     // Logout from current account
@@ -44,7 +43,7 @@
     }
 
     invoke("check_online_status").then((result) => {
-        console.debug("online status", result);
+        console.debug("Status", result);
     }).catch(e => {
         alert("You are offline! Please connect to the internet and restart the app.\n If this problem persists, please contact the developer.\n\n (Error: " + e + ")");
         console.error(e);
@@ -56,15 +55,14 @@
 
     </div>
 
-    {#if options !== undefined }
-        <!-- TODO: Animation? -->
-        {#if options.currentAccount !== null }
+    {#if options }
+        {#if options.currentAccount }
             <MainScreen bind:options on:logout={logout} />
         {:else}
             <LoginScreen bind:options />
         {/if}
     {:else}
-        <h1>Loading options...</h1>
+        <h1>The launcher is loading...</h1>
     {/if}
 
 </div>

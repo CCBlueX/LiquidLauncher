@@ -34,7 +34,7 @@
 
     <div class="version-selector">
         <ButtonVersion icon="lb" title={lbVersion} subtitle="LiquidBounce" on:click={() => dispatch("showVersionSelect")} />
-        <ButtonVersion icon="mc" title={mcVersion} subtitle="Minecraft" on:click={() => dispatch("showVersionSelect")} />
+        <ButtonVersion icon="mc" title="1.7 - {mcVersion}" subtitle="Minecraft" on:click={() => dispatch("showVersionSelect")} />
     </div> 
 
     {#if running}

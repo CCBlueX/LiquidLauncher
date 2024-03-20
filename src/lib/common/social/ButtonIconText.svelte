@@ -1,12 +1,13 @@
 <script>
-    import { invoke } from "@tauri-apps/api/tauri";
+    import { invoke } from "@tauri-apps/api/core";
+    import { open } from "@tauri-apps/plugin-shell";
 
     export let text;
     export let icon;
     export let url;
 
-    function handleClick(e) {
-        invoke("open_url", { url: url });
+    async function handleClick(e) {
+        await open(url);
     }
 </script>
 

@@ -1,8 +1,9 @@
 <script>
+    import { open } from "@tauri-apps/plugin-shell";
     import ModalButton from "./ModalButton.svelte";
     import ModalInput from "./ModalInput.svelte";
     
-    import { invoke } from "@tauri-apps/api/tauri";
+    import { invoke } from "@tauri-apps/api/core";
     import { listen } from "@tauri-apps/api/event";
 
     export let options;
@@ -34,6 +35,7 @@
             options.store();
         } catch (err) {
             alert(err);
+            cancelMicrosoft();
         }
     }
 
@@ -41,8 +43,8 @@
         microsoftCode = e.payload;
     });
 
-    function linkMicrosoftOpen() {
-        invoke("open_url", { url: "https://microsoft.com/link" })
+    async function linkMicrosoftOpen() {
+        await open("https://microsoft.com/link");
     }
 
     function cancelMicrosoft() {

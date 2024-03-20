@@ -28,8 +28,11 @@ use once_cell::sync::Lazy;
 use anyhow::Result;
 use directories::ProjectDirs;
 use reqwest::Client;
-use tracing::debug;
+use tracing::{debug, info, error};
 use tracing_subscriber::layer::SubscriberExt;
+use utils::ARCHITECTURE;
+
+use crate::utils::{OS, OS_VERSION};
 
 pub mod app;
 pub mod minecraft;
@@ -61,6 +64,19 @@ static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
     client
 });
 
+/// Creates a directory tree if it doesn't exist
+macro_rules! mkdir {
+    ($path:expr) => {
+        // Check if directory exists
+        if !$path.exists() {
+            // Create directory
+            if let Err(e) = fs::create_dir_all($path) {
+                error!("Failed to create directory {:?}: {}", $path, e);
+            }
+        }
+    };
+}
+
 pub fn main() -> Result<()> {
     use tracing_subscriber::{fmt, EnvFilter};
 
@@ -83,14 +99,20 @@ pub fn main() -> Result<()> {
         );
     tracing::subscriber::set_global_default(subscriber).expect("Unable to set a global subscriber");
 
+    info!("Starting LiquidLauncher v{}", LAUNCHER_VERSION);
+    info!("OS: {:} {:} {:}", OS, ARCHITECTURE, OS_VERSION.to_string());
 
     // application directory
-    debug!("Creating launcher directories...");
-    fs::create_dir_all(LAUNCHER_DIRECTORY.data_dir())?;
-    fs::create_dir_all(LAUNCHER_DIRECTORY.config_dir())?;
+    info!("Creating application directory");
+    debug!("Application directory: {:?}", LAUNCHER_DIRECTORY.data_dir());
+    debug!("Config directory: {:?}", LAUNCHER_DIRECTORY.config_dir());
+    mkdir!(LAUNCHER_DIRECTORY.data_dir());
+    mkdir!(LAUNCHER_DIRECTORY.config_dir());
 
     // app
+    info!("The GUI is starting...");
     app::gui::gui_main();
 
+    info!("Launcher exited");
     Ok(())
 }

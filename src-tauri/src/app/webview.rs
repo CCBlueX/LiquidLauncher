@@ -19,22 +19,19 @@
  
 use std::{sync::{Arc, Mutex}, time::Duration};
 use serde::Deserialize;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use tracing::{info, debug};
-use tauri::Manager;
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tokio::time::sleep;
 use crate::utils::download_file;
 
 pub(crate) async fn download_client<F>(url: &str, on_progress: F, window: &Arc<Mutex<tauri::Window>>) -> Result<Vec<u8>> where F : Fn(u64, u64){
-    let app_handle = window.lock().unwrap().app_handle();
-
     let download_page = format!("{}&liquidlauncher=1", url);
-    let download_view = tauri::WindowBuilder::new(
-        &app_handle,
-        "client_download",
-        tauri::WindowUrl::External(download_page.parse().unwrap())
-    )
-        .title("Download of LiquidBounce")
+    let download_view = WebviewWindowBuilder::new(
+        window.lock().unwrap().app_handle(),
+        "download_view",
+        WebviewUrl::External(download_page.parse().unwrap())
+    ).title("Download of LiquidBounce")
         .center()
         .focused(true)
         .maximized(true)
@@ -49,19 +46,18 @@ pub(crate) async fn download_client<F>(url: &str, on_progress: F, window: &Arc<M
     let cloned_cell = download_link_cell.clone();
 
     download_view.once("download", move |event| {
-        debug!("Triggerd download event");
+        debug!("Download Event received: {:?}", event);
+        let payload = event.payload();
 
-        if let Some(payload) = event.payload() {
-            #[derive(Deserialize)]
-            struct DownloadPayload {
-                url: String
-            }
-
-            let payload = serde_json::from_str::<DownloadPayload>(payload).unwrap();
-
-            info!("Received download link: {}", payload.url);
-            *cloned_cell.lock().unwrap() = Some(payload.url);
+        #[derive(Deserialize)]
+        struct DownloadPayload {
+            url: String
         }
+
+        let payload = serde_json::from_str::<DownloadPayload>(payload).unwrap();
+
+        info!("Received download link: {}", payload.url);
+        *cloned_cell.lock().unwrap() = Some(payload.url);
     });
 
     let url = loop {
@@ -76,7 +72,8 @@ pub(crate) async fn download_client<F>(url: &str, on_progress: F, window: &Arc<M
         }
 
         // check if the view is still open, is_visible will throw error when the window is closed
-        download_view.is_visible()?;
+        download_view.is_visible()
+            .with_context(|| "The download view was closed unexpected, cancelling.")?;
     };
 
     download_view.close().unwrap();

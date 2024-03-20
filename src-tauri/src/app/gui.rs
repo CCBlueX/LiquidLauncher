@@ -45,25 +45,24 @@ async fn get_launcher_version() -> Result<String, String> {
 
 #[tauri::command]
 async fn check_online_status() -> Result<(), String> {
+    info!("Checking online status");
     HTTP_CLIENT.get("https://api.liquidbounce.net/")
         .send().await
         .map_err(|e| format!("unable to connect to api.liquidbounce.net: {:}", e))?
         .error_for_status()
         .map_err(|e| format!("api.liquidbounce.net returned an error: {:}", e))?;
-    Ok(())
-}
-
-#[tauri::command]
-fn open_url(url: &str) -> Result<(), String> {
-    open::that(url)
-        .map_err(|e| format!("unable to open url: {:?}", e))?;
+    info!("Online status check successful");
     Ok(())
 }
 
 #[tauri::command]
 async fn get_options() -> Result<LauncherOptions, String> {
+    info!("Loading options...");
     let config_dir = LAUNCHER_DIRECTORY.config_dir();
-    let options = LauncherOptions::load(config_dir).await.unwrap_or_default(); // default to basic options if unable to load
+    let options = LauncherOptions::load(config_dir)
+        .await
+        .unwrap_or_default(); // default to basic options if unable to load
+    info!("Done!");
     
     Ok(options)
 }
@@ -97,7 +96,7 @@ async fn request_builds(branch: &str) -> Result<Vec<Build>, String> {
 }
 
 #[tauri::command]
-async fn request_mods(branch: &str, mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod>, String> {
+async fn request_mods(mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod>, String> {
     let mods = ApiEndpoints::mods(&mc_version, &subsystem)
         .await
         .map_err(|e| format!("unable to request mods: {:?}", e))?;
@@ -115,11 +114,11 @@ async fn login_offline(username: &str) -> Result<MinecraftAccount, String> {
 
 #[tauri::command]
 async fn login_microsoft(window: tauri::Window) -> Result<MinecraftAccount, String> {
-    let account = MinecraftAccount::auth_msa(|code| {
-        debug!("received code: {}", code);
+    let account = MinecraftAccount::auth_msa(|uri, code| {
+        debug!("enter code {} on {} to sign-in", code, uri);
 
         let _ = window.emit("microsoft_code", code);
-    }).await.map_err(|e| format!("unable to ms auth: {:?}", e))?;
+    }).await.map_err(|e| e.to_string())?;
 
   Ok(account)
 }
@@ -224,8 +223,9 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
     let window_mutex = Arc::new(std::sync::Mutex::new(window));
 
     let (account_name, uuid, token, user_type) = match account_data {
-        MinecraftAccount::MsaAccount { name, uuid, token, .. } => (name, uuid, token, "msa".to_string()),
-        MinecraftAccount::OfflineAccount { name, uuid } => (name, uuid, "-".to_string(), "legacy".to_string())
+        MinecraftAccount::MsaAccount { msa: _, xbl: _, mca, profile } => (profile.name, profile.id.to_string(), mca.data.access_token, "msa".to_string()),
+        MinecraftAccount::LegacyMsaAccount { name, uuid, token, .. } => (name, uuid.to_string(), token, "msa".to_string()),
+        MinecraftAccount::OfflineAccount { name, id } => (name, id.to_string(), "-".to_string(), "legacy".to_string())
     };
 
     // Random XUID
@@ -288,7 +288,7 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
                         window_mutex.lock().unwrap().show().unwrap();
                     }
 
-                    let message = format!("An error with the client occourd:\n{:?}", e);
+                    let message = format!("An error occourd:\n\n{:?}", e);
                     window_mutex.lock().unwrap().emit("client-error", format!("{}\n\nIf this error persists, upload your log with the button below and report it to GitHub.", message)).unwrap();
                     handle_stderr(&window_mutex, message.as_bytes()).unwrap();
                 };
@@ -378,44 +378,14 @@ async fn clear_data(options: LauncherOptions) -> Result<(), String> {
 /// Runs the GUI and returns when the window is closed.
 pub fn gui_main() {
     tauri::Builder::default()
-        .setup(|app| {
-            let window = app.get_window("main").unwrap();
-
-            #[cfg(target_os = "macos")]
-            {
-                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
-                if let Err(e) = apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None) {
-                    error!("Failed to apply vibrancy: {:?}", e);
-                }
-            }
-            
-            // Applies blur to the window and make corners rounded
-            #[cfg(target_os = "windows")]
-            {
-                use window_vibrancy::{apply_acrylic, apply_blur, apply_rounded_corners};
-
-                if let Err(e) = apply_acrylic(&window, None) {
-                    error!("Failed to apply acrylic vibrancy: {:?}", e);
-
-                    if let Err(e) = apply_blur(&window) {
-                        error!("Failed to apply blur vibrancy: {:?}", e);
-                    }
-                }
-
-                if let Err(e) = apply_rounded_corners(&window) {
-                    error!("Failed to apply rounded corners: {:?}", e);
-                    
-                    // todo: fallback to HTML corners
-                }
-            }
-
-            Ok(())
-        })
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState { 
             runner_instance: Arc::new(Mutex::new(None))
         })
         .invoke_handler(tauri::generate_handler![
-            open_url,
             check_online_status,
             get_options,
             store_options,

@@ -1,7 +1,7 @@
 {
   "name": "liquidlauncher",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,13 +10,17 @@
     "tauri": "tauri"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^3.0",
-    "@tauri-apps/cli": "^1.5",
-    "svelte": "^4.1.2",
-    "vite": "^5.0"
+    "@tauri-apps/cli": "^2.0.0-beta",
+    "svelte": "^4.2",
+    "vite": "^5.0",
+    "@sveltejs/vite-plugin-svelte": "^3.0"
   },
   "dependencies": {
-    "@tauri-apps/api": "^1.5",
-    "nouislider": "^15.7.1"
+    "@tauri-apps/api": "^2.0.0-beta",
+    "@tauri-apps/plugin-process": "^2.0.0-beta",
+    "@tauri-apps/plugin-dialog": "^2.0.0-beta",
+    "@tauri-apps/plugin-shell": "^2.0.0-beta",
+    "@tauri-apps/plugin-updater": "^2.0.0-beta",
+    "nouislider": "^15.7"
   }
 }

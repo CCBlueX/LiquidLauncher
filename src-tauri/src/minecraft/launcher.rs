@@ -17,22 +17,22 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
  
-use std::{path::{Path, PathBuf}};
+use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 use std::fmt::Write;
 
-use std::process::{exit};
+use std::process::exit;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use futures::stream::{self, StreamExt};
 
 use tracing::*;
 use path_absolutize::*;
 use tokio::{fs, fs::OpenOptions};
 
-use crate::{LAUNCHER_VERSION, utils::{OS, OS_VERSION}};
+use crate::{utils::{OS, OS_VERSION}, LAUNCHER_VERSION};
 use crate::app::api::LaunchManifest;
 use crate::error::LauncherError;
 use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
@@ -76,21 +76,25 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
             info!("Checking for JRE...");
             launcher_data_arc.progress_update(ProgressUpdate::set_label("Checking for JRE..."));
 
-            match find_java_binary(&runtimes_folder, manifest.build.jre_version).await {
+            match find_java_binary(&runtimes_folder, &manifest.build.jre_distribution, &*manifest.build.jre_version.to_string()).await {
                 Ok(jre) => jre,
                 Err(e) => {
                     error!("Failed to find JRE: {}", e);
 
                     info!("Download JRE...");
                     launcher_data_arc.progress_update(ProgressUpdate::set_label("Download JRE..."));
-                    jre_downloader::jre_download(&runtimes_folder, manifest.build.jre_version, |a, b| {
+                    jre_downloader::jre_download(&runtimes_folder, &manifest.build.jre_distribution, &*manifest.build.jre_version.to_string(), |a, b| {
                         launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadJRE, get_progress(0, a, b), get_max(1)));
                     }).await?
                 }
             }
         }
     };
+    
     debug!("Java binary: {}", java_bin.to_str().unwrap());
+    if !java_bin.exists() {
+        bail!("Java binary not found");
+    }
 
     // Launch class path for JRE
     let mut class_path = String::new();
@@ -128,7 +132,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
             // After downloading, check sha1
             let hash = sha1sum(&client_jar)?;
             if hash != client_download.sha1 {
-                anyhow::bail!("Client JAR download failed. SHA1 mismatch.");
+                bail!("Client JAR download failed. SHA1 mismatch.");
             }
         }
     } else {

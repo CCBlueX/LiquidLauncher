@@ -19,8 +19,10 @@
  
 pub(crate) mod jre_downloader;
 mod runtime;
+mod distribution;
 
 pub use {
     jre_downloader::*,
     runtime::*,
+    distribution::*,
 };

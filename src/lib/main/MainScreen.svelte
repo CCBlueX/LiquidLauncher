@@ -18,14 +18,14 @@
     import ProgressStatus from "./statusbar/ProgressStatus.svelte";
     import StatusBar from "./statusbar/StatusBar.svelte";
     import TextStatus from "./statusbar/TextStatus.svelte";
-    import { invoke } from "@tauri-apps/api/tauri";
+    import { invoke } from "@tauri-apps/api/core";
     import { listen } from "@tauri-apps/api/event";
     import DirectorySelectorSetting from "../settings/DirectorySelectorSetting.svelte";
     import FileSelectorSetting from "../settings/FileSelectorSetting.svelte";
     import LauncherVersion from "../settings/LauncherVersion.svelte";
     import IconButtonSetting from "../settings/IconButtonSetting.svelte";
     import CustomModSetting from "../settings/CustomModSetting.svelte";
-    import { open as dialogOpen } from "@tauri-apps/api/dialog";
+    import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
 
     export let options;
 
@@ -49,9 +49,9 @@
     let progressBar = {
         max: 0,
         value: 0,
-        text: ""
+        text: "",
     };
-    
+
     let recommendedMods = [];
     let customMods = [];
     let branches = [];
@@ -67,14 +67,13 @@
 
     let log = [];
 
-    invoke("get_launcher_version")
-        .then(res => (launcherVersion = res));
+    invoke("get_launcher_version").then((res) => (launcherVersion = res));
 
-    listen("process-output", event => {
+    listen("process-output", (event) => {
         log = [...log, event.payload];
     });
 
-    listen("progress-update", event => {
+    listen("progress-update", (event) => {
         let progressUpdate = event.payload;
 
         switch (progressUpdate.type) {
@@ -94,12 +93,15 @@
     });
 
     function getBuild() {
-        if (options.preferredBuild === -1) { // -1 = latest
+        if (options.selectedBuild === -1) {
+            // -1 = latest
             // The find() method returns a value of the first element in the array that satisfies the provided testing function. Otherwise undefined is returned.
-            return builds.find(e => e.release || options.showNightlyBuilds);
+            return builds.find((e) => e.release || options.showNightlyBuilds);
         }
-        
-        let build = builds.find((build) => build.buildId === options.preferredBuild);
+
+        let build = builds.find(
+            (build) => build.buildId === options.selectedBuild,
+        );
         if (!build) {
             return builds[0];
         }
@@ -120,7 +122,7 @@
     function updateModStates() {
         const branchOptions = {
             modStates: {},
-            customModStates: {}
+            customModStates: {},
         };
 
         for (const mod of recommendedMods) {
@@ -131,14 +133,16 @@
             branchOptions.customModStates[mod.name] = mod.enabled;
         }
 
-        options.branchOptions[options.preferredBranch] = branchOptions;
+        options.branchOptions[options.selectedBranch] = branchOptions;
         options.store();
     }
 
     /// Request builds from API server
     async function requestBuilds() {
-        const requestedBuilds = await invoke("request_builds", { branch: options.preferredBranch });
-        requestedBuilds.forEach(build => {
+        const requestedBuilds = await invoke("request_builds", {
+            branch: options.selectedBranch,
+        });
+        requestedBuilds.forEach((build) => {
             const date = new Date(build.date);
             build.date = date.toLocaleString();
             build.dateDay = date.toLocaleDateString();
@@ -154,12 +158,14 @@
         currentBuild = getBuild();
 
         // Update changelog
-        const changelog = await invoke("fetch_changelog", { buildId: currentBuild.buildId });
+        const changelog = await invoke("fetch_changelog", {
+            buildId: currentBuild.buildId,
+        });
         versionInfo = {
             bannerUrl: "img/banner.png",
             title: `LiquidBounce ${currentBuild.lbVersion} for Minecraft ${currentBuild.mcVersion}`,
             date: currentBuild.dateDay,
-            description: changelog.changelog
+            description: changelog.changelog,
         };
 
         requestMods();
@@ -167,19 +173,29 @@
 
     /// Request mods from API server
     async function requestMods() {
-        const { branch, mcVersion, subsystem } = currentBuild; 
+        const { branch, mcVersion, subsystem } = currentBuild;
         const branchOptions = options.branchOptions[branch];
 
-        recommendedMods = await invoke("request_mods", { branch, mcVersion, subsystem });
+        recommendedMods = await invoke("request_mods", {
+            mcVersion,
+            subsystem,
+        });
         customMods = await invoke("get_custom_mods", { branch, mcVersion });
 
         if (branchOptions) {
-            recommendedMods = recommendedMods.map(mod => {
-                return { ...mod, enabled: branchOptions.modStates[mod.name] ?? mod.enabled };
+            recommendedMods = recommendedMods.map((mod) => {
+                return {
+                    ...mod,
+                    enabled: branchOptions.modStates[mod.name] ?? mod.enabled,
+                };
             });
 
-            customMods = customMods.map(mod => {
-                return { ...mod, enabled: branchOptions.customModStates[mod.name] ?? mod.enabled };
+            customMods = customMods.map((mod) => {
+                return {
+                    ...mod,
+                    enabled:
+                        branchOptions.customModStates[mod.name] ?? mod.enabled,
+                };
             });
         }
     }
@@ -191,31 +207,35 @@
 
         let build = getBuild();
         console.debug("Running build", build);
-
-        console.log([...recommendedMods, ...customMods])
-        await invoke("run_client", { buildId: build.buildId, accountData: options.currentAccount, options: options, mods: [...recommendedMods, ...customMods] });
+        
+        await invoke("run_client", {
+            buildId: build.buildId,
+            accountData: options.currentAccount,
+            options: options,
+            mods: [...recommendedMods, ...customMods],
+        });
     }
-    
+
     async function terminateClient() {
         await invoke("terminate");
     }
 
     // Request branches from API server
     invoke("request_branches")
-        .then(result => {
+        .then((result) => {
             // string array of branches
             branches = result.branches;
 
             // Default to first branch and latest build
-            if (options.preferredBranch === null) {
-                options.preferredBranch = result.defaultBranch;
-                options.preferredBuild = -1;
+            if (options.selectedBranch === null) {
+                options.selectedBranch = result.defaultBranch;
+                options.selectedBuild = -1;
             }
 
             // request builds of branch
             requestBuilds();
         })
-        .catch(e => console.error(e));
+        .catch((e) => console.error(e));
 
     listen("client-exited", () => {
         clientRunning = false;
@@ -229,25 +249,33 @@
     });
 
     function clearData() {
-        invoke("clear_data", { options }).then(() => {
-            alert("Data cleared.");
-        }).catch(e => {
-            alert("Failed to clear data: " + e);
-            console.error(e)
-        });
+        invoke("clear_data", { options })
+            .then(() => {
+                alert("Data cleared.");
+            })
+            .catch((e) => {
+                alert("Failed to clear data: " + e);
+                console.error(e);
+            });
     }
 
-    invoke("default_data_folder_path").then(result => {
-        defaultDataFolder = result;
-    }).catch(e => {
-        alert("Failed to get data folder: " + e);
-        console.error(e);
-    });
+    invoke("default_data_folder_path")
+        .then((result) => {
+            defaultDataFolder = result;
+        })
+        .catch((e) => {
+            alert("Failed to get data folder: " + e);
+            console.error(e);
+        });
 
     async function handleCustomModDelete(e) {
         const { branch, mcVersion } = currentBuild;
 
-        await invoke("delete_custom_mod", { branch, mcVersion, modName: `${e.detail.name}.jar` });
+        await invoke("delete_custom_mod", {
+            branch,
+            mcVersion,
+            modName: `${e.detail.name}.jar`,
+        });
 
         requestMods();
     }
@@ -259,9 +287,8 @@
             directory: false,
             multiple: true,
             filters: [{ name: "", extensions: ["jar"] }],
-            title: "Select a custom mod to install"
+            title: "Select a custom mod to install",
         });
-
 
         if (selected) {
             for (const path of selected) {
@@ -271,63 +298,172 @@
             requestMods();
         }
     }
+
+    // Refresh account data
+    invoke("refresh", { accountData: options.currentAccount })
+        .then((account) => {
+            console.info("Account Refreshed", account);
+
+            options.currentAccount = account;
+            options.store();
+        })
+        .catch((e) => console.error(e));
 </script>
 
 {#if clientLogShown}
-    <ClientLog messages={log} on:hideClientLog={() => clientLogShown = false} />
+    <ClientLog
+        messages={log}
+        on:hideClientLog={() => (clientLogShown = false)}
+    />
 {/if}
 
 {#if settingsShown}
     <SettingsContainer title="Settings" on:hideSettings={hideSettings}>
-        <FileSelectorSetting title="JVM Location" placeholder="Internal" bind:value={options.customJavaPath} filters={[{ name: "javaw", extensions: [] }]} windowTitle="Select custom Java wrapper" />
-        <DirectorySelectorSetting title="Data Location" placeholder={defaultDataFolder} bind:value={options.customDataPath} windowTitle="Select custom data directory" />
-        <RangeSetting title="Memory" min={20} max={100} bind:value={options.memoryPercentage} valueSuffix="%" step={1} />
-        <RangeSetting title="Concurrent Downloads" min={1} max={50} bind:value={options.concurrentDownloads} valueSuffix="connections" step={1} />
-        <ToggleSetting title="Keep launcher running" disabled={false} bind:value={options.keepLauncherOpen} />
-        <ButtonSetting text="Logout" on:click={() => dispatch("logout")} color="#4677FF" />
+        <FileSelectorSetting
+            title="JVM Location"
+            placeholder="Internal"
+            bind:value={options.customJavaPath}
+            filters={[{ name: "javaw", extensions: [] }]}
+            windowTitle="Select custom Java wrapper"
+        />
+        <DirectorySelectorSetting
+            title="Data Location"
+            placeholder={defaultDataFolder}
+            bind:value={options.customDataPath}
+            windowTitle="Select custom data directory"
+        />
+        <RangeSetting
+            title="Memory"
+            min={20}
+            max={100}
+            bind:value={options.memoryPercentage}
+            valueSuffix="%"
+            step={1}
+        />
+        <RangeSetting
+            title="Concurrent Downloads"
+            min={1}
+            max={50}
+            bind:value={options.concurrentDownloads}
+            valueSuffix="connections"
+            step={1}
+        />
+        <ToggleSetting
+            title="Keep launcher running"
+            disabled={false}
+            bind:value={options.keepLauncherOpen}
+        />
+        <ButtonSetting
+            text="Logout"
+            on:click={() => dispatch("logout")}
+            color="#4677FF"
+        />
         <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
         <LauncherVersion version={launcherVersion} />
     </SettingsContainer>
 {/if}
 
 {#if versionSelectShown}
-    <SettingsContainer title="Select version" on:hideSettings={hideVersionSelection}>
-        <SelectSetting title="Branch" items={branches.map(e => ({ value: e, text: e }))} bind:value={options.preferredBranch} on:change={requestBuilds} />
-        <SelectSetting title="Build" items={[{ value: -1, text: "Latest" }, ...builds.filter(e => e.release || options.showNightlyBuilds).map(e => ({ value: e.buildId, text: e.lbVersion + " git-" + e.commitId.substring(0, 7) + " - " + e.date }))]} bind:value={options.preferredBuild} on:change={updateData} />
-        <ToggleSetting title="Show nightly builds" bind:value={options.showNightlyBuilds} disabled={false} on:change={updateData} />
+    <SettingsContainer
+        title="Select version"
+        on:hideSettings={hideVersionSelection}
+    >
+        <SelectSetting
+            title="Branch"
+            items={branches.map((e) => ({ value: e, text: e }))}
+            bind:value={options.selectedBranch}
+            on:change={requestBuilds}
+        />
+        <SelectSetting
+            title="Build"
+            items={[
+                { value: -1, text: "Latest" },
+                ...builds
+                    .filter((e) => e.release || options.showNightlyBuilds)
+                    .map((e) => ({
+                        value: e.buildId,
+                        text:
+                            e.lbVersion +
+                            " git-" +
+                            e.commitId.substring(0, 7) +
+                            " - " +
+                            e.date,
+                    })),
+            ]}
+            bind:value={options.selectedBuild}
+            on:change={updateData}
+        />
+        <ToggleSetting
+            title="Show nightly builds"
+            bind:value={options.showNightlyBuilds}
+            disabled={false}
+            on:change={updateData}
+        />
         <SettingWrapper title="Recommended mods">
             {#each recommendedMods as m}
-                <ToggleSetting title={m.name} bind:value={m.enabled} disabled={m.required} on:change={updateModStates} />
+                <ToggleSetting
+                    title={m.name}
+                    bind:value={m.enabled}
+                    disabled={m.required}
+                    on:change={updateModStates}
+                />
             {/each}
         </SettingWrapper>
         <SettingWrapper title={additionalModsTitle}>
             <div slot="title-element">
-                <IconButtonSetting text="Install" icon="icon-plus" on:click={handleInstallMod} />
+                <IconButtonSetting
+                    text="Install"
+                    icon="icon-plus"
+                    on:click={handleInstallMod}
+                />
             </div>
 
             {#each customMods as m}
-                <CustomModSetting title={m.name} bind:value={m.enabled} on:change={updateModStates} on:delete={handleCustomModDelete} />
+                <CustomModSetting
+                    title={m.name}
+                    bind:value={m.enabled}
+                    on:change={updateModStates}
+                    on:delete={handleCustomModDelete}
+                />
             {/each}
         </SettingWrapper>
     </SettingsContainer>
 {/if}
 
-<VerticalFlexWrapper blur={settingsShown || versionSelectShown || clientLogShown}>
+<VerticalFlexWrapper
+    blur={settingsShown || versionSelectShown || clientLogShown}
+>
     <TitleBar>
         <Logo />
         <StatusBar>
             {#if !clientRunning}
-                <TextStatus text="Welcome back, {options.currentAccount.name}." />
+                <TextStatus
+                    text="Welcome back, {options.currentAccount.name}."
+                />
             {:else}
                 <ProgressStatus {...progressBar} />
             {/if}
         </StatusBar>
-        <Account username={options.currentAccount.name} uuid={options.currentAccount.uuid} accountType={options.currentAccount.type} on:showSettings={() => settingsShown = true} />
+        <Account
+            username={options.currentAccount.name}
+            uuid={options.currentAccount.id}
+            accountType={options.currentAccount.type}
+            on:showSettings={() => (settingsShown = true)}
+        />
         <ButtonClose />
     </TitleBar>
 
     <ContentWrapper>
-        <LaunchArea {versionInfo} lbVersion={currentBuild.lbVersion} mcVersion={currentBuild.mcVersion} on:showVersionSelect={() => versionSelectShown = true} on:showClientLog={() => clientLogShown = true} on:launch={runClient} on:terminate={terminateClient} running={clientRunning} />
+        <LaunchArea
+            {versionInfo}
+            lbVersion={currentBuild.lbVersion}
+            mcVersion={currentBuild.mcVersion}
+            on:showVersionSelect={() => (versionSelectShown = true)}
+            on:showClientLog={() => (clientLogShown = true)}
+            on:launch={runClient}
+            on:terminate={terminateClient}
+            running={clientRunning}
+        />
         <NewsArea />
     </ContentWrapper>
 </VerticalFlexWrapper>
