@@ -110,7 +110,7 @@ pub fn main() -> Result<()> {
     mkdir!(LAUNCHER_DIRECTORY.config_dir());
 
     // app
-    info!("Starting GUI");
+    info!("The GUI is starting...");
     app::gui::gui_main();
 
     info!("Launcher exited");

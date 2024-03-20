@@ -16,7 +16,9 @@
         "window:allow-start-dragging",
         "dialog:allow-message",
         "dialog:allow-open",
+        "dialog:allow-confirm",
         "shell:allow-open",
-        "process:allow-exit"
+        "process:allow-exit",
+        "updater:default"
     ]
 }

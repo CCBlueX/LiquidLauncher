@@ -45,18 +45,24 @@ async fn get_launcher_version() -> Result<String, String> {
 
 #[tauri::command]
 async fn check_online_status() -> Result<(), String> {
+    info!("Checking online status");
     HTTP_CLIENT.get("https://api.liquidbounce.net/")
         .send().await
         .map_err(|e| format!("unable to connect to api.liquidbounce.net: {:}", e))?
         .error_for_status()
         .map_err(|e| format!("api.liquidbounce.net returned an error: {:}", e))?;
+    info!("Online status check successful");
     Ok(())
 }
 
 #[tauri::command]
 async fn get_options() -> Result<LauncherOptions, String> {
+    info!("Loading options...");
     let config_dir = LAUNCHER_DIRECTORY.config_dir();
-    let options = LauncherOptions::load(config_dir).await.unwrap_or_default(); // default to basic options if unable to load
+    let options = LauncherOptions::load(config_dir)
+        .await
+        .unwrap_or_default(); // default to basic options if unable to load
+    info!("Done!");
     
     Ok(options)
 }
@@ -108,11 +114,11 @@ async fn login_offline(username: &str) -> Result<MinecraftAccount, String> {
 
 #[tauri::command]
 async fn login_microsoft(window: tauri::Window) -> Result<MinecraftAccount, String> {
-    let account = MinecraftAccount::auth_msa(|code| {
-        debug!("received code: {}", code);
+    let account = MinecraftAccount::auth_msa(|uri, code| {
+        debug!("enter code {} on {} to sign-in", code, uri);
 
         let _ = window.emit("microsoft_code", code);
-    }).await.map_err(|e| format!("unable to ms auth: {:?}", e))?;
+    }).await.map_err(|e| e.to_string())?;
 
   Ok(account)
 }
@@ -217,8 +223,9 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
     let window_mutex = Arc::new(std::sync::Mutex::new(window));
 
     let (account_name, uuid, token, user_type) = match account_data {
-        MinecraftAccount::MsaAccount { name, uuid, token, .. } => (name, uuid, token, "msa".to_string()),
-        MinecraftAccount::OfflineAccount { name, uuid } => (name, uuid, "-".to_string(), "legacy".to_string())
+        MinecraftAccount::MsaAccount { msa: _, xbl: _, mca, profile } => (profile.name, profile.id.to_string(), mca.data.access_token, "msa".to_string()),
+        MinecraftAccount::LegacyMsaAccount { name, uuid, token, .. } => (name, uuid.to_string(), token, "msa".to_string()),
+        MinecraftAccount::OfflineAccount { name, id } => (name, id.to_string(), "-".to_string(), "legacy".to_string())
     };
 
     // Random XUID

@@ -35,6 +35,7 @@
             options.store();
         } catch (err) {
             alert(err);
+            cancelMicrosoft();
         }
     }
 
