@@ -128,7 +128,7 @@ async fn login_microsoft(window: tauri::Window) -> Result<MinecraftAccount, Stri
         debug!("enter code {} on {} to sign-in", code, uri);
 
         let _ = window.emit("microsoft_code", code);
-    }).await.map_err(|e| e.to_string())?;
+    }).await.map_err(|e| format!("{}", e))?;
 
   Ok(account)
 }
