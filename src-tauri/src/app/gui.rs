@@ -44,7 +44,17 @@ async fn get_launcher_version() -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn check_online_status() -> Result<(), String> {
+async fn check_health() -> Result<(), String> {
+    // Check hosts
+    #[cfg(windows)]
+    {
+        use crate::utils::check_hosts_file;
+
+        info!("Checking hosts file...");
+        check_hosts_file().await
+            .map_err(|e| format!("{}", e))?;
+    }
+
     info!("Checking online status");
     HTTP_CLIENT.get("https://api.liquidbounce.net/")
         .send().await
@@ -386,7 +396,7 @@ pub fn gui_main() {
             runner_instance: Arc::new(Mutex::new(None))
         })
         .invoke_handler(tauri::generate_handler![
-            check_online_status,
+            check_health,
             get_options,
             store_options,
             request_branches,

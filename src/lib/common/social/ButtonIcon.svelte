@@ -1,5 +1,4 @@
 <script>
-    import { invoke } from "@tauri-apps/api/core";
     import ToolTip from "../ToolTip.svelte";
     import { open } from "@tauri-apps/plugin-shell";
 

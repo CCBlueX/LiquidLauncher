@@ -44,26 +44,26 @@
     // Logout from current account
     function logout() {
         // Revoke the actual session
-        invoke("logout", { accountData: options.currentAccount }).catch((e) =>
-            console.error(e),
-        );
+        invoke("logout", { accountData: options.currentAccount }).catch(console.error);
 
         // Remove account data from options data
         options.currentAccount = null;
         options.store();
     }
 
-    invoke("check_online_status")
-        .then((result) => {
-            console.debug("Status", result);
-        })
+    // Check if the launcher is online and passes health checks
+    invoke("check_health")
+        .then(() => console.info("Health Check passed"))
         .catch((e) => {
-            alert(
-                "You are offline! Please connect to the internet and restart the app.\n If this problem persists, please contact the developer.\n\n (Error: " +
-                    e +
-                    ")",
-            );
-            console.error(e);
+            let message = e;
+            if (message.startsWith('"')) message = message.slice(1);
+            if (message.endsWith('"')) message = message.slice(0, -1);
+
+            console.error(message);
+            alert(message.replace(/\\n/g, "\n"));
+            
+            // Open help page
+            open("https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher");
         });
 </script>
 

@@ -40,15 +40,6 @@ use crate::utils::{download_file, get_maven_artifact_path};
 /// Prelaunching client
 ///
 pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, launching_parameter: LaunchingParameter, additional_mods: Vec<LoaderMod>, progress: LauncherData<D>, window: Arc<Mutex<tauri::Window>>) -> Result<()> {
-    // Check hosts
-    #[cfg(windows)]
-    {
-        use crate::utils::check_hosts_file;
-
-        info!("Checking hosts file...");
-        check_hosts_file(&window).await?;
-    }
-    
     info!("Loading minecraft version manifest...");
     let mc_version_manifest = VersionManifest::fetch().await?;
 
