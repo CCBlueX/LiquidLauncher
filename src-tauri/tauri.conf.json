@@ -47,14 +47,15 @@
         "shortDescription": "A LiquidBounce launcher for Minecraft",
         "longDescription": "A LiquidBounce hacked-client launcher for the game Minecraft",
         "license": "GPL-3.0",
-        "licenseFile": "LICENSE",
+        "licenseFile": "../LICENSE",
         "resources": [],
         "targets": [
             "updater",
             "msi",
             "appimage",
             "deb",
-            "appimage"
+            "appimage",
+            "app"
         ],
         "windows": {
             "certificateThumbprint": null,
