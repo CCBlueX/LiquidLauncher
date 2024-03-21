@@ -10,7 +10,7 @@
         .then(async (result) => {
             console.debug("Update Check Result", result);
             if (result && result.available) {
-                if (!await ask("An launcher update is available. Do you want to install it now?", "LiquidLaunher")) {
+                if (!await ask("An launcher update is available. Do you want to install it now?", "LiquidLauncher")) {
                     return;
                 }
 
