@@ -294,7 +294,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 [[package]]
 name = "azalea-auth"
 version = "0.9.0"
-source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#23f621230cf63589c94097b2938ba572b4d30028"
+source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#86c165e8faf7db778b7c36bd17283445be6156dc"
 dependencies = [
  "azalea-buf",
  "azalea-crypto",
@@ -316,7 +316,7 @@ dependencies = [
 [[package]]
 name = "azalea-buf"
 version = "0.9.0"
-source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#23f621230cf63589c94097b2938ba572b4d30028"
+source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#86c165e8faf7db778b7c36bd17283445be6156dc"
 dependencies = [
  "azalea-buf-macros",
  "byteorder",
@@ -329,7 +329,7 @@ dependencies = [
 [[package]]
 name = "azalea-buf-macros"
 version = "0.9.0"
-source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#23f621230cf63589c94097b2938ba572b4d30028"
+source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#86c165e8faf7db778b7c36bd17283445be6156dc"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -339,7 +339,7 @@ dependencies = [
 [[package]]
 name = "azalea-crypto"
 version = "0.9.0"
-source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#23f621230cf63589c94097b2938ba572b4d30028"
+source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#86c165e8faf7db778b7c36bd17283445be6156dc"
 dependencies = [
  "aes",
  "azalea-buf",
@@ -355,9 +355,9 @@ dependencies = [
 
 [[package]]
 name = "backtrace"
-version = "0.3.69"
+version = "0.3.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2089b7e3f35b9dd2d0ed921ead4f6d318c27680d4a5bd167b3ee120edb105837"
+checksum = "95d8e92cac0961e91dbd517496b00f7e9b92363dbe6d42c3198268323798860c"
 dependencies = [
  "addr2line",
  "cc",
