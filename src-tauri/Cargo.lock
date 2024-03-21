@@ -2117,7 +2117,7 @@ dependencies = [
  "async-compression",
  "async_zip",
  "base16ct",
- "base64 0.13.1",
+ "base64 0.21.5",
  "byteorder",
  "chrono",
  "directories",
