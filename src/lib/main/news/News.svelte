@@ -15,8 +15,9 @@
 </script>
 
 <div class="news">
-    <div class="banner" style="background-image: linear-gradient(to bottom, transparent, #4677ffc5), url({bannerUrl});">
+    <div class="banner">
         <div class="banner-text">{bannerText}</div>
+        <div class="background" style="background-image: linear-gradient(to bottom, transparent, #4677ffc5), url({bannerUrl});"></div>
     </div>
     <div class="content">
         <div class="title-date">
@@ -42,12 +43,25 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        background-size: cover;
+        filter: blur(3px);
+        z-index: -1;
     }
 
     .banner-text {
         color: white;
         font-weight: 600;
-        font-size: 26px;
+        font-size: 20px;
     }
 
     .content {
