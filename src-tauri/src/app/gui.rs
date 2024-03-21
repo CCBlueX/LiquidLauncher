@@ -38,6 +38,8 @@ struct AppState {
     runner_instance: Arc<Mutex<Option<RunnerInstance>>>
 }
 
+const ERROR_MSG: &str = "Try restarting the LiquidLauncher with administrator rights.\nIf this error persists, upload your log with the button below and report it to GitHub.";
+
 #[tauri::command]
 async fn get_launcher_version() -> Result<String, String> {
     Ok(LAUNCHER_VERSION.to_string())
@@ -299,7 +301,7 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
                     }
 
                     let message = format!("An error occourd:\n\n{:?}", e);
-                    window_mutex.lock().unwrap().emit("client-error", format!("{}\n\nIf this error persists, upload your log with the button below and report it to GitHub.", message)).unwrap();
+                    window_mutex.lock().unwrap().emit("client-error", format!("{}\n\n{}", message, ERROR_MSG)).unwrap();
                     handle_stderr(&window_mutex, message.as_bytes()).unwrap();
                 };
 
