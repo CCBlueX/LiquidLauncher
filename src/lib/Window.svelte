@@ -4,15 +4,20 @@
     import MainScreen from "./main/MainScreen.svelte";
     import { check } from "@tauri-apps/plugin-updater";
     import { relaunch } from "@tauri-apps/plugin-process";
+    import { ask } from "@tauri-apps/plugin-dialog";
 
     check()
-        .then((result) => {
+        .then(async (result) => {
             console.debug("Update Check Result", result);
             if (result && result.available) {
+                if (!await ask("An launcher update is available. Do you want to install it now?", "LiquidLaunher")) {
+                    return;
+                }
+
                 result
                     .downloadAndInstall()
                     .then(() => {
-                        relaunch().catch((e) => console.error(e));
+                        relaunch().catch(console.error);
                     })
                     .catch((e) =>
                         console.error("Download and Install Failed", e),
