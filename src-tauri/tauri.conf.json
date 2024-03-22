@@ -28,6 +28,17 @@
                     ]
                 },
                 "shadow": true
+            },
+            {
+                "title": "LiquidBounce Download",
+                "label": "download_view",
+                "url": "https://liquidbounce.net/",
+                "visible": false,
+                "resizable": true,
+                "maximized": true,
+                "alwaysOnTop": true,
+                "center": true,
+                "shadow": true
             }
         ]
     },

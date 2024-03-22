@@ -48,7 +48,7 @@ pub async fn open_download_page(url: &str, on_progress: &impl ProgressReceiver, 
         match show_webview(download_page.clone(), window).await {
             Ok(url) => break url,
             Err(e) => {
-                log(&window, &format!("Failed to open download page: {}", e));
+                log(&window, &format!("Failed to open download page: {:?}", e));
                 sleep(Duration::from_millis(500)).await;
             }
         }
@@ -58,25 +58,18 @@ pub async fn open_download_page(url: &str, on_progress: &impl ProgressReceiver, 
 }
 
 async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<String> {
-    let download_view = WebviewWindowBuilder::new(
-        window.lock()
-            .map_err(|_| anyhow!("Unable to lock window due to poisoned mutex"))?
-            .app_handle(),
-        "download_view",
-        WebviewUrl::External(url)
-    ).title("Download of LiquidBounce")
-        .center()
-        .focused(true)
-        .maximized(true)
-        .always_on_top(true)
-        .build()
-        .context("Failed to create download view")?;
+    // Find download_view window from the window manager
+    let mut download_view = window.lock()
+        .map_err(|_| anyhow!("Failed to lock window"))?
+        .get_webview_window("download_view")
+        .context("Failed to get download view window")?;
+
+    // Redirect the download view to the download page
+    download_view.navigate(url);
 
     // Show and maximize the download view
     download_view.show()
         .context("Failed to show the download view")?;
-    download_view.maximize()
-        .context("Failed to maximize the download view")?;
 
     // Wait for the download to finish
     let download_link_cell = Arc::new(Mutex::new(None));
@@ -125,7 +118,7 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
             .context("Download view was closed unexpected")?;
     };
 
-    let _ = download_view.destroy();
+    let _ = download_view.hide();
 
     Ok(url)
 }
