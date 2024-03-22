@@ -15,6 +15,13 @@ pub async fn check_hosts_file() -> Result<()> {
     let system_drive = env::var("SystemDrive").unwrap_or("C:".to_string());
     let hosts_path = format!("{}\\{}", system_drive, HOSTS_PATH);
 
+    // Check if hosts file exists, if not cancel this check with OK
+    if let Ok(exists) = fs::try_exists(&hosts_path).await {
+        if !exists {
+            return Ok(());
+        }
+    }
+
     // Check if the hosts file has been modified
     let hosts_file = fs::read_to_string(&hosts_path).await
         .context(format!("Failed to read hosts file at {}", hosts_path))?;
