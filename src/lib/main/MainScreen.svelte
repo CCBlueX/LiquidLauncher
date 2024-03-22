@@ -291,8 +291,8 @@
         });
 
         if (selected) {
-            for (const path of selected) {
-                await invoke("install_custom_mod", { branch, mcVersion, path });
+            for (const file of selected) {
+                await invoke("install_custom_mod", { branch, mcVersion, path: file.path });
             }
 
             requestMods();
