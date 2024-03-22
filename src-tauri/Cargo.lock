@@ -557,9 +557,9 @@ dependencies = [
 
 [[package]]
 name = "cargo-platform"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "694c8807f2ae16faecc43dc17d74b3eb042482789fd0eb64b39a2e04e087053f"
+checksum = "24b1f0365a6c6bb4020cd05806fd0d33c44d38046b8bd7f0e40814b9763cabfc"
 dependencies = [
  "serde",
 ]
@@ -2370,7 +2370,7 @@ checksum = "f0b5399f6804fbab912acbd8878ed3532d506b7c951b8f9f164ef90fef39e3f4"
 
 [[package]]
 name = "liquidlauncher"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "anyhow",
  "async-compression",
