@@ -59,10 +59,23 @@ pub async fn open_download_page(url: &str, on_progress: &impl ProgressReceiver, 
 
 async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<String> {
     // Find download_view window from the window manager
-    let mut download_view = window.lock()
-        .map_err(|_| anyhow!("Failed to lock window"))?
-        .get_webview_window("download_view")
-        .context("Failed to get download view window")?;
+    let mut download_view = {
+        let window = window.lock()
+            .map_err(|_| anyhow!("Failed to lock window"))?;
+        
+        match window.get_webview_window("download_view") {
+            Some(window) => Ok(window),
+            None => {
+                // todo: do not hardcode index
+                let config = window.config().app.windows.get(1)
+                    .context("Unable to find window config")?;
+
+                WebviewWindowBuilder::from_config(window.app_handle(), config)
+                    .map_err(|e| anyhow!("Failed to build window: {:?}", e))?
+                    .build()
+            },
+        }
+    }?;
 
     // Redirect the download view to the download page
     download_view.navigate(url);
@@ -78,7 +91,8 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
     let cloned_cell = download_link_cell.clone();
     
     download_view.on_window_event(move |event| {
-        if let tauri::WindowEvent::Destroyed = event {
+        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            api.prevent_close();
             close_request.store(true, Ordering::SeqCst);
         }
     });
@@ -110,6 +124,7 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
         }
 
         if cloned_close_request.load(Ordering::SeqCst) {
+            let _ = download_view.hide();
             bail!("Download view was closed before the download link was received. \
             Aborting download...");
         }
