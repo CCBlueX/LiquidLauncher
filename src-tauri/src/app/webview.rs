@@ -17,33 +17,46 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
  
-use std::{sync::{Arc, Mutex}, time::Duration};
+use std::{sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, time::Duration};
 use serde::Deserialize;
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use tracing::{info, debug};
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Manager, Url, WebviewUrl, WebviewWindowBuilder};
 use tokio::time::sleep;
 use crate::utils::download_file;
 
 pub(crate) async fn download_client<F>(url: &str, on_progress: F, window: &Arc<Mutex<tauri::Window>>) -> Result<Vec<u8>> where F : Fn(u64, u64){
-    let download_page = format!("{}&liquidlauncher=1", url);
+    let download_page: Url = format!("{}&liquidlauncher=1", url).parse()
+        .context("Failed to parse download page URL")?;
     let download_view = WebviewWindowBuilder::new(
         window.lock().unwrap().app_handle(),
         "download_view",
-        WebviewUrl::External(download_page.parse().unwrap())
+        WebviewUrl::External(download_page)
     ).title("Download of LiquidBounce")
         .center()
         .focused(true)
         .maximized(true)
-        .build().unwrap();
+        .always_on_top(true)
+        .build()
+        .context("Failed to create download view")?;
 
     // Show and maximize the download view
-    download_view.show().unwrap();
-    download_view.maximize().unwrap();
+    download_view.show()
+        .context("Failed to show the download view")?;
+    download_view.maximize()
+        .context("Failed to maximize the download view")?;
 
     // Wait for the download to finish
     let download_link_cell = Arc::new(Mutex::new(None));
+    let close_request = Arc::new(AtomicBool::new(false));
+    let cloned_close_request = close_request.clone();
     let cloned_cell = download_link_cell.clone();
+    
+    download_view.on_window_event(move |event| {
+        if let tauri::WindowEvent::Destroyed = event {
+            close_request.store(true, Ordering::SeqCst);
+        }
+    });
 
     download_view.once("download", move |event| {
         debug!("Download Event received: {:?}", event);
@@ -61,8 +74,8 @@ pub(crate) async fn download_client<F>(url: &str, on_progress: F, window: &Arc<M
     });
 
     let url = loop {
-        // sleep for 100ms
-        sleep(Duration::from_millis(100)).await;
+        // sleep for 25ms
+        sleep(Duration::from_millis(25)).await;
 
         // check if we got the download link
         if let Ok(mg) = download_link_cell.lock() {
@@ -71,12 +84,13 @@ pub(crate) async fn download_client<F>(url: &str, on_progress: F, window: &Arc<M
             }
         }
 
-        // check if the view is still open, is_visible will throw error when the window is closed
-        download_view.is_visible()
-            .with_context(|| "The download view was closed unexpected, cancelling.")?;
+        if cloned_close_request.load(Ordering::SeqCst) {
+            bail!("Download view was closed before the download link was received. \
+            Aborting download...");
+        }
     };
 
-    download_view.close().unwrap();
+    let _ = download_view.destroy();
 
     info!("Downloading LiquidBounce from {}", url);
     return download_file(&url, on_progress).await;
