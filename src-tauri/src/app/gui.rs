@@ -19,6 +19,7 @@
  
 use std::{sync::{Arc, Mutex}, thread, path::PathBuf};
 
+use anyhow::anyhow;
 use tokio::fs;
 use tracing::{error, info, debug};
 use tauri::{Manager, Window};
@@ -203,6 +204,14 @@ async fn delete_custom_mod(branch: &str, mc_version: &str, mod_name: &str) -> Re
     Ok(())
 }
 
+pub fn log(window: &Arc<std::sync::Mutex<Window>>, msg: &str) {
+    info!("{}", msg);
+    
+    if let Ok(k) = window.lock() {
+        let _ = k.emit("process-output", msg);
+    }
+}
+
 fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
     let data = String::from_utf8(data.to_vec())?;
     if data.is_empty() {
@@ -210,7 +219,7 @@ fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow:
     }
 
     info!("{}", data);
-    window.lock().unwrap().emit("process-output", data)?;
+    window.lock().map_err(|_| anyhow!("Window lock is poisoned"))?.emit("process-output", data)?;
     Ok(())
 }
 
@@ -221,12 +230,12 @@ fn handle_stderr(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow:
     }
 
     error!("{}", data);
-    window.lock().unwrap().emit("process-output", data)?;
+    window.lock().map_err(|_| anyhow!("Window lock is poisoned"))?.emit("process-output", data)?;
     Ok(())
 }
 
 fn handle_progress(window: &Arc<std::sync::Mutex<Window>>, progress_update: ProgressUpdate) -> anyhow::Result<()> {
-    window.lock().unwrap().emit("progress-update", progress_update)?;
+    window.lock().map_err(|_| anyhow!("Window lock is poisoned"))?.emit("progress-update", progress_update)?;
     Ok(())
 }
 
