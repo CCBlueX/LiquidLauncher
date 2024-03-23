@@ -1,5 +1,5 @@
 <script>
-    import { open } from "@tauri-apps/api/shell";
+    import {open} from "@tauri-apps/plugin-shell";
 
     export let bannerText;
     export let title;

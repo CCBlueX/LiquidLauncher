@@ -1,5 +1,5 @@
 <script>
-    import { createEventDispatcher } from "svelte";
+    import {createEventDispatcher} from "svelte";
     import ButtonClose from "../common/ButtonClose.svelte";
     import Logo from "../common/Logo.svelte";
     import TitleBar from "../common/TitleBar.svelte";
@@ -23,11 +23,10 @@
     import LauncherVersion from "../settings/LauncherVersion.svelte";
     import IconButtonSetting from "../settings/IconButtonSetting.svelte";
     import CustomModSetting from "../settings/CustomModSetting.svelte";
-    import { invoke } from "@tauri-apps/api";
-    import { open as dialogOpen } from "@tauri-apps/api/dialog";
-    import { open as shellOpen } from "@tauri-apps/api/shell";
-    import { listen } from "@tauri-apps/api/event";
-    import { exit } from "@tauri-apps/api/process";
+    import {invoke} from "@tauri-apps/api/core";
+    import {listen} from "@tauri-apps/api/event";
+    import {open as dialogOpen} from "@tauri-apps/plugin-dialog";
+    import {open as shellOpen} from "@tauri-apps/plugin-shell";
     import Tabs from "../settings/tab/Tabs.svelte";
     import Description from "../settings/Description.svelte";
     import LiquidBounceAccount from "../settings/LiquidBounceAccount.svelte";
@@ -216,7 +215,7 @@
         }
 
         clientRunning = true;
-        
+
         if (options.clientAccount) {
             try {
                 progressBar.text = "Authenticating client account...";
@@ -240,7 +239,7 @@
         } catch (e) {
             console.error("Failed to refresh account and is now invalidated.", e);
             alert("Failed to refresh account session: " + e + "\n\nYou have been logged out. Please try logging in again.");
-            
+
             // Invalidate account for this session (do not store it)
             options.currentAccount = null;
 
@@ -250,7 +249,7 @@
         }
 
         options.store();
-        
+
         try {
             progressBar.text = "Starting client...";
             console.info("Starting client build", build);
@@ -263,7 +262,7 @@
         } catch (e) {
             console.error("Failed to start client", e);
             alert("Failed to start client: " + e);
-            
+
             clientRunning = false;
         }
     }
@@ -290,9 +289,10 @@
         .catch((e) => {
             alert(e);
             console.error(e);
-            
+
             // exit app
-            exit(1);
+            // todo: fix later
+            //exit(1);
         });
 
     listen("client-exited", () => {
@@ -349,8 +349,8 @@
         });
 
         if (selected) {
-            for (const path of selected) {
-                await invoke("install_custom_mod", { branch, mcVersion, path });
+            for (const file of selected) {
+                await invoke("install_custom_mod", { branch, mcVersion, path: file.path });
             }
 
             requestMods();
@@ -378,8 +378,8 @@
 
 {#if clientLogShown}
     <ClientLog
-        messages={log}
-        on:hideClientLog={() => (clientLogShown = false)}
+            messages={log}
+            on:hideClientLog={() => (clientLogShown = false)}
     />
 {/if}
 
@@ -389,52 +389,52 @@
 
         {#if activeSettingsTab === "General"}
             <FileSelectorSetting
-                title="JVM Location"
-                placeholder="Internal"
-                bind:value={options.customJavaPath}
-                filters={[{ name: "javaw", extensions: [] }]}
-                windowTitle="Select custom Java wrapper"
+                    title="JVM Location"
+                    placeholder="Internal"
+                    bind:value={options.customJavaPath}
+                    filters={[{ name: "javaw", extensions: [] }]}
+                    windowTitle="Select custom Java wrapper"
             />
             <DirectorySelectorSetting
-                title="Data Location"
-                placeholder={defaultDataFolder}
-                bind:value={options.customDataPath}
-                windowTitle="Select custom data directory"
+                    title="Data Location"
+                    placeholder={defaultDataFolder}
+                    bind:value={options.customDataPath}
+                    windowTitle="Select custom data directory"
             />
             <RangeSetting
-                title="Memory"
-                min={20}
-                max={100}
-                bind:value={options.memoryPercentage}
-                valueSuffix="%"
-                step={1}
+                    title="Memory"
+                    min={20}
+                    max={100}
+                    bind:value={options.memoryPercentage}
+                    valueSuffix="%"
+                    step={1}
             />
 
             <RangeSetting
-                title="Concurrent Downloads"
-                min={1}
-                max={50}
-                bind:value={options.concurrentDownloads}
-                valueSuffix="connections"
-                step={1}
+                    title="Concurrent Downloads"
+                    min={1}
+                    max={50}
+                    bind:value={options.concurrentDownloads}
+                    valueSuffix="connections"
+                    step={1}
             />
             <ToggleSetting
-                title="Keep launcher running"
-                disabled={false}
-                bind:value={options.keepLauncherOpen}
+                    title="Keep launcher running"
+                    disabled={false}
+                    bind:value={options.keepLauncherOpen}
             />
             <ButtonSetting
-                text="Logout"
-                on:click={() => dispatch("logout")}
-                color="#4677FF"
+                    text="Logout"
+                    on:click={() => dispatch("logout")}
+                    color="#4677FF"
             />
             <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
             <LauncherVersion version={launcherVersion} />
         {:else if activeSettingsTab === "Donator"}
             <ToggleSetting
-                title="Skip Advertisements"
-                disabled={!options.clientAccount || !options.clientAccount.premium}
-                bind:value={options.skipAdvertisement}
+                    title="Skip Advertisements"
+                    disabled={!options.clientAccount || !options.clientAccount.premium}
+                    bind:value={options.skipAdvertisement}
             />
 
 
@@ -448,22 +448,22 @@
                 {/if}
 
                 <ButtonSetting
-                    text="Manage Account"
-                    on:click={async () => { await shellOpen("https://user.liquidbounce.net"); }}
-                    color="#4677FF"
+                        text="Manage Account"
+                        on:click={async () => { await shellOpen("https://user.liquidbounce.net"); }}
+                        color="#4677FF"
                 />
                 <ButtonSetting
-                    text="Logout"
-                    on:click={() => (options.clientAccount = null)}
-                    color="#B83529"
+                        text="Logout"
+                        on:click={() => (options.clientAccount = null)}
+                        color="#B83529"
                 />
             {:else}
                 <Description description="By donating, you not only support the ongoing development of the client but also receive a donator cape and the ability to bypass ads on the launcher." />
 
                 <ButtonSetting
-                    text="Login with LiquidBounce Account"
-                    on:click={authClientAccount}
-                    color="#4677FF"
+                        text="Login with LiquidBounce Account"
+                        on:click={authClientAccount}
+                        color="#4677FF"
                 />
             {/if}
         {/if}
@@ -472,18 +472,18 @@
 
 {#if versionSelectShown}
     <SettingsContainer
-        title="Select version"
-        on:hideSettings={hideVersionSelection}
+            title="Select version"
+            on:hideSettings={hideVersionSelection}
     >
         <SelectSetting
-            title="Branch"
-            items={branches.map((e) => ({ value: e, text: e }))}
-            bind:value={options.selectedBranch}
-            on:change={requestBuilds}
+                title="Branch"
+                items={branches.map((e) => ({ value: e, text: e }))}
+                bind:value={options.selectedBranch}
+                on:change={requestBuilds}
         />
         <SelectSetting
-            title="Build"
-            items={[
+                title="Build"
+                items={[
                 { value: -1, text: "Latest" },
                 ...builds
                     .filter((e) => e.release || options.showNightlyBuilds)
@@ -497,40 +497,40 @@
                             e.date,
                     })),
             ]}
-            bind:value={options.selectedBuild}
-            on:change={updateData}
+                bind:value={options.selectedBuild}
+                on:change={updateData}
         />
         <ToggleSetting
-            title="Show nightly builds"
-            bind:value={options.showNightlyBuilds}
-            disabled={false}
-            on:change={updateData}
+                title="Show nightly builds"
+                bind:value={options.showNightlyBuilds}
+                disabled={false}
+                on:change={updateData}
         />
         <SettingWrapper title="Recommended mods">
             {#each recommendedMods as m}
                 <ToggleSetting
-                    title={m.name}
-                    bind:value={m.enabled}
-                    disabled={m.required}
-                    on:change={updateModStates}
+                        title={m.name}
+                        bind:value={m.enabled}
+                        disabled={m.required}
+                        on:change={updateModStates}
                 />
             {/each}
         </SettingWrapper>
         <SettingWrapper title={additionalModsTitle}>
             <div slot="title-element">
                 <IconButtonSetting
-                    text="Install"
-                    icon="icon-plus"
-                    on:click={handleInstallMod}
+                        text="Install"
+                        icon="icon-plus"
+                        on:click={handleInstallMod}
                 />
             </div>
 
             {#each customMods as m}
                 <CustomModSetting
-                    title={m.name}
-                    bind:value={m.enabled}
-                    on:change={updateModStates}
-                    on:delete={handleCustomModDelete}
+                        title={m.name}
+                        bind:value={m.enabled}
+                        on:change={updateModStates}
+                        on:delete={handleCustomModDelete}
                 />
             {/each}
         </SettingWrapper>
@@ -538,39 +538,39 @@
 {/if}
 
 <VerticalFlexWrapper
-    blur={settingsShown || versionSelectShown || clientLogShown}
+        blur={settingsShown || versionSelectShown || clientLogShown}
 >
     <TitleBar>
-        <Logo />
+        <Logo/>
         <StatusBar>
             {#if !clientRunning}
                 <TextStatus
-                    text="Welcome back, {options.currentAccount.name}."
+                        text="Welcome back, {options.currentAccount.name}."
                 />
             {:else}
-                <ProgressStatus {...progressBar} />
+                <ProgressStatus {...progressBar}/>
             {/if}
         </StatusBar>
         <Account
-            username={options.currentAccount.name}
-            uuid={options.currentAccount.id}
-            accountType={options.currentAccount.type}
-            on:showSettings={() => (settingsShown = true)}
+                username={options.currentAccount.name}
+                uuid={options.currentAccount.id}
+                accountType={options.currentAccount.type}
+                on:showSettings={() => (settingsShown = true)}
         />
-        <ButtonClose />
+        <ButtonClose/>
     </TitleBar>
 
     <ContentWrapper>
         <LaunchArea
-            {versionInfo}
-            lbVersion={currentBuild.lbVersion}
-            mcVersion={currentBuild.mcVersion}
-            on:showVersionSelect={() => (versionSelectShown = true)}
-            on:showClientLog={() => (clientLogShown = true)}
-            on:launch={runClient}
-            on:terminate={terminateClient}
-            running={clientRunning}
+                {versionInfo}
+                lbVersion={currentBuild.lbVersion}
+                mcVersion={currentBuild.mcVersion}
+                on:showVersionSelect={() => (versionSelectShown = true)}
+                on:showClientLog={() => (clientLogShown = true)}
+                on:launch={runClient}
+                on:terminate={terminateClient}
+                running={clientRunning}
         />
-        <NewsArea />
+        <NewsArea/>
     </ContentWrapper>
 </VerticalFlexWrapper>

@@ -10,7 +10,7 @@ edition = "2021"
 rust-version = "1.79.0"
 
 [build-dependencies]
-tauri-build = { version = "1.5", features = [] }
+tauri-build = { version = "2.0.0-beta", features = [] }
 
 [dependencies]
 # Log
@@ -53,7 +53,12 @@ sha1 = "0.10"
 base16ct = {version = "0.2.0", features = ["alloc"] }
 
 # UI library
-tauri = {version = "1.8", features = ["api-all", "updater"] }
+# UI library
+tauri = { version = "2.0.0-beta", features = [] }
+tauri-plugin-process = "2.0.0-beta"
+tauri-plugin-dialog = "2.0.0-beta"
+tauri-plugin-shell = "2.0.0-beta"
+tauri-plugin-updater = "2.0.0-beta"
 window-vibrancy = { git = "https://github.com/CCBlueX/window-vibrancy.git" }
 
 # HTTP library

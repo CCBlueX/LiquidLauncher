@@ -11,12 +11,16 @@
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^3.0",
-    "@tauri-apps/cli": "^1.6",
+    "@tauri-apps/cli": "^2.0.0-beta",
     "svelte": "^4.2",
     "vite": "^5.0"
   },
   "dependencies": {
-    "@tauri-apps/api": "^1.5",
+    "@tauri-apps/api": "^2.0.0-beta",
+    "@tauri-apps/plugin-process": "^2.0.0-beta",
+    "@tauri-apps/plugin-dialog": "^2.0.0-beta",
+    "@tauri-apps/plugin-shell": "^2.0.0-beta",
+    "@tauri-apps/plugin-updater": "^2.0.0-beta",
     "jwt-decode": "^4.0.0",
     "nouislider": "^15.7"
   }

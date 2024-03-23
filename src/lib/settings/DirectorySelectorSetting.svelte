@@ -1,6 +1,6 @@
 <script>
-    import { open as dialogOpen } from "@tauri-apps/api/dialog";
-    import { open as shellOpen } from "@tauri-apps/api/shell";
+    import {open as dialogOpen} from "@tauri-apps/plugin-dialog";
+    import {open as shellOpen} from "@tauri-apps/plugin-shell";
 
     export let title;
     export let windowTitle;

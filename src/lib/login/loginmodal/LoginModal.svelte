@@ -1,9 +1,10 @@
 <script>
-    import { invoke } from "@tauri-apps/api";
+    import {open} from "@tauri-apps/plugin-shell";
     import ModalButton from "./ModalButton.svelte";
     import ModalInput from "./ModalInput.svelte";
-    import { listen } from "@tauri-apps/api/event";
-    import { open } from "@tauri-apps/api/shell";
+
+    import {invoke} from "@tauri-apps/api/core";
+    import {listen} from "@tauri-apps/api/event";
 
     export let options;
 

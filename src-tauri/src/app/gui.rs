@@ -16,18 +16,18 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
-use std::{sync::{Arc, Mutex}, thread, path::PathBuf};
+
+use std::{path::PathBuf, sync::{Arc, Mutex}, thread};
 
 use anyhow::anyhow;
-use tokio::fs;
-use tracing::{error, info, debug};
 use tauri::{Manager, Window};
+use tokio::fs;
+use tracing::{debug, error, info};
 use uuid::Uuid;
 
-use crate::{auth::{ClientAccountAuthenticator, ClientAccount}, minecraft::{auth::{self, MinecraftAccount}, launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate}, HTTP_CLIENT, LAUNCHER_DIRECTORY, LAUNCHER_VERSION};
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 use crate::utils::percentage_of_total_memory;
+use crate::{auth::{ClientAccount, ClientAccountAuthenticator}, minecraft::{auth::{self, MinecraftAccount}, launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate}, HTTP_CLIENT, LAUNCHER_DIRECTORY, LAUNCHER_VERSION};
 
 use super::{api::{ApiEndpoints, Build, LoaderMod, ModSource}, app_data::LauncherOptions};
 
@@ -452,39 +452,10 @@ async fn clear_data(options: LauncherOptions) -> Result<(), String> {
 /// Runs the GUI and returns when the window is closed.
 pub fn gui_main() {
     tauri::Builder::default()
-        .setup(|app| {
-            let window = app.get_window("main").unwrap();
-
-            #[cfg(target_os = "macos")]
-            {
-                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
-                if let Err(e) = apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None) {
-                    error!("Failed to apply vibrancy: {:?}", e);
-                }
-            }
-            
-            // Applies blur to the window and make corners rounded
-            #[cfg(target_os = "windows")]
-            {
-                use window_vibrancy::{apply_acrylic, apply_blur, apply_rounded_corners};
-
-                if let Err(e) = apply_acrylic(&window, None) {
-                    error!("Failed to apply acrylic vibrancy: {:?}", e);
-
-                    if let Err(e) = apply_blur(&window) {
-                        error!("Failed to apply blur vibrancy: {:?}", e);
-                    }
-                }
-
-                if let Err(e) = apply_rounded_corners(&window) {
-                    error!("Failed to apply rounded corners: {:?}", e);
-                    
-                    // todo: fallback to HTML corners
-                }
-            }
-
-            Ok(())
-        })
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState { 
             runner_instance: Arc::new(Mutex::new(None))
         })

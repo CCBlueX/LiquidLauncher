@@ -16,14 +16,14 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
-use std::{sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, time::Duration};
-use serde::Deserialize;
+
+use crate::minecraft::{launcher::LauncherData, progress::{ProgressReceiver, ProgressUpdate}};
 use anyhow::{anyhow, bail, Context, Result};
-use tracing::{info, debug};
+use serde::Deserialize;
+use std::{sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, time::Duration};
 use tauri::{Manager, Url, WindowBuilder};
 use tokio::time::sleep;
-use crate::minecraft::{launcher::LauncherData, progress::{ProgressReceiver, ProgressUpdate}};
+use tracing::{debug, info};
 
 use super::gui::ShareableWindow;
 
@@ -61,26 +61,26 @@ pub async fn open_download_page(url: &str, launcher_data: &LauncherData<Shareabl
 
 async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<String> {
     // Find download_view window from the window manager
-    let download_view = {
+    let mut download_view = {
         let window = window.lock()
             .map_err(|_| anyhow!("Failed to lock window"))?;
-        
-        match window.get_window("download_view") {
+
+        match window.get_webview_window("download_view") {
             Some(window) => Ok(window),
             None => {
                 // todo: do not hardcode index
-                let config = window.config().tauri.windows.get(1)
-                    .context("Unable to find window config")?.clone();
+                let config = window.config().app.windows.get(1)
+                    .context("Unable to find window config")?;
 
-                WindowBuilder::from_config(&window.app_handle(), config)
+                WebviewWindowBuilder::from_config(window.app_handle(), config)
+                    .map_err(|e| anyhow!("Failed to build window: {:?}", e))?
                     .build()
             },
         }
     }?;
 
     // Redirect the download view to the download page
-    download_view.eval(&format!("window.location.href = '{}';", url.to_string()))
-        .context("Failed to redirect download view to download page")?;
+    download_view.navigate(url);
 
     // Show and maximize the download view
     download_view.show()
@@ -93,7 +93,7 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
     let close_request = Arc::new(AtomicBool::new(false));
     let cloned_close_request = close_request.clone();
     let cloned_cell = download_link_cell.clone();
-    
+
     download_view.on_window_event(move |event| {
         if let tauri::WindowEvent::CloseRequested { api, .. } = event {
             api.prevent_close();
@@ -103,17 +103,17 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
 
     download_view.once("download", move |event| {
         debug!("Download Event received: {:?}", event);
-        if let Some(payload) = event.payload() {
-            #[derive(Deserialize)]
-            struct DownloadPayload {
-                url: String
-            }
+        let payload = event.payload();
 
-            let payload = serde_json::from_str::<DownloadPayload>(payload).unwrap();
-
-            info!("Received download link: {}", payload.url);
-            *cloned_cell.lock().unwrap() = Some(payload.url);
+        #[derive(Deserialize)]
+        struct DownloadPayload {
+            url: String
         }
+
+        let payload = serde_json::from_str::<DownloadPayload>(payload).unwrap();
+
+        info!("Received download link: {}", payload.url);
+        *cloned_cell.lock().unwrap() = Some(payload.url);
     });
 
     let url = loop {
