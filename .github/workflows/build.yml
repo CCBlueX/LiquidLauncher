@@ -1,7 +1,7 @@
 name: Build
 on:
   push:
-    branches: [ tauri_v2 ]
+    branches: [ tauri_v1 ]
 
 jobs:
   build-tauri:
