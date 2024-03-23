@@ -77,7 +77,8 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
     }?;
 
     // Redirect the download view to the download page
-    download_view.eval(&format!("window.location.href = '{}';", url.to_string()));
+    download_view.eval(&format!("window.location.href = '{}';", url.to_string()))
+        .context("Failed to redirect download view to download page")?;
 
     // Show and maximize the download view
     download_view.show()
