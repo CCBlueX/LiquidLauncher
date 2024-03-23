@@ -30,8 +30,8 @@
     .tooltip {
         background-color: #4677FF;
         color: white;
-        padding: 5px 7px;
-        border-radius: 6px;
+        padding: 7px 10px;
+        border-radius: 15px;
         font-size: 14px;
         font-weight: 600;
         position: absolute;

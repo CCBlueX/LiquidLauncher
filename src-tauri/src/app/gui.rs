@@ -19,6 +19,7 @@
  
 use std::{sync::{Arc, Mutex}, thread, path::PathBuf};
 
+use anyhow::anyhow;
 use tokio::fs;
 use tracing::{error, info, debug};
 use tauri::{Manager, Window};
@@ -38,13 +39,25 @@ struct AppState {
     runner_instance: Arc<Mutex<Option<RunnerInstance>>>
 }
 
+const ERROR_MSG: &str = "Try restarting the LiquidLauncher with administrator rights.\nIf this error persists, upload your log with the button below and report it to GitHub.";
+
 #[tauri::command]
 async fn get_launcher_version() -> Result<String, String> {
     Ok(LAUNCHER_VERSION.to_string())
 }
 
 #[tauri::command]
-async fn check_online_status() -> Result<(), String> {
+async fn check_health() -> Result<(), String> {
+    // Check hosts
+    #[cfg(windows)]
+    {
+        use crate::utils::check_hosts_file;
+
+        info!("Checking hosts file...");
+        check_hosts_file().await
+            .map_err(|e| format!("{}", e))?;
+    }
+
     info!("Checking online status");
     HTTP_CLIENT.get("https://api.liquidbounce.net/")
         .send().await
@@ -118,7 +131,7 @@ async fn login_microsoft(window: tauri::Window) -> Result<MinecraftAccount, Stri
         debug!("enter code {} on {} to sign-in", code, uri);
 
         let _ = window.emit("microsoft_code", code);
-    }).await.map_err(|e| e.to_string())?;
+    }).await.map_err(|e| format!("{}", e))?;
 
   Ok(account)
 }
@@ -191,6 +204,14 @@ async fn delete_custom_mod(branch: &str, mc_version: &str, mod_name: &str) -> Re
     Ok(())
 }
 
+pub fn log(window: &Arc<std::sync::Mutex<Window>>, msg: &str) {
+    info!("{}", msg);
+    
+    if let Ok(k) = window.lock() {
+        let _ = k.emit("process-output", msg);
+    }
+}
+
 fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
     let data = String::from_utf8(data.to_vec())?;
     if data.is_empty() {
@@ -198,7 +219,7 @@ fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow:
     }
 
     info!("{}", data);
-    window.lock().unwrap().emit("process-output", data)?;
+    window.lock().map_err(|_| anyhow!("Window lock is poisoned"))?.emit("process-output", data)?;
     Ok(())
 }
 
@@ -209,12 +230,12 @@ fn handle_stderr(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow:
     }
 
     error!("{}", data);
-    window.lock().unwrap().emit("process-output", data)?;
+    window.lock().map_err(|_| anyhow!("Window lock is poisoned"))?.emit("process-output", data)?;
     Ok(())
 }
 
 fn handle_progress(window: &Arc<std::sync::Mutex<Window>>, progress_update: ProgressUpdate) -> anyhow::Result<()> {
-    window.lock().unwrap().emit("progress-update", progress_update)?;
+    window.lock().map_err(|_| anyhow!("Window lock is poisoned"))?.emit("progress-update", progress_update)?;
     Ok(())
 }
 
@@ -289,7 +310,7 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
                     }
 
                     let message = format!("An error occourd:\n\n{:?}", e);
-                    window_mutex.lock().unwrap().emit("client-error", format!("{}\n\nIf this error persists, upload your log with the button below and report it to GitHub.", message)).unwrap();
+                    window_mutex.lock().unwrap().emit("client-error", format!("{}\n\n{}", message, ERROR_MSG)).unwrap();
                     handle_stderr(&window_mutex, message.as_bytes()).unwrap();
                 };
 
@@ -386,7 +407,7 @@ pub fn gui_main() {
             runner_instance: Arc::new(Mutex::new(None))
         })
         .invoke_handler(tauri::generate_handler![
-            check_online_status,
+            check_health,
             get_options,
             store_options,
             request_branches,

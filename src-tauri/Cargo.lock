@@ -294,7 +294,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 [[package]]
 name = "azalea-auth"
 version = "0.9.0"
-source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#2b7484af0dd7bde6d68a7395f59d41e98ba7f2dc"
+source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#86c165e8faf7db778b7c36bd17283445be6156dc"
 dependencies = [
  "azalea-buf",
  "azalea-crypto",
@@ -316,7 +316,7 @@ dependencies = [
 [[package]]
 name = "azalea-buf"
 version = "0.9.0"
-source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#2b7484af0dd7bde6d68a7395f59d41e98ba7f2dc"
+source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#86c165e8faf7db778b7c36bd17283445be6156dc"
 dependencies = [
  "azalea-buf-macros",
  "byteorder",
@@ -329,7 +329,7 @@ dependencies = [
 [[package]]
 name = "azalea-buf-macros"
 version = "0.9.0"
-source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#2b7484af0dd7bde6d68a7395f59d41e98ba7f2dc"
+source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#86c165e8faf7db778b7c36bd17283445be6156dc"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -339,7 +339,7 @@ dependencies = [
 [[package]]
 name = "azalea-crypto"
 version = "0.9.0"
-source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#2b7484af0dd7bde6d68a7395f59d41e98ba7f2dc"
+source = "git+https://github.com/CCBlueX/azalea.git?branch=custom_auth#86c165e8faf7db778b7c36bd17283445be6156dc"
 dependencies = [
  "aes",
  "azalea-buf",
@@ -355,9 +355,9 @@ dependencies = [
 
 [[package]]
 name = "backtrace"
-version = "0.3.69"
+version = "0.3.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2089b7e3f35b9dd2d0ed921ead4f6d318c27680d4a5bd167b3ee120edb105837"
+checksum = "95d8e92cac0961e91dbd517496b00f7e9b92363dbe6d42c3198268323798860c"
 dependencies = [
  "addr2line",
  "cc",
@@ -557,9 +557,9 @@ dependencies = [
 
 [[package]]
 name = "cargo-platform"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "694c8807f2ae16faecc43dc17d74b3eb042482789fd0eb64b39a2e04e087053f"
+checksum = "24b1f0365a6c6bb4020cd05806fd0d33c44d38046b8bd7f0e40814b9763cabfc"
 dependencies = [
  "serde",
 ]
@@ -2370,7 +2370,7 @@ checksum = "f0b5399f6804fbab912acbd8878ed3532d506b7c951b8f9f164ef90fef39e3f4"
 
 [[package]]
 name = "liquidlauncher"
-version = "0.2.2"
+version = "0.2.4"
 dependencies = [
  "anyhow",
  "async-compression",
@@ -4199,9 +4199,9 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "1.13.1"
+version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6ecd384b10a64542d77071bd64bd7b231f4ed5940fba55e98c3de13824cf3d7"
+checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 
 [[package]]
 name = "socket2"
@@ -4509,9 +4509,9 @@ checksum = "e1fc403891a21bcfb7c37834ba66a547a8f402146eba7265b5a6d88059c9ff2f"
 
 [[package]]
 name = "tauri"
-version = "2.0.0-beta.12"
+version = "2.0.0-beta.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c33d0026c6146b73322833bc8e51fc4ee400a814c4cbfe489e3c2aa92cfedcec"
+checksum = "3b119a486a9075ae20bfb8ed9a1883aff862c61a9c1cb1ef1336620536f032cc"
 dependencies = [
  "anyhow",
  "bytes",
@@ -4637,9 +4637,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-dialog"
-version = "2.0.0-beta.2"
+version = "2.0.0-beta.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14c7894fb904ed003fd15915b263655672be4e4581298f7fa8916016e50010ed"
+checksum = "462456015607e4325d39dbb74e53f5a3cdcec3074b08ba8ce4936f7f936f8833"
 dependencies = [
  "glib 0.16.9",
  "log",
@@ -4655,9 +4655,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-fs"
-version = "2.0.0-beta.2"
+version = "2.0.0-beta.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5d71f69535111078131380bcf2a4c2f190ef4d045a33d787a606e7d4fc6a786"
+checksum = "31961707e3be23c95f5fe39cb7688217e3c571a9a88aa9a03149b56bffd8036c"
 dependencies = [
  "anyhow",
  "glob",
@@ -4674,9 +4674,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-process"
-version = "2.0.0-beta.2"
+version = "2.0.0-beta.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0e3a9a8fcce829133941bbd2f164114cf7feb012a6c06a8c4b7e531a8dcd01d"
+checksum = "11215c3615299090e97f37341ae4b01f518bc1d43e9c4391144c0e5e3b7d4f01"
 dependencies = [
  "tauri",
  "tauri-plugin",
@@ -4684,9 +4684,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-shell"
-version = "2.0.0-beta.2"
+version = "2.0.0-beta.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19e5c2d4187bc552d1be72081588c34187eb29e4c375cdfe99872f8d57b6aead"
+checksum = "5624537650f627707f3bd9c6562efe2116c7fb043fcfc2e3d10f802d7870a1cd"
 dependencies = [
  "encoding_rs",
  "log",
@@ -4704,9 +4704,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-updater"
-version = "2.0.0-beta.2"
+version = "2.0.0-beta.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6cb1f95a0fa908434f19241137255ad84bc9433b4b5ce6727f26f6b22a74622e"
+checksum = "106ed17da7442061bf3c0577cd22091424d1a64c86569064e99e7466d97dca65"
 dependencies = [
  "base64 0.21.7",
  "dirs-next",
@@ -4727,6 +4727,7 @@ dependencies = [
  "time",
  "tokio",
  "url",
+ "windows-sys 0.52.0",
  "zip",
 ]
 

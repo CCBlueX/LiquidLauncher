@@ -4,59 +4,79 @@
     import MainScreen from "./main/MainScreen.svelte";
     import { check } from "@tauri-apps/plugin-updater";
     import { relaunch } from "@tauri-apps/plugin-process";
+    import { ask } from "@tauri-apps/plugin-dialog";
 
-    check().then((result) => {
-        console.debug("Update Check Result", result);
-        if (result && result.available) {
-            result.downloadAndInstall().then(() => {
-                relaunch().catch(e => console.error(e));
-            }).catch(e => console.error("Download and Install Failed", e));
-        }
-    }).catch(e => console.error("Update Check Failed", e));
+    check()
+        .then(async (result) => {
+            console.debug("Update Check Result", result);
+            if (result && result.available) {
+                if (!await ask("A Launcher update is available. Would you like to install it now?", "LiquidLauncher")) {
+                    return;
+                }
+
+                result
+                    .downloadAndInstall()
+                    .then(() => {
+                        relaunch().catch(console.error);
+                    })
+                    .catch((e) =>
+                        console.error("Download and Install Failed", e),
+                    );
+            }
+        })
+        .catch((e) => console.error("Update Check Failed", e));
 
     // Load options from file
     let options;
 
-    invoke("get_options").then((result) => {
-        options = result;
+    invoke("get_options")
+        .then((result) => {
+            options = result;
 
-        // Debug options - might be interesting to see what's in there
-        console.debug("Options", options);
+            // Debug options - might be interesting to see what's in there
+            console.debug("Options", options);
 
-        // Easy way to store options
-        options.store = function() {
-            console.debug("Storing options...", options);
-            invoke("store_options", { options })
-                .catch(e => console.error(e));
-        };
-    }).catch(e => console.error(e));
+            // Easy way to store options
+            options.store = function () {
+                console.debug("Storing options...", options);
+                invoke("store_options", { options }).catch((e) =>
+                    console.error(e),
+                );
+            };
+        })
+        .catch((e) => console.error(e));
 
     // Logout from current account
     function logout() {
         // Revoke the actual session
-        invoke("logout", { accountData: options.currentAccount })
-            .catch(e => console.error(e));
+        invoke("logout", { accountData: options.currentAccount }).catch(console.error);
 
         // Remove account data from options data
         options.currentAccount = null;
         options.store();
     }
 
-    invoke("check_online_status").then((result) => {
-        console.debug("Status", result);
-    }).catch(e => {
-        alert("You are offline! Please connect to the internet and restart the app.\n If this problem persists, please contact the developer.\n\n (Error: " + e + ")");
-        console.error(e);
-    });
+    // Check if the launcher is online and passes health checks
+    invoke("check_health")
+        .then(() => console.info("Health Check passed"))
+        .catch((e) => {
+            let message = e;
+            if (message.startsWith('"')) message = message.slice(1);
+            if (message.endsWith('"')) message = message.slice(0, -1);
+
+            console.error(message);
+            alert(message.replace(/\\n/g, "\n"));
+            
+            // Open help page
+            open("https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher");
+        });
 </script>
 
 <div class="window">
-    <div class="drag-area" data-tauri-drag-region>
+    <div class="drag-area" data-tauri-drag-region></div>
 
-    </div>
-
-    {#if options }
-        {#if options.currentAccount }
+    {#if options}
+        {#if options.currentAccount}
             <MainScreen bind:options on:logout={logout} />
         {:else}
             <LoginScreen bind:options />
@@ -64,7 +84,6 @@
     {:else}
         <h1>The launcher is loading...</h1>
     {/if}
-
 </div>
 
 <style>
@@ -84,6 +103,12 @@
         padding: 32px;
         overflow: hidden;
         /* border-radius: 14px; */
+    }
+
+    @media (prefers-color-scheme: light) {
+        .window {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
     }
 
     h1 {

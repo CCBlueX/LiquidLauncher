@@ -25,13 +25,14 @@ use std::process::exit;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use futures::stream::{self, StreamExt};
 
 use tracing::*;
 use path_absolutize::*;
 use tokio::{fs, fs::OpenOptions};
 
+use crate::app::gui::log;
 use crate::{utils::{OS, OS_VERSION}, LAUNCHER_VERSION};
 use crate::app::api::LaunchManifest;
 use crate::error::LauncherError;
@@ -61,8 +62,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     let launcher_data_arc = Arc::new(launcher_data);
 
     let features: HashSet<String> = HashSet::new();
-    
-    info!("Determined OS to be {} {}", OS, OS_VERSION.clone());
+    log(&window, &format!("Determined OS to be {} {}", OS, OS_VERSION.clone()));
 
     // JRE download
     let runtimes_folder = data.join("runtimes");
@@ -73,15 +73,15 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
     let java_bin = match &launching_parameter.custom_java_path {
         Some(path) => PathBuf::from(path),
         None => {
-            info!("Checking for JRE...");
+            log(&window, "Checking for JRE...");
             launcher_data_arc.progress_update(ProgressUpdate::set_label("Checking for JRE..."));
 
             match find_java_binary(&runtimes_folder, &manifest.build.jre_distribution, &*manifest.build.jre_version.to_string()).await {
                 Ok(jre) => jre,
                 Err(e) => {
-                    error!("Failed to find JRE: {}", e);
+                    log(&window, &format!("Failed to find JRE: {}", e));
 
-                    info!("Download JRE...");
+                    log(&window, "Downloading JRE...");
                     launcher_data_arc.progress_update(ProgressUpdate::set_label("Download JRE..."));
                     jre_downloader::jre_download(&runtimes_folder, &manifest.build.jre_distribution, &*manifest.build.jre_version.to_string(), |a, b| {
                         launcher_data_arc.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadJRE, get_progress(0, a, b), get_max(1)));
@@ -90,8 +90,8 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
             }
         }
     };
-    
-    debug!("Java binary: {}", java_bin.to_str().unwrap());
+
+    log(&window, &format!("Java binary: {:?}", java_bin));
     if !java_bin.exists() {
         bail!("Java binary not found");
     }
@@ -299,6 +299,7 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
 
     launcher_data_arc.progress_update(ProgressUpdate::set_label("Launching..."));
     launcher_data_arc.progress_update(ProgressUpdate::set_to_max());
+    log(&window, "Launching...");
 
     let mut running_task = java_runtime.execute(mapped, &game_dir).await?;
 
@@ -306,11 +307,15 @@ pub async fn launch<D: Send + Sync>(data: &Path, manifest: LaunchManifest, versi
 
     if !launching_parameter.keep_launcher_open {
         // Hide launcher window
-        window.lock().unwrap().hide().unwrap();
+        if let Err(err) = window.lock()
+            .map_err(|_| anyhow!("Unable to lock window due to poisoned mutex"))?
+            .hide() {
+                error!("Failed to hide window: {}", err);
+            }
     }
-
+    
     let launcher_data = Arc::try_unwrap(launcher_data_arc)
-        .unwrap_or_else(|_| panic!());
+        .map_err(|_| anyhow!("Failed to unwrap launcher data"))?;
     let terminator = launcher_data.terminator;
     let data = launcher_data.data;
 

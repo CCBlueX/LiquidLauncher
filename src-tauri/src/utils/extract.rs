@@ -18,7 +18,7 @@
  */
  
 use anyhow::{Result, Context};
-use std::{path::{Path, PathBuf}};
+use std::path::{Path, PathBuf};
 use async_compression::tokio::bufread::GzipDecoder;
 use async_zip::read::seek::ZipFileReader;
 use tokio::fs::{create_dir_all, OpenOptions};

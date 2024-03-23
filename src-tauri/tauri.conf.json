@@ -1,6 +1,6 @@
 {
     "productName": "liquidlauncher",
-    "version": "0.2.2",
+    "version": "0.2.4",
     "identifier": "net.ccbluex.liquidlauncher",
     "build": {
         "beforeBuildCommand": "npm run build",
@@ -13,6 +13,7 @@
         "windows": [
             {
                 "title": "LiquidLauncher",
+                "label": "main",
                 "width": 1000,
                 "minWidth": 1000,
                 "height": 670,
@@ -28,6 +29,16 @@
                     ]
                 },
                 "shadow": true
+            },
+            {
+                "title": "LiquidBounce Download",
+                "label": "download_view",
+                "url": "https://liquidbounce.net/",
+                "visible": false,
+                "maximized": true,
+                "alwaysOnTop": true,
+                "center": true,
+                "parent": "main"
             }
         ]
     },
@@ -47,14 +58,16 @@
         "shortDescription": "A LiquidBounce launcher for Minecraft",
         "longDescription": "A LiquidBounce hacked-client launcher for the game Minecraft",
         "license": "GPL-3.0",
-        "licenseFile": "LICENSE",
+        "licenseFile": "../LICENSE",
         "resources": [],
         "targets": [
             "updater",
             "msi",
             "appimage",
             "deb",
-            "appimage"
+            "appimage",
+            "app",
+            "nsis"
         ],
         "windows": {
             "certificateThumbprint": null,
@@ -83,10 +96,7 @@
             "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU1QkM5MTlDREQ4NkEzNjMKUldSam80YmRuSkc4NVNxS2MzYVZPN1I4a283RkdsS0lPTjVjRWlxQ1JhdzFZUkRtc0c1eEtqSzQK",
             "endpoints": [
               "https://api.liquidbounce.net/api/v1/launcher/releases/{{target}}/{{current_version}}"
-            ],
-            "windows": {
-                "installMode": "basicUi"
-            }
+            ]
         }
     }
 }

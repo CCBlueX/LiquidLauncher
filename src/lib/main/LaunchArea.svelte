@@ -63,15 +63,14 @@
         overflow: hidden;
         position: relative;
         display: flex;
-        align-items: center;
+        align-items: flex-end;
     }
 
     .version-info .banner .title {
         font-weight: 800;
         color: white;
         font-size: 18px;
-        max-width: 50%;
-        margin-left: 20px;
+        margin: 10px 20px;
     }
 
     .version-info .date {

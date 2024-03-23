@@ -16,7 +16,7 @@
         height: 48px;
         width: 48px;
         background-color: transparent;
-        border: solid 1px rgba(255, 255, 255, .5);
+        border: solid 2px rgba(255, 255, 255, .5);
         transition: ease background-color .2s;
         display: flex;
         align-items: center;
