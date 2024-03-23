@@ -1,7 +1,7 @@
 name: Build
 on:
   push:
-    branches: [ tauri_v2 ]
+    branches: [ tauri_v1 ]
 
 jobs:
   build-tauri:
@@ -29,7 +29,7 @@ jobs:
         if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libx11-dev xorg-dev libglu1-mesa-dev libglib2.0-0 libgtk2.0-dev
       
       - name: Setup Cargo dependency cache
         uses: Swatinem/rust-cache@v2
@@ -42,8 +42,8 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
       
       - uses: actions/upload-artifact@v3
         if: matrix.platform == 'ubuntu-latest'
