@@ -399,10 +399,39 @@ async fn clear_data(options: LauncherOptions) -> Result<(), String> {
 /// Runs the GUI and returns when the window is closed.
 pub fn gui_main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            let window = app.get_window("main").unwrap();
+
+            #[cfg(target_os = "macos")]
+            {
+                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+                if let Err(e) = apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None) {
+                    error!("Failed to apply vibrancy: {:?}", e);
+                }
+            }
+            
+            // Applies blur to the window and make corners rounded
+            #[cfg(target_os = "windows")]
+            {
+                use window_vibrancy::{apply_acrylic, apply_blur, apply_rounded_corners};
+
+                if let Err(e) = apply_acrylic(&window, None) {
+                    error!("Failed to apply acrylic vibrancy: {:?}", e);
+
+                    if let Err(e) = apply_blur(&window) {
+                        error!("Failed to apply blur vibrancy: {:?}", e);
+                    }
+                }
+
+                if let Err(e) = apply_rounded_corners(&window) {
+                    error!("Failed to apply rounded corners: {:?}", e);
+                    
+                    // todo: fallback to HTML corners
+                }
+            }
+
+            Ok(())
+        })
         .manage(AppState { 
             runner_instance: Arc::new(Mutex::new(None))
         })

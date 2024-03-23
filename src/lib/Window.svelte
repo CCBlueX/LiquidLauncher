@@ -1,30 +1,7 @@
 <script>
-    import { invoke } from "@tauri-apps/api/core";
+    import { invoke } from "@tauri-apps/api";
     import LoginScreen from "./login/LoginScreen.svelte";
     import MainScreen from "./main/MainScreen.svelte";
-    import { check } from "@tauri-apps/plugin-updater";
-    import { relaunch } from "@tauri-apps/plugin-process";
-    import { ask } from "@tauri-apps/plugin-dialog";
-
-    check()
-        .then(async (result) => {
-            console.debug("Update Check Result", result);
-            if (result && result.available) {
-                if (!await ask("A Launcher update is available. Would you like to install it now?", "LiquidLauncher")) {
-                    return;
-                }
-
-                result
-                    .downloadAndInstall()
-                    .then(() => {
-                        relaunch().catch(console.error);
-                    })
-                    .catch((e) =>
-                        console.error("Download and Install Failed", e),
-                    );
-            }
-        })
-        .catch((e) => console.error("Update Check Failed", e));
 
     // Load options from file
     let options;

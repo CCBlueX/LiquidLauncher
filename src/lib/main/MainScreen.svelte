@@ -18,14 +18,14 @@
     import ProgressStatus from "./statusbar/ProgressStatus.svelte";
     import StatusBar from "./statusbar/StatusBar.svelte";
     import TextStatus from "./statusbar/TextStatus.svelte";
-    import { invoke } from "@tauri-apps/api/core";
-    import { listen } from "@tauri-apps/api/event";
     import DirectorySelectorSetting from "../settings/DirectorySelectorSetting.svelte";
     import FileSelectorSetting from "../settings/FileSelectorSetting.svelte";
     import LauncherVersion from "../settings/LauncherVersion.svelte";
     import IconButtonSetting from "../settings/IconButtonSetting.svelte";
     import CustomModSetting from "../settings/CustomModSetting.svelte";
-    import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
+    import { invoke } from "@tauri-apps/api";
+    import { open as dialogOpen } from "@tauri-apps/api/dialog";
+    import { listen } from "@tauri-apps/api/event";
 
     export let options;
 
@@ -291,8 +291,8 @@
         });
 
         if (selected) {
-            for (const file of selected) {
-                await invoke("install_custom_mod", { branch, mcVersion, path: file.path });
+            for (const path of selected) {
+                await invoke("install_custom_mod", { branch, mcVersion, path });
             }
 
             requestMods();

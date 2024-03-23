@@ -21,13 +21,13 @@ use std::{sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, time::Duration};
 use serde::Deserialize;
 use anyhow::{anyhow, bail, Context, Result};
 use tracing::{info, debug};
-use tauri::{Manager, Url, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Manager, Url, WindowBuilder};
 use tokio::time::sleep;
 use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
 
 use super::gui::log;
 
-const MAX_DOWNLOAD_ATTEMPTS: u8 = 5;
+const MAX_DOWNLOAD_ATTEMPTS: u8 = 2;
 
 pub async fn open_download_page(url: &str, on_progress: &impl ProgressReceiver, window: &Arc<Mutex<tauri::Window>>) -> Result<String> {
     let download_page: Url = format!("{}&liquidlauncher=1", url).parse()
@@ -63,22 +63,21 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
         let window = window.lock()
             .map_err(|_| anyhow!("Failed to lock window"))?;
         
-        match window.get_webview_window("download_view") {
+        match window.get_window("download_view") {
             Some(window) => Ok(window),
             None => {
                 // todo: do not hardcode index
-                let config = window.config().app.windows.get(1)
-                    .context("Unable to find window config")?;
+                let config = window.config().tauri.windows.get(1)
+                    .context("Unable to find window config")?.clone();
 
-                WebviewWindowBuilder::from_config(window.app_handle(), config)
-                    .map_err(|e| anyhow!("Failed to build window: {:?}", e))?
+                WindowBuilder::from_config(&window.app_handle(), config)
                     .build()
             },
         }
     }?;
 
     // Redirect the download view to the download page
-    download_view.navigate(url);
+    download_view.eval(&format!("window.location.href = '{}';", url.to_string()));
 
     // Show and maximize the download view
     download_view.show()
@@ -99,17 +98,17 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
 
     download_view.once("download", move |event| {
         debug!("Download Event received: {:?}", event);
-        let payload = event.payload();
+        if let Some(payload) = event.payload() {
+            #[derive(Deserialize)]
+            struct DownloadPayload {
+                url: String
+            }
 
-        #[derive(Deserialize)]
-        struct DownloadPayload {
-            url: String
+            let payload = serde_json::from_str::<DownloadPayload>(payload).unwrap();
+
+            info!("Received download link: {}", payload.url);
+            *cloned_cell.lock().unwrap() = Some(payload.url);
         }
-
-        let payload = serde_json::from_str::<DownloadPayload>(payload).unwrap();
-
-        info!("Received download link: {}", payload.url);
-        *cloned_cell.lock().unwrap() = Some(payload.url);
     });
 
     let url = loop {
