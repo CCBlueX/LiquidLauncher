@@ -82,6 +82,8 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
     // Show and maximize the download view
     download_view.show()
         .context("Failed to show the download view")?;
+    download_view.maximize()
+        .context("Failed to maximize the download view")?;
 
     // Wait for the download to finish
     let download_link_cell = Arc::new(Mutex::new(None));
