@@ -44,7 +44,7 @@ os_info = "3"
 sysinfo = "0.28"
 
 # Data
-regex = "1.7.0"
+regex = "1.10.4"
 urlencoding = "2.1"
 uuid = { version = "1.2", features = ["serde", "v4"] }
 chrono = { version = "0.4", features = ["serde"] }
