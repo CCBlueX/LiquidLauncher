@@ -23,13 +23,13 @@ use anyhow::{anyhow, bail, Context, Result};
 use tracing::{info, debug};
 use tauri::{Manager, Url, WindowBuilder};
 use tokio::time::sleep;
-use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
+use crate::minecraft::{launcher::LauncherData, progress::{ProgressReceiver, ProgressUpdate}};
 
-use super::gui::log;
+use super::gui::ShareableWindow;
 
 const MAX_DOWNLOAD_ATTEMPTS: u8 = 2;
 
-pub async fn open_download_page(url: &str, on_progress: &impl ProgressReceiver, window: &Arc<Mutex<tauri::Window>>) -> Result<String> {
+pub async fn open_download_page(url: &str, launcher_data: &LauncherData<ShareableWindow>) -> Result<String> {
     let download_page: Url = format!("{}&liquidlauncher=1", url).parse()
         .context("Failed to parse download page URL")?;
 
@@ -42,13 +42,12 @@ pub async fn open_download_page(url: &str, on_progress: &impl ProgressReceiver, 
             bail!("Failed to open download page after {} attempts", MAX_DOWNLOAD_ATTEMPTS);
         }
 
-        log(&window, &format!("Opening download page... (Attempt {}/{})", count, MAX_DOWNLOAD_ATTEMPTS));
-        on_progress.progress_update(ProgressUpdate::SetLabel(format!("Opening download page... (Attempt {}/{})", count, MAX_DOWNLOAD_ATTEMPTS)));
+        launcher_data.progress_update(ProgressUpdate::SetLabel(format!("Opening download page... (Attempt {}/{})", count, MAX_DOWNLOAD_ATTEMPTS)));
 
-        match show_webview(download_page.clone(), window).await {
+        match show_webview(download_page.clone(), &launcher_data.data).await {
             Ok(url) => break url,
             Err(e) => {
-                log(&window, &format!("Failed to open download page: {:?}", e));
+                launcher_data.log(&format!("Failed to open download page: {:?}", e));
                 sleep(Duration::from_millis(500)).await;
             }
         }
@@ -59,7 +58,7 @@ pub async fn open_download_page(url: &str, on_progress: &impl ProgressReceiver, 
 
 async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<String> {
     // Find download_view window from the window manager
-    let mut download_view = {
+    let download_view = {
         let window = window.lock()
             .map_err(|_| anyhow!("Failed to lock window"))?;
         

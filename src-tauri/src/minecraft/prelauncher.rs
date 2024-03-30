@@ -16,81 +16,122 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
+
 use std::path::Path;
-use std::sync::{Mutex, Arc};
 
 use anyhow::{bail, Context, Result};
 use async_zip::read::mem::ZipFileReader;
-use tracing::*;
 use tokio::fs;
 use tokio::io::AsyncReadExt;
+use tracing::*;
 
-use crate::app::api::{LaunchManifest, LoaderSubsystem, ModSource, LoaderMod};
-use crate::app::gui::log;
-use crate::error::LauncherError;
+use crate::app::api::{LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
+use crate::app::gui::ShareableWindow;
 use crate::app::webview::open_download_page;
-use crate::LAUNCHER_DIRECTORY;
+use crate::error::LauncherError;
 use crate::minecraft::launcher;
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
-use crate::minecraft::progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps};
+use crate::minecraft::progress::{
+    get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps,
+};
 use crate::minecraft::version::{VersionManifest, VersionProfile};
 use crate::utils::{download_file, get_maven_artifact_path};
+use crate::LAUNCHER_DIRECTORY;
 
 ///
 /// Prelaunching client
 ///
-pub(crate) async fn launch<D: Send + Sync>(launch_manifest: LaunchManifest, launching_parameter: LaunchingParameter, additional_mods: Vec<LoaderMod>, progress: LauncherData<D>, window: Arc<Mutex<tauri::Window>>) -> Result<()> {
-    log(&window, "Loading minecraft version manifest...");
+pub(crate) async fn launch(
+    launch_manifest: LaunchManifest,
+    launching_parameter: LaunchingParameter,
+    additional_mods: Vec<LoaderMod>,
+    launcher_data: LauncherData<ShareableWindow>,
+) -> Result<()> {
+    launcher_data.log("Loading minecraft version manifest...");
+
     let mc_version_manifest = VersionManifest::fetch().await?;
 
     let build = &launch_manifest.build;
     let subsystem = &launch_manifest.subsystem;
 
-    progress.progress_update(ProgressUpdate::set_max());
-    progress.progress_update(ProgressUpdate::SetProgress(0));
+    launcher_data.progress_update(ProgressUpdate::set_max());
+    launcher_data.progress_update(ProgressUpdate::SetProgress(0));
 
-    let data_directory = launching_parameter.custom_data_path
+    let data_directory = launching_parameter
+        .custom_data_path
         .clone()
         .map(|x| x.into())
         .unwrap_or_else(|| LAUNCHER_DIRECTORY.data_dir().to_path_buf());
 
     // Copy retrieve and copy mods from manifest
     clear_mods(&data_directory, &launch_manifest).await?;
-    retrieve_and_copy_mods(&data_directory, &launch_manifest, &launch_manifest.mods, &progress, &window).await?;
-    retrieve_and_copy_mods(&data_directory, &launch_manifest, &additional_mods, &progress, &window).await?;
+    retrieve_and_copy_mods(
+        &data_directory,
+        &launch_manifest,
+        &launch_manifest.mods,
+        &launcher_data,
+    )
+    .await?;
+    retrieve_and_copy_mods(
+        &data_directory,
+        &launch_manifest,
+        &additional_mods,
+        &launcher_data,
+    )
+    .await?;
 
-    log(&window, "Loading version profile...");
+    launcher_data.log("Loading version profile...");
     let manifest_url = match subsystem {
         LoaderSubsystem::Fabric { manifest, .. } => manifest
             .replace("{MINECRAFT_VERSION}", &build.mc_version)
-            .replace("{FABRIC_LOADER_VERSION}", &build.subsystem_specific_data.fabric_loader_version),
-        LoaderSubsystem::Forge { manifest, .. } => manifest.clone()
+            .replace(
+                "{FABRIC_LOADER_VERSION}",
+                &build.subsystem_specific_data.fabric_loader_version,
+            ),
+        LoaderSubsystem::Forge { manifest, .. } => manifest.clone(),
     };
     let mut version = VersionProfile::load(&manifest_url).await?;
 
     if let Some(inherited_version) = &version.inherits_from {
-        let url = mc_version_manifest.versions
+        let url = mc_version_manifest
+            .versions
             .iter()
             .find(|x| &x.id == inherited_version)
             .map(|x| &x.url)
-            .ok_or_else(|| LauncherError::InvalidVersionProfile(format!("unable to find inherited version manifest {}", inherited_version)))?;
+            .ok_or_else(|| {
+                LauncherError::InvalidVersionProfile(format!(
+                    "unable to find inherited version manifest {}",
+                    inherited_version
+                ))
+            })?;
 
-        debug!("Determined {}'s download url to be {}", inherited_version, url);
-        log(&window, &format!("Downloading inherited version {}...", inherited_version));
+        debug!(
+            "Determined {}'s download url to be {}",
+            inherited_version, url
+        );
+        launcher_data.log(&format!("Downloading inherited version {}...", inherited_version));
 
         let parent_version = VersionProfile::load(url).await?;
-
         version.merge(parent_version)?;
     }
 
-    log(&window, &format!("Launching {}...", launch_manifest.build.commit_id));
-    launcher::launch(&data_directory, launch_manifest, version, launching_parameter, progress, window).await?;
+    launcher_data.log(&format!("Launching {}...", launch_manifest.build.commit_id));
+    launcher::launch(
+        &data_directory,
+        launch_manifest,
+        version,
+        launching_parameter,
+        launcher_data
+    )
+    .await?;
     Ok(())
 }
 
 pub(crate) async fn clear_mods(data: &Path, manifest: &LaunchManifest) -> Result<()> {
-    let mods_path = data.join("gameDir").join(&manifest.build.branch).join("mods");
+    let mods_path = data
+        .join("gameDir")
+        .join(&manifest.build.branch)
+        .join("mods");
 
     if !mods_path.exists() {
         return Ok(());
@@ -106,20 +147,39 @@ pub(crate) async fn clear_mods(data: &Path, manifest: &LaunchManifest) -> Result
     Ok(())
 }
 
-pub async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods: &Vec<LoaderMod>, progress: &impl ProgressReceiver, window: &Arc<Mutex<tauri::Window>>) -> Result<()> {
+pub async fn retrieve_and_copy_mods(
+    data: &Path,
+    manifest: &LaunchManifest,
+    mods: &Vec<LoaderMod>,
+    launcher_data: &LauncherData<ShareableWindow>,
+) -> Result<()> {
     let mod_cache_path = data.join("mod_cache");
-    let mod_custom_path = data.join("custom_mods")
-        .join(format!("{}-{}", manifest.build.branch, manifest.build.mc_version));
-    let mods_path = data.join("gameDir")
+    let mod_custom_path = data.join("custom_mods").join(format!(
+        "{}-{}",
+        manifest.build.branch, manifest.build.mc_version
+    ));
+    let mods_path = data
+        .join("gameDir")
         .join(&manifest.build.branch)
         .join("mods");
 
-    fs::create_dir_all(&mod_cache_path).await
-        .with_context(|| format!("Failed to create mod cache directory {}", mod_cache_path.display()))?;
-    fs::create_dir_all(&mods_path).await
+    fs::create_dir_all(&mod_cache_path).await.with_context(|| {
+        format!(
+            "Failed to create mod cache directory {}",
+            mod_cache_path.display()
+        )
+    })?;
+    fs::create_dir_all(&mods_path)
+        .await
         .with_context(|| format!("Failed to create mods directory {}", mods_path.display()))?;
-    fs::create_dir_all(&mod_custom_path).await
-        .with_context(|| format!("Failed to create custom mods directory {}", mod_custom_path.display()))?;
+    fs::create_dir_all(&mod_custom_path)
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to create custom mods directory {}",
+                mod_custom_path.display()
+            )
+        })?;
 
     // Download and copy mods
     let max = get_max(mods.len());
@@ -135,12 +195,17 @@ pub async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods
             fs::copy(mod_custom_path.join(file_name), mods_path.join(file_name))
                 .await
                 .with_context(|| format!("Failed to copy custom mod {}", current_mod.name))?;
-            log(&window, &format!("Copied custom mod {}", current_mod.name));
-            progress.progress_update(ProgressUpdate::set_label(format!("Copied custom mod {}", current_mod.name)));
+            launcher_data.progress_update(ProgressUpdate::set_label(format!(
+                "Copied custom mod {}",
+                current_mod.name
+            )));
             continue;
         }
 
-        progress.progress_update(ProgressUpdate::set_label(format!("Downloading recommended mod {}", current_mod.name)));
+        launcher_data.progress_update(ProgressUpdate::set_label(format!(
+            "Downloading recommended mod {}",
+            current_mod.name
+        )));
 
         let current_mod_path = mod_cache_path.join(current_mod.source.get_path()?);
 
@@ -150,24 +215,50 @@ pub async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods
             fs::create_dir_all(&current_mod_path.parent().unwrap()).await?;
 
             let contents = match &current_mod.source {
-                ModSource::SkipAd { artifact_name: _, url, extract } => {
-                    log(&window, &format!("Opening download page for mod {} on {}", current_mod.name, url));
-                    progress.progress_update(ProgressUpdate::set_label(format!("Opening download page for mod {}", current_mod.name)));
-                    let direct_url = open_download_page(url, progress, window).await?;
+                ModSource::SkipAd {
+                    artifact_name: _,
+                    url,
+                    extract,
+                } => {
+                    launcher_data.log(&format!(
+                        "Opening download page for mod {} on {}",
+                        current_mod.name, url
+                    ));
+                    launcher_data.progress_update(ProgressUpdate::set_label(format!(
+                        "Opening download page for mod {}",
+                        current_mod.name
+                    )));
+                    let direct_url = open_download_page(url, launcher_data).await?;
 
-                    log(&window, &format!("Downloading mod {} from {}", current_mod.name, direct_url));
-                    progress.progress_update(ProgressUpdate::set_label(format!("Downloading mod {}", current_mod.name)));
-                    let retrieved_bytes = download_file(&direct_url, |a, b| progress.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLiquidBounceMods, get_progress(mod_idx, a, b) as u64, max))).await?;
+                    launcher_data.log(&format!("Downloading mod {} from {}", current_mod.name, direct_url));
+                    launcher_data.progress_update(ProgressUpdate::set_label(format!(
+                        "Downloading mod {}",
+                        current_mod.name
+                    )));
+                    let retrieved_bytes = download_file(&direct_url, |a, b| {
+                        launcher_data.progress_update(ProgressUpdate::set_for_step(
+                            ProgressUpdateSteps::DownloadLiquidBounceMods,
+                            get_progress(mod_idx, a, b) as u64,
+                            max,
+                        ))
+                    })
+                    .await?;
 
                     // Extract bytes
                     if *extract {
                         let reader = ZipFileReader::new(retrieved_bytes).await?;
 
                         // Find .JAR file in archive and get index of it
-                        let index_of_file_to_extract = reader.file().entries()
+                        let index_of_file_to_extract = reader
+                            .file()
+                            .entries()
                             .iter()
                             .position(|x| x.entry().filename().ends_with(".jar"))
-                            .ok_or_else(|| LauncherError::InvalidVersionProfile("There is no JAR in the downloaded archive".to_string()))?;
+                            .ok_or_else(|| {
+                                LauncherError::InvalidVersionProfile(
+                                    "There is no JAR in the downloaded archive".to_string(),
+                                )
+                            })?;
                         let entry = reader.file().entries()[index_of_file_to_extract].entry();
 
                         // Read file to extract
@@ -180,31 +271,50 @@ pub async fn retrieve_and_copy_mods(data: &Path, manifest: &LaunchManifest, mods
                     } else {
                         retrieved_bytes
                     }
-                },
-                ModSource::Repository { repository, artifact } => {
-                    log(&window, &format!("Downloading mod {} from {}", artifact, repository));
-                    let repository_url = manifest.repositories.get(repository)
-                        .ok_or_else(|| LauncherError::InvalidVersionProfile(format!("There is no repository specified with the name {}", repository)))?;
+                }
+                ModSource::Repository {
+                    repository,
+                    artifact,
+                } => {
+                    launcher_data.log(&format!("Downloading mod {} from {}", artifact, repository));
+                    let repository_url =
+                        manifest.repositories.get(repository).ok_or_else(|| {
+                            LauncherError::InvalidVersionProfile(format!(
+                                "There is no repository specified with the name {}",
+                                repository
+                            ))
+                        })?;
 
-                    let retrieved_bytes = download_file(&format!("{}{}", repository_url, get_maven_artifact_path(artifact)?), |a, b| {
-                        progress.progress_update(ProgressUpdate::set_for_step(ProgressUpdateSteps::DownloadLiquidBounceMods, get_progress(mod_idx, a, b), max));
-                    }).await?;
+                    let retrieved_bytes = download_file(
+                        &format!("{}{}", repository_url, get_maven_artifact_path(artifact)?),
+                        |a, b| {
+                            launcher_data.progress_update(ProgressUpdate::set_for_step(
+                                ProgressUpdateSteps::DownloadLiquidBounceMods,
+                                get_progress(mod_idx, a, b),
+                                max,
+                            ));
+                        },
+                    )
+                    .await?;
 
                     retrieved_bytes
-                },
+                }
                 _ => bail!("unsupported mod source: {:?}", current_mod.source),
             };
 
-            fs::write(&current_mod_path, contents).await
+            fs::write(&current_mod_path, contents)
+                .await
                 .with_context(|| format!("Failed to write mod {}", current_mod.name))?;
         }
 
         // Copy the mod.
-        fs::copy(&current_mod_path, mods_path.join(format!("{}.jar", current_mod.name)))
-            .await
-            .with_context(|| format!("Failed to copy mod {}", current_mod.name))?;
+        fs::copy(
+            &current_mod_path,
+            mods_path.join(format!("{}.jar", current_mod.name)),
+        )
+        .await
+        .with_context(|| format!("Failed to copy mod {}", current_mod.name))?;
     }
 
     Ok(())
-
 }

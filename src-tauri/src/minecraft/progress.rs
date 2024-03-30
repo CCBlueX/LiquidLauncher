@@ -84,5 +84,6 @@ impl ProgressUpdate {
 
 pub trait ProgressReceiver {
     fn progress_update(&self, update: ProgressUpdate);
+    fn log(&self, msg: &str);
 }
 

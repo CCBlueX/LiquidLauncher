@@ -31,6 +31,8 @@ use crate::utils::percentage_of_total_memory;
 
 use super::{api::{ApiEndpoints, Build, LoaderMod, ModSource}, app_data::LauncherOptions};
 
+pub type ShareableWindow = Arc<Mutex<Window>>;
+
 struct RunnerInstance {
     terminator: tokio::sync::oneshot::Sender<()>,
 }
@@ -204,15 +206,7 @@ async fn delete_custom_mod(branch: &str, mc_version: &str, mod_name: &str) -> Re
     Ok(())
 }
 
-pub fn log(window: &Arc<std::sync::Mutex<Window>>, msg: &str) {
-    info!("{}", msg);
-    
-    if let Ok(k) = window.lock() {
-        let _ = k.emit("process-output", msg);
-    }
-}
-
-fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
+fn handle_stdout(window: &ShareableWindow, data: &[u8]) -> anyhow::Result<()> {
     let data = String::from_utf8(data.to_vec())?;
     if data.is_empty() {
         return Ok(()); // ignore empty lines
@@ -223,7 +217,7 @@ fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow:
     Ok(())
 }
 
-fn handle_stderr(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
+fn handle_stderr(window: &ShareableWindow, data: &[u8]) -> anyhow::Result<()> {
     let data = String::from_utf8(data.to_vec())?;
     if data.is_empty() {
         return Ok(()); // ignore empty lines
@@ -234,14 +228,29 @@ fn handle_stderr(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow:
     Ok(())
 }
 
-fn handle_progress(window: &Arc<std::sync::Mutex<Window>>, progress_update: ProgressUpdate) -> anyhow::Result<()> {
-    window.lock().map_err(|_| anyhow!("Window lock is poisoned"))?.emit("progress-update", progress_update)?;
+fn handle_progress(window: &ShareableWindow, progress_update: ProgressUpdate) -> anyhow::Result<()> {
+    window.lock().map_err(|_| anyhow!("Window lock is poisoned"))?.emit("progress-update", &progress_update)?;
+
+    // Check if progress update is label update
+    if let ProgressUpdate::SetLabel(label) = progress_update {
+        handle_log(window, &label)?;
+    }
+    Ok(())
+}
+
+fn handle_log(window: &ShareableWindow, msg: &str) -> anyhow::Result<()> {
+    info!("{}", msg);
+    
+    if let Ok(k) = window.lock() {
+        let _ = k.emit("process-output", msg);
+    }
     Ok(())
 }
 
 #[tauri::command]
 async fn run_client(build_id: u32, account_data: MinecraftAccount, options: LauncherOptions, mods: Vec<LoaderMod>, window: Window, app_state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let window_mutex = Arc::new(std::sync::Mutex::new(window));
+    // A shared mutex for the window object.
+    let shareable_window: ShareableWindow = Arc::new(Mutex::new(window));
 
     let (account_name, uuid, token, user_type) = match account_data {
         MinecraftAccount::MsaAccount { msa: _, xbl: _, mca, profile } => (profile.name, profile.id.to_string(), mca.data.access_token, "msa".to_string()),
@@ -292,31 +301,34 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
             .block_on(async {
                 let keep_launcher_open = parameters.keep_launcher_open;
 
+                let launcher_data = LauncherData {
+                    on_stdout: handle_stdout,
+                    on_stderr: handle_stderr,
+                    on_progress: handle_progress,
+                    on_log: handle_log,
+                    hide_window: |w| w.lock().unwrap().hide().unwrap(),
+                    data: Box::new(shareable_window.clone()),
+                    terminator: terminator_rx
+                };
+
                 if let Err(e) = prelauncher::launch(
                     launch_manifest,
                     parameters,
                     mods,
-                    LauncherData {
-                        on_stdout: handle_stdout,
-                        on_stderr: handle_stderr,
-                        on_progress: handle_progress,
-                        data: Box::new(window_mutex.clone()),
-                        terminator: terminator_rx
-                    },
-                    window_mutex.clone()
+                    launcher_data
                 ).await {
                     if !keep_launcher_open {
-                        window_mutex.lock().unwrap().show().unwrap();
+                        shareable_window.lock().unwrap().show().unwrap();
                     }
 
                     let message = format!("An error occourd:\n\n{:?}", e);
-                    window_mutex.lock().unwrap().emit("client-error", format!("{}\n\n{}", message, ERROR_MSG)).unwrap();
-                    handle_stderr(&window_mutex, message.as_bytes()).unwrap();
+                    shareable_window.lock().unwrap().emit("client-error", format!("{}\n\n{}", message, ERROR_MSG)).unwrap();
+                    handle_stderr(&shareable_window, message.as_bytes()).unwrap();
                 };
 
                 *copy_of_runner_instance.lock().map_err(|e| format!("unable to lock runner instance: {:?}", e)).unwrap()
                     = None;
-                window_mutex.lock().unwrap().emit("client-exited", ()).unwrap()
+                shareable_window.lock().unwrap().emit("client-exited", ()).unwrap()
             });
     });
 

@@ -18,7 +18,7 @@ impl Default for JavaDistribution {
 }
 
 impl JavaDistribution {
-    pub fn get_url(&self, jre_version: &str, os_name: &str, os_arch: &str) -> String {
+    pub fn get_url(&self, jre_version: &u32, os_name: &str, os_arch: &str) -> String {
         match self {
             JavaDistribution::Temurin => {
                 format!(

@@ -23,7 +23,7 @@
     windows_subsystem = "windows"
 )]
 
-use std::{fs, io};
+use std::io;
 use once_cell::sync::Lazy;
 use anyhow::Result;
 use directories::ProjectDirs;
@@ -63,19 +63,6 @@ static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
     
     client
 });
-
-/// Creates a directory tree if it doesn't exist
-macro_rules! mkdir {
-    ($path:expr) => {
-        // Check if directory exists
-        if !$path.exists() {
-            // Create directory
-            if let Err(e) = fs::create_dir_all($path) {
-                error!("Failed to create directory {:?}: {}", $path, e);
-            }
-        }
-    };
-}
 
 pub fn main() -> Result<()> {
     use tracing_subscriber::{fmt, EnvFilter};

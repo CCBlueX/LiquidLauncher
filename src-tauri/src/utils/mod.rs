@@ -22,6 +22,7 @@ mod extract;
 mod download;
 mod maven;
 mod checksum;
+mod macros;
 #[cfg(windows)]
 mod hosts;
 
