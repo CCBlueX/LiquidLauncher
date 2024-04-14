@@ -62,6 +62,12 @@ jobs:
         with:
           name: liquidlauncher-windows
           path: ./src-tauri/target/release/bundle/msi/liquidlauncher_**.msi.*
+      
+      - uses: actions/upload-artifact@v3
+        if: matrix.platform == 'windows-latest'
+        with:
+          name: liquidlauncher-windows
+          path: ./src-tauri/target/release/bundle/nsis/liquidlauncher_**.nsis.*
 
       - uses: actions/upload-artifact@v3
         if: matrix.platform == 'macos-latest'
