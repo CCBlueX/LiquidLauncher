@@ -39,7 +39,10 @@ pub async fn open_download_page(url: &str, launcher_data: &LauncherData<Shareabl
         count += 1;
 
         if count > MAX_DOWNLOAD_ATTEMPTS {
-            bail!("Failed to open download page after {} attempts", MAX_DOWNLOAD_ATTEMPTS);
+            bail!("Failed to open download page after {} attempts.\n\n\
+            If the download window does not appear, please try restarting LiquidLauncher with administrator privileges.\n\
+            If this does not help, please install LiquidBounce manually (https://liquidbounce.net/docs/Tutorials/Installation).\n\
+            Or try our advice at https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher.", MAX_DOWNLOAD_ATTEMPTS);
         }
 
         launcher_data.progress_update(ProgressUpdate::SetLabel(format!("Opening download page... (Attempt {}/{})", count, MAX_DOWNLOAD_ATTEMPTS)));
