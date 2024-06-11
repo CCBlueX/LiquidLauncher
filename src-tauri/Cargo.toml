@@ -67,6 +67,8 @@ toml = "0.7.2"
 # MS Authentication support
 azalea-auth = { git = "https://github.com/CCBlueX/azalea.git", branch = "custom_auth", package = "azalea-auth" }
 
+md5 = "0.7.0"
+
 [features]
 # by default Tauri runs in production mode
 # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL

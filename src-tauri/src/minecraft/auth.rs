@@ -17,7 +17,7 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 
 use azalea_auth::{
     cache::ExpiringValue, check_ownership, get_minecraft_token, get_ms_auth_token, get_ms_link_code, get_profile, refresh_ms_auth_token, AccessTokenResponse, AuthError, MinecraftAuthResponse, ProfileResponse, XboxLiveAuth
@@ -98,10 +98,23 @@ impl MinecraftAccount {
     ///
     /// Returns a `MinecraftAccount::OfflineAccount` if successful
     pub async fn auth_offline(username: String) -> Self {
-        // Request UUID from Mojang's API
-        let uuid = uuid_of_username(&username)
-            .await
-            .unwrap_or_else(|_| Uuid::new_v4());
+        // Generate UUID from following string: OfflinePlayer:<username>
+        // Java/Kotlin equivalent: UUID.nameUUIDFromBytes("OfflinePlayer:$name".toByteArray())
+        // Explanation: [nameUUIDFromBytes] uses MD5 to generate a UUID from the input bytes.
+        // The input bytes are the UTF-8 bytes of the string "OfflinePlayer:$name".
+        // The UUID generated is a version 3 UUID, which is based on the MD5 hash of the input bytes.
+
+        // Generate UUID from "OfflinePlayer:$name"
+        let name_str = format!("OfflinePlayer:{}", username);
+        let bytes = name_str.as_bytes();
+        let mut md5: [u8; 16] = md5::compute(bytes).into();
+
+        md5[6] &= 0x0f; // clear version
+        md5[6] |= 0x30; // version 3
+        md5[8] &= 0x3f; // clear variant
+        md5[8] |= 0x80; // IETF variant
+
+        let uuid = Uuid::from_bytes(md5);
 
         // Return offline account
         MinecraftAccount::OfflineAccount {
@@ -181,41 +194,4 @@ async fn login_msa(msa: ExpiringValue<AccessTokenResponse>) -> Result<MinecraftA
         mca: minecraft.mca,
         profile,
     })
-}
-
-/// Get the UUID of a username
-pub async fn uuid_of_username(username: &String) -> Result<Uuid> {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    pub enum ApiMojangProfile {
-        Success {
-            id: Uuid,
-            name: String,
-        },
-        Error {
-            error: String,
-            #[serde(rename(deserialize = "errorMessage"))]
-            error_message: String,
-        },
-    }
-
-    // https://api.mojang.com/users/profiles/minecraft/<username>
-
-    let response = HTTP_CLIENT
-        .get(format!(
-            "https://api.mojang.com/users/profiles/minecraft/{}",
-            username
-        ))
-        .send()
-        .await?
-        .json::<ApiMojangProfile>()
-        .await?;
-
-    match response {
-        ApiMojangProfile::Success { id, name: _name } => Ok(id),
-        ApiMojangProfile::Error {
-            error,
-            error_message,
-        } => Err(anyhow!("{}: {}", error, error_message)),
-    }
 }
