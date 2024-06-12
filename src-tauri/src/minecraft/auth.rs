@@ -94,16 +94,15 @@ impl MinecraftAccount {
     }
 
     /// Authenticate using an offline account
-    /// Requests the UUID of the username from Mojang's API. If the username is invalid, the UUID will be `-`.
+    /// Generates UUID from following format: OfflinePlayer:<username>
+    /// Java/Kotlin equivalent: UUID.nameUUIDFromBytes("OfflinePlayer:$name".toByteArray())
+    /// 
+    // Explanation: [nameUUIDFromBytes] uses MD5 to generate a UUID from the input bytes.
+    // The input bytes are the UTF-8 bytes of the string "OfflinePlayer:$name".
+    // The UUID generated is a version 3 UUID, which is based on the MD5 hash of the input bytes.
     ///
     /// Returns a `MinecraftAccount::OfflineAccount` if successful
     pub async fn auth_offline(username: String) -> Self {
-        // Generate UUID from following string: OfflinePlayer:<username>
-        // Java/Kotlin equivalent: UUID.nameUUIDFromBytes("OfflinePlayer:$name".toByteArray())
-        // Explanation: [nameUUIDFromBytes] uses MD5 to generate a UUID from the input bytes.
-        // The input bytes are the UTF-8 bytes of the string "OfflinePlayer:$name".
-        // The UUID generated is a version 3 UUID, which is based on the MD5 hash of the input bytes.
-
         // Generate UUID from "OfflinePlayer:$name"
         let name_str = format!("OfflinePlayer:{}", username);
         let bytes = name_str.as_bytes();
