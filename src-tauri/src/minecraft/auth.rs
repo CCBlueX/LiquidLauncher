@@ -46,6 +46,10 @@ pub enum MinecraftAccount {
         /// The user's Minecraft profile (i.e. username, UUID, skin)
         #[serde(flatten)]
         profile: ProfileResponse,
+        #[serde(skip_deserializing)]
+        #[serde(default)]
+        #[serde(rename = "hasBeenAuthenticated")]
+        has_been_authenticated: bool,
     },
     #[serde(rename = "Microsoft")]
     LegacyMsaAccount {
@@ -53,12 +57,20 @@ pub enum MinecraftAccount {
         uuid: Uuid,
         token: String,
         ms_auth: MsAuth,
+        #[serde(skip_deserializing)]
+        #[serde(default)]
+        #[serde(rename = "hasBeenAuthenticated")]
+        has_been_authenticated: bool,
     },
     #[serde(rename = "Offline")]
     OfflineAccount {
         name: String,
         #[serde(alias = "uuid")]
-        id: Uuid
+        id: Uuid,
+        #[serde(skip_deserializing)]
+        #[serde(default)]
+        #[serde(rename = "hasBeenAuthenticated")]
+        has_been_authenticated: bool,
     },
 }
 
@@ -119,6 +131,7 @@ impl MinecraftAccount {
         MinecraftAccount::OfflineAccount {
             name: username,
             id: uuid,
+            has_been_authenticated: true
         }
     }
 
@@ -130,6 +143,7 @@ impl MinecraftAccount {
                 xbl,
                 mca,
                 profile,
+                ..
             } => {
                 // Not necessary to refresh if the Minecraft auth token is not expired
                 if !mca.is_expired() {
@@ -138,6 +152,7 @@ impl MinecraftAccount {
                         xbl,
                         mca,
                         profile,
+                        has_been_authenticated: true
                     });
                 }
 
@@ -163,7 +178,13 @@ impl MinecraftAccount {
                     &ms_auth.refresh_token).await?;
                 return Ok(login_msa(msa).await?);
             }
-            MinecraftAccount::OfflineAccount { .. } => Ok(self),
+            MinecraftAccount::OfflineAccount { name, id, .. } => {
+                Ok(MinecraftAccount::OfflineAccount {
+                    name,
+                    id,
+                    has_been_authenticated: true
+                })
+            },
         };
     }
 
@@ -171,6 +192,15 @@ impl MinecraftAccount {
     pub async fn logout(&self) -> Result<()> {
         Ok(())
     }
+
+    pub fn get_username(&self) -> &str {
+        match self {
+            MinecraftAccount::MsaAccount { profile, .. } => &profile.name,
+            MinecraftAccount::LegacyMsaAccount { name, .. } => name,
+            MinecraftAccount::OfflineAccount { name, .. } => name,
+        }
+    }
+
 }
 
 async fn login_msa(msa: ExpiringValue<AccessTokenResponse>) -> Result<MinecraftAccount, AuthError> {
@@ -186,5 +216,6 @@ async fn login_msa(msa: ExpiringValue<AccessTokenResponse>) -> Result<MinecraftA
         xbl: minecraft.xbl,
         mca: minecraft.mca,
         profile,
+        has_been_authenticated: true
     })
 }

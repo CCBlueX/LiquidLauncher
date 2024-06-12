@@ -201,13 +201,22 @@
     }
 
     async function runClient() {
-        console.log("Client started");
         log = [];
-        clientRunning = true;
 
         let build = getBuild();
-        console.debug("Running build", build);
-        
+        if (!build) {
+            return;
+        }
+
+        console.log(options.currentAccount);
+
+        if (!options.currentAccount.hasBeenAuthenticated) {
+            alert("Your session has not been authenticated yet - please wait a few seconds...\nIf there was an error shown about your session, please try to logout and login again.");
+            return;
+        }
+
+        console.info("Starting client build", build);
+        clientRunning = true;
         await invoke("run_client", {
             buildId: build.buildId,
             accountData: options.currentAccount,
@@ -303,11 +312,13 @@
     invoke("refresh", { accountData: options.currentAccount })
         .then((account) => {
             console.info("Account Refreshed", account);
-
             options.currentAccount = account;
             options.store();
         })
-        .catch((e) => console.error(e));
+        .catch((e) => {
+            console.error("Failed to refresh account", e);
+            alert("Failed to refresh account session: " + e);
+        });
 </script>
 
 {#if clientLogShown}

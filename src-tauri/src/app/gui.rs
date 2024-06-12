@@ -253,9 +253,9 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
     let shareable_window: ShareableWindow = Arc::new(Mutex::new(window));
 
     let (account_name, uuid, token, user_type) = match account_data {
-        MinecraftAccount::MsaAccount { msa: _, xbl: _, mca, profile } => (profile.name, profile.id.to_string(), mca.data.access_token, "msa".to_string()),
+        MinecraftAccount::MsaAccount { msa: _, xbl: _, mca, profile, .. } => (profile.name, profile.id.to_string(), mca.data.access_token, "msa".to_string()),
         MinecraftAccount::LegacyMsaAccount { name, uuid, token, .. } => (name, uuid.to_string(), token, "msa".to_string()),
-        MinecraftAccount::OfflineAccount { name, id } => (name, id.to_string(), "-".to_string(), "legacy".to_string())
+        MinecraftAccount::OfflineAccount { name, id, .. } => (name, id.to_string(), "-".to_string(), "legacy".to_string())
     };
 
     // Random XUID
@@ -351,8 +351,10 @@ async fn terminate(app_state: tauri::State<'_, AppState>) -> Result<(), String> 
 
 #[tauri::command]
 async fn refresh(account_data: MinecraftAccount) -> Result<MinecraftAccount, String> {
+    info!("Refreshing account...");
     let account = account_data.refresh().await
         .map_err(|e| format!("unable to refresh: {:?}", e))?;
+    info!("Account was refreshed - username {}", account.get_username());
     Ok(account)
 }
 
