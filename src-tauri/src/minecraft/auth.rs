@@ -20,7 +20,7 @@
 use anyhow::Result;
 
 use azalea_auth::{
-    cache::ExpiringValue, check_ownership, get_minecraft_token, get_ms_auth_token, get_ms_link_code, get_profile, refresh_ms_auth_token, AccessTokenResponse, AuthError, MinecraftAuthResponse, ProfileResponse, XboxLiveAuth
+    cache::ExpiringValue, get_minecraft_token, get_ms_auth_token, get_ms_link_code, get_profile, refresh_ms_auth_token, AccessTokenResponse, AuthError, MinecraftAuthResponse, ProfileResponse, XboxLiveAuth
 };
 use serde::{Deserialize, Serialize};
 use tracing::{error, trace};
@@ -178,12 +178,6 @@ async fn login_msa(msa: ExpiringValue<AccessTokenResponse>) -> Result<MinecraftA
     trace!("Got access token: {msa_token}");
 
     let minecraft = get_minecraft_token(&HTTP_CLIENT, msa_token).await?;
-
-    let has_game = check_ownership(&HTTP_CLIENT, &minecraft.minecraft_access_token).await?;
-    if !has_game {
-        return Err(AuthError::DoesNotOwnGame);
-    }
-
     let profile = get_profile(&HTTP_CLIENT, &minecraft.minecraft_access_token).await?;
 
     // Return account
