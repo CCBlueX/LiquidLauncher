@@ -26,6 +26,7 @@
     import { invoke } from "@tauri-apps/api";
     import { open as dialogOpen } from "@tauri-apps/api/dialog";
     import { listen } from "@tauri-apps/api/event";
+  import { exit } from "@tauri-apps/api/process";
 
     export let options;
 
@@ -208,10 +209,8 @@
             return;
         }
 
-        console.log(options.currentAccount);
-
         if (!options.currentAccount.hasBeenAuthenticated) {
-            alert("Your session has not been authenticated yet - please wait a few seconds...\nIf there was an error shown about your session, please try to logout and login again.");
+            alert("Your session has not been authenticated yet - wait a few seconds...");
             return;
         }
 
@@ -244,7 +243,13 @@
             // request builds of branch
             requestBuilds();
         })
-        .catch((e) => console.error(e));
+        .catch((e) => {
+            alert(e);
+            console.error(e);
+            
+            // exit app
+            exit(1);
+        });
 
     listen("client-exited", () => {
         clientRunning = false;
@@ -316,8 +321,12 @@
             options.store();
         })
         .catch((e) => {
-            console.error("Failed to refresh account", e);
-            alert("Failed to refresh account session: " + e);
+            console.error("Failed to refresh account and is now invalidated.", e);
+            alert("Failed to refresh account session: " + e + "\n\nYou have been logged out. Please try logging in again.");
+
+            // Invalidate account for this session
+            options.currentAccount = null;
+            // Do not store - this might gives the user the chance to retry after restarting the app.
         });
 </script>
 
