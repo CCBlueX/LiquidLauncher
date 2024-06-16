@@ -18,7 +18,13 @@ impl Default for JavaDistribution {
 }
 
 impl JavaDistribution {
-    pub fn get_url(&self, jre_version: &u32, os_name: &str, os_arch: &str) -> String {
+    pub fn get_url(
+        &self, 
+        jre_version: &u32, 
+        os_name: &str, 
+        os_arch: &str,
+        archive_type: &str
+    ) -> String {
         match self {
             JavaDistribution::Temurin => {
                 format!(
@@ -28,8 +34,8 @@ impl JavaDistribution {
             }
             JavaDistribution::GraalVM => {
                 format!(
-                    "https://download.oracle.com/graalvm/{}/latest/graalvm-jdk-{}_{}-{}_bin.tar.gz",
-                    jre_version, jre_version, os_name, os_arch
+                    "https://download.oracle.com/graalvm/{}/latest/graalvm-jdk-{}_{}-{}_bin.{}",
+                    jre_version, jre_version, os_name, os_arch, archive_type
                 )
             }
             JavaDistribution::OpenJDK => {
@@ -37,8 +43,8 @@ impl JavaDistribution {
                 // https://aka.ms/download-jdk/microsoft-jdk-21-linux-x64.tar.gz
 
                 format!(
-                    "https://aka.ms/download-jdk/microsoft-jdk-{}_{}-{}.tar.gz",
-                    jre_version, os_name, os_arch
+                    "https://aka.ms/download-jdk/microsoft-jdk-{}_{}-{}.{}",
+                    jre_version, os_name, os_arch, archive_type
                 )
             }
         }

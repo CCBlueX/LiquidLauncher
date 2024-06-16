@@ -99,7 +99,8 @@ where
     // OS details
     let os_name = OS.get_graal_name()?;
     let os_arch = ARCHITECTURE.get_simple_name()?;
-    let url = jre_distribution.get_url(jre_version, os_name, os_arch);
+    let archive_type = OS.get_archive_type()?;
+    let url = jre_distribution.get_url(jre_version, os_name, os_arch, archive_type);
 
     // Download from JRE source and extract runtime files
     fs::create_dir_all(&runtime_path).await?;

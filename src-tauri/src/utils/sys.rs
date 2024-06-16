@@ -109,6 +109,14 @@ impl OperatingSystem {
         })
     }
 
+    pub fn get_archive_type(&self) -> Result<&'static str> {
+        Ok(match self {
+            OperatingSystem::WINDOWS => "zip",
+            OperatingSystem::LINUX | OperatingSystem::OSX => "tar.gz",
+            _ => bail!("Invalid OS")
+        })
+    }
+
 }
 
 impl Display for OperatingSystem {
