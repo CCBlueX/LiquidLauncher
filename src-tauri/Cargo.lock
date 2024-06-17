@@ -2468,7 +2468,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-tar",
- "toml 0.7.8",
+ "toml 0.8.14",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
