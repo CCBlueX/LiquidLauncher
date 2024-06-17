@@ -33,7 +33,7 @@ directories = "4.0"
 once_cell = "1.16.0"
 
 # FS libs
-async_zip = { version = "0.0.11", features = ["full"] }
+async_zip = { version = "0.0.17", features = ["full"] }
 tokio-tar = "0.3.0"
 async-compression = { version= "0.3.15", features = ["gzip"] }
 sanitize-filename = "0.4.0"
