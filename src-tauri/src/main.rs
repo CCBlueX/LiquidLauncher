@@ -35,6 +35,7 @@ use utils::ARCHITECTURE;
 use crate::utils::{OS, OS_VERSION};
 
 pub mod app;
+pub mod auth;
 pub mod minecraft;
 
 mod error;

@@ -25,7 +25,7 @@ use tracing::{error, info, debug};
 use tauri::{Manager, Window};
 use uuid::Uuid;
 
-use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, auth::{MinecraftAccount, self}}, HTTP_CLIENT, LAUNCHER_VERSION};
+use crate::{auth::auth_with_liquidbounce, minecraft::{auth::{self, MinecraftAccount}, launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate}, HTTP_CLIENT, LAUNCHER_DIRECTORY, LAUNCHER_VERSION};
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 use crate::utils::percentage_of_total_memory;
 
@@ -50,6 +50,9 @@ async fn get_launcher_version() -> Result<String, String> {
 
 #[tauri::command]
 async fn check_health() -> Result<(), String> {
+    auth_with_liquidbounce().await
+        .map_err(|e| format!("unable to authenticate with LiquidBounce: {:?}", e))?;
+
     // Check hosts
     #[cfg(windows)]
     {
