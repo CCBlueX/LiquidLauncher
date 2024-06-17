@@ -209,19 +209,43 @@
             return;
         }
 
-        if (!options.currentAccount.hasBeenAuthenticated) {
-            alert("Your session has not been authenticated yet - wait a few seconds...");
+        clientRunning = true;
+
+        try {
+            progressBar.text = "Refreshing session...";
+
+            let account = await invoke("refresh", { accountData: options.currentAccount })
+            console.info("Account Refreshed", account);
+            options.currentAccount = account;
+            options.store();
+        } catch (e) {
+            console.error("Failed to refresh account and is now invalidated.", e);
+            alert("Failed to refresh account session: " + e + "\n\nYou have been logged out. Please try logging in again.");
+            
+            // Invalidate account for this session (do not store it)
+            options.currentAccount = null;
+
+            // Do not start client if account is not valid
+            clientRunning = false;
             return;
         }
+        
+        try {
+            progressBar.text = "Starting client...";
+            console.info("Starting client build", build);
 
-        console.info("Starting client build", build);
-        clientRunning = true;
-        await invoke("run_client", {
-            buildId: build.buildId,
-            accountData: options.currentAccount,
-            options: options,
-            mods: [...recommendedMods, ...customMods],
-        });
+            await invoke("run_client", {
+                buildId: build.buildId,
+                accountData: options.currentAccount,
+                options: options,
+                mods: [...recommendedMods, ...customMods],
+            });
+        } catch (e) {
+            console.error("Failed to start client", e);
+            alert("Failed to start client: " + e);
+            
+            clientRunning = false;
+        }
     }
 
     async function terminateClient() {
@@ -312,22 +336,6 @@
             requestMods();
         }
     }
-
-    // Refresh account data
-    invoke("refresh", { accountData: options.currentAccount })
-        .then((account) => {
-            console.info("Account Refreshed", account);
-            options.currentAccount = account;
-            options.store();
-        })
-        .catch((e) => {
-            console.error("Failed to refresh account and is now invalidated.", e);
-            alert("Failed to refresh account session: " + e + "\n\nYou have been logged out. Please try logging in again.");
-
-            // Invalidate account for this session
-            options.currentAccount = null;
-            // Do not store - this might gives the user the chance to retry after restarting the app.
-        });
 </script>
 
 {#if clientLogShown}

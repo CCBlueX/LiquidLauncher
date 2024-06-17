@@ -46,10 +46,6 @@ pub enum MinecraftAccount {
         /// The user's Minecraft profile (i.e. username, UUID, skin)
         #[serde(flatten)]
         profile: ProfileResponse,
-        #[serde(skip_deserializing)]
-        #[serde(default)]
-        #[serde(rename = "hasBeenAuthenticated")]
-        has_been_authenticated: bool,
     },
     #[serde(rename = "Microsoft")]
     LegacyMsaAccount {
@@ -57,20 +53,12 @@ pub enum MinecraftAccount {
         uuid: Uuid,
         token: String,
         ms_auth: MsAuth,
-        #[serde(skip_deserializing)]
-        #[serde(default)]
-        #[serde(rename = "hasBeenAuthenticated")]
-        has_been_authenticated: bool,
     },
     #[serde(rename = "Offline")]
     OfflineAccount {
         name: String,
         #[serde(alias = "uuid")]
         id: Uuid,
-        #[serde(skip_deserializing)]
-        #[serde(default)]
-        #[serde(rename = "hasBeenAuthenticated")]
-        has_been_authenticated: bool,
     },
 }
 
@@ -130,8 +118,7 @@ impl MinecraftAccount {
         // Return offline account
         MinecraftAccount::OfflineAccount {
             name: username,
-            id: uuid,
-            has_been_authenticated: true
+            id: uuid
         }
     }
 
@@ -151,8 +138,7 @@ impl MinecraftAccount {
                         msa,
                         xbl,
                         mca,
-                        profile,
-                        has_been_authenticated: true
+                        profile
                     });
                 }
 
@@ -181,8 +167,7 @@ impl MinecraftAccount {
             MinecraftAccount::OfflineAccount { name, id, .. } => {
                 Ok(MinecraftAccount::OfflineAccount {
                     name,
-                    id,
-                    has_been_authenticated: true
+                    id
                 })
             },
         };
@@ -215,7 +200,6 @@ async fn login_msa(msa: ExpiringValue<AccessTokenResponse>) -> Result<MinecraftA
         msa,
         xbl: minecraft.xbl,
         mca: minecraft.mca,
-        profile,
-        has_been_authenticated: true
+        profile
     })
 }
