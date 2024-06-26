@@ -50,7 +50,7 @@ impl ClientAccount {
         self.expires_at
     }
 
-    pub async fn from_refresh_token(&self) -> Result<ClientAccount> {
+    pub async fn renew(self) -> Result<ClientAccount> {
         let client_id = ClientId::new(OAUTH_CLIENT_ID.to_string());
         let auth_url = AuthUrl::new(AUTH_URL.to_string())
             .context("Invalid authorization endpoint URL")?;

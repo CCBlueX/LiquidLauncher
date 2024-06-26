@@ -150,7 +150,7 @@ async fn client_account_authenticate(window: tauri::Window) -> Result<ClientAcco
 
 #[tauri::command]
 async fn client_account_update(account: ClientAccount) -> Result<ClientAccount, String> {
-    let account = account.from_refresh_token().await
+    let account = account.renew().await
         .map_err(|e| format!("unable to update access token: {:?}", e))?;
     Ok(account)
 }
