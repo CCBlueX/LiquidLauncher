@@ -1,11 +1,11 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
-use oauth2::{basic::BasicClient, AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken, Scope, StandardTokenResponse, TokenResponse, TokenUrl};
+use oauth2::{basic::BasicClient, AccessToken, AuthUrl, AuthorizationCode, ClientId, CsrfToken, RedirectUrl, RefreshToken, TokenResponse, TokenUrl};
 use serde::{Deserialize, Serialize};
 use tauri::Url;
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, net::TcpListener};
-use tracing::info;
+use tracing::debug;
 
 const OAUTH_CLIENT_ID: &str = "J2hzqzCxch8hfOPRFNINOZV5Ma4X4BFdZpMjAVEW";
 const AUTH_URL: &str = "https://auth.liquidbounce.net/application/o/authorize/";
@@ -84,8 +84,8 @@ impl AccountAuthenticator {
             }
         };
 
-        info!("OAuth returned the following code:\n{}\n", code.secret());
-        info!(
+        debug!("OAuth returned the following code:\n{}\n", code.secret());
+        debug!(
             "OAuth returned the following state:\n{} (expected `{}`)\n",
             state.secret(),
             csrf_state.secret()
@@ -96,7 +96,7 @@ impl AccountAuthenticator {
             .request_async(&http_client)
             .await?;
 
-        info!("OAuth returned the following token:\n{token:?}\n");
+        debug!("OAuth returned the following token:\n{token:?}\n");
         let expires_at = SystemTime::now() + token.expires_in().context("Missing expires_in")?;
 
         Ok(ClientAccount {
