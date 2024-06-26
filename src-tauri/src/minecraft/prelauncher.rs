@@ -19,15 +19,16 @@
 
 use std::path::Path;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use async_zip::read::mem::ZipFileReader;
 use tokio::fs;
 use tokio::io::AsyncReadExt;
 use tracing::*;
 
-use crate::app::api::{LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
+use crate::app::api::{self, ApiEndpoints, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
 use crate::app::gui::ShareableWindow;
 use crate::app::webview::open_download_page;
+use crate::auth::ClientAccount;
 use crate::error::LauncherError;
 use crate::minecraft::launcher;
 use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
@@ -63,19 +64,24 @@ pub(crate) async fn launch(
         .map(|x| x.into())
         .unwrap_or_else(|| LAUNCHER_DIRECTORY.data_dir().to_path_buf());
 
+    let client_account = &launching_parameter.client_account;
+
     // Copy retrieve and copy mods from manifest
     clear_mods(&data_directory, &launch_manifest).await?;
     retrieve_and_copy_mods(
         &data_directory,
         &launch_manifest,
         &launch_manifest.mods,
+        client_account,
         &launcher_data,
+        
     )
     .await?;
     retrieve_and_copy_mods(
         &data_directory,
         &launch_manifest,
         &additional_mods,
+        client_account,
         &launcher_data,
     )
     .await?;
@@ -151,6 +157,7 @@ pub async fn retrieve_and_copy_mods(
     data: &Path,
     manifest: &LaunchManifest,
     mods: &Vec<LoaderMod>,
+    client_account: &Option<ClientAccount>,
     launcher_data: &LauncherData<ShareableWindow>,
 ) -> Result<()> {
     let mod_cache_path = data.join("mod_cache");
@@ -228,7 +235,24 @@ pub async fn retrieve_and_copy_mods(
                         "Opening download page for mod {}",
                         current_mod.name
                     )));
-                    let direct_url = open_download_page(url, launcher_data).await?;
+
+
+                    let direct_url = match client_account {
+                        Some(account) => {
+                            // PID is taken from the URL which is the last part of the URL
+                            // https://dl.liquidbounce.net/skip/c7kMT2q00U -> c7kMT2q00U
+                            let pid = url.split('/').last().context("Failed to get PID")?;
+                            let skip_file_resolve = ApiEndpoints::resolve_skip_file(account, pid).await?;
+                            debug!("{:?}", skip_file_resolve);
+                            
+                            // If the skip file resolve has a direct URL, use it - if not it means that the account is not allowed for direct downloads
+                            match skip_file_resolve.direct_url {
+                                Some(url) => url,
+                                None => open_download_page(url, launcher_data).await?,
+                            }
+                        }
+                        None => open_download_page(url, launcher_data).await?,
+                    };
 
                     launcher_data.log(&format!("Downloading mod {} from {}", current_mod.name, direct_url));
                     launcher_data.progress_update(ProgressUpdate::set_label(format!(

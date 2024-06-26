@@ -19,7 +19,7 @@
  
 use std::{sync::{Arc, Mutex}, thread, path::PathBuf};
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use tokio::fs;
 use tracing::{error, info, debug};
 use tauri::{Manager, Window};
@@ -139,13 +139,20 @@ async fn login_microsoft(window: tauri::Window) -> Result<MinecraftAccount, Stri
 }
 
 #[tauri::command]
-async fn authenticate_client_account(window: tauri::Window) -> Result<ClientAccount, String> {
+async fn client_account_authenticate(window: tauri::Window) -> Result<ClientAccount, String> {
     let account = AccountAuthenticator::start_auth(|uri| {
         // Open the browser with the auth URL
         let _ = window.emit("auth_url", uri);
     }).await.map_err(|e| format!("{}", e))?;
 
   Ok(account)
+}
+
+#[tauri::command]
+async fn client_account_update(account: ClientAccount) -> Result<ClientAccount, String> {
+    let account = account.from_refresh_token().await
+        .map_err(|e| format!("unable to update access token: {:?}", e))?;
+    Ok(account)
 }
 
 #[tauri::command]
@@ -258,15 +265,24 @@ fn handle_log(window: &ShareableWindow, msg: &str) -> anyhow::Result<()> {
 }
 
 #[tauri::command]
-async fn run_client(build_id: u32, account_data: MinecraftAccount, options: LauncherOptions, mods: Vec<LoaderMod>, window: Window, app_state: tauri::State<'_, AppState>) -> Result<(), String> {
+async fn run_client(
+    build_id: u32,
+    options: LauncherOptions,
+    mods: Vec<LoaderMod>,
+    window: Window,
+    app_state: tauri::State<'_, AppState>
+) -> Result<(), String> {
     // A shared mutex for the window object.
     let shareable_window: ShareableWindow = Arc::new(Mutex::new(window));
 
-    let (account_name, uuid, token, user_type) = match account_data {
+    let minecraft_account = options.current_account.ok_or("no account selected")?;
+    let (account_name, uuid, token, user_type) = match minecraft_account {
         MinecraftAccount::MsaAccount { msa: _, xbl: _, mca, profile, .. } => (profile.name, profile.id.to_string(), mca.data.access_token, "msa".to_string()),
         MinecraftAccount::LegacyMsaAccount { name, uuid, token, .. } => (name, uuid.to_string(), token, "msa".to_string()),
         MinecraftAccount::OfflineAccount { name, id, .. } => (name, id.to_string(), "-".to_string(), "legacy".to_string())
     };
+
+    let client_account = options.client_account;
 
     // Random XUID
     let xuid = Uuid::new_v4().to_string();
@@ -283,6 +299,7 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
         user_type,
         keep_launcher_open: options.keep_launcher_open,
         concurrent_downloads: options.concurrent_downloads,
+        client_account
     };
 
     let runner_instance = &app_state.runner_instance;
@@ -469,7 +486,8 @@ pub fn gui_main() {
             run_client,
             login_offline,
             login_microsoft,
-            authenticate_client_account,
+            client_account_authenticate,
+            client_account_update,
             logout,
             refresh,
             fetch_news,

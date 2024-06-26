@@ -24,13 +24,15 @@ use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use serde::de::DeserializeOwned;
 
+use crate::auth::ClientAccount;
 use crate::minecraft::java::JavaDistribution;
 use crate::HTTP_CLIENT;
 use crate::utils::get_maven_artifact_path;
 
 /// API endpoint url
 pub const LAUNCHER_API: &str = "https://api.liquidbounce.net";
-pub const LAUNCHER_API_VERSION: &str = "api/v1";
+pub const API_V1: &str = "api/v1";
+pub const API_V3: &str = "api/v3";
 
 pub const CONTENT_DELIVERY: &str = "https://cloud.liquidbounce.net";
 pub const CONTENT_FOLDER: &str = "LiquidLauncher";
@@ -122,9 +124,23 @@ impl ApiEndpoints {
         Self::request_from_endpoint(&format!("version/changelog/{}", build_id)).await
     }
 
+    /// Resolve direct download link from skip file pid
+    pub async fn resolve_skip_file(client_account: &ClientAccount, pid: &str) -> Result<SkipFileResolve> {
+        Self::request_with_client_account(&format!("file/resolve/{}", pid), client_account).await
+    }
+
     /// Request JSON formatted data from launcher API
     pub async fn request_from_endpoint<T: DeserializeOwned>(endpoint: &str) -> Result<T> {
-        Ok(HTTP_CLIENT.get(format!("{}/{}/{}", LAUNCHER_API, LAUNCHER_API_VERSION, endpoint))
+        Ok(HTTP_CLIENT.get(format!("{}/{}/{}", LAUNCHER_API, API_V1, endpoint))
+            .send().await?
+            .error_for_status()?
+            .json::<T>()
+            .await?
+        )
+    }
+
+    pub async fn request_with_client_account<T: DeserializeOwned>(endpoint: &str, client_account: &ClientAccount) -> Result<T> {
+        Ok(client_account.authenticate_request(HTTP_CLIENT.get(format!("{}/{}/{}", LAUNCHER_API, API_V3, endpoint)))?
             .send().await?
             .error_for_status()?
             .json::<T>()
@@ -257,4 +273,13 @@ pub enum LoaderSubsystem {
     Fabric { manifest: String, mod_directory: String },
     #[serde(rename = "forge")]
     Forge { manifest: String, mod_directory: String  },
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct SkipFileResolve {
+    pub error: bool,
+    pub msg: String,
+    pub target_pid: Option<String>,
+    pub download_url: Option<String>,
+    pub direct_url: Option<String>
 }

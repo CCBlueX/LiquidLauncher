@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use anyhow::{Context, Result};
-use oauth2::{basic::BasicClient, AccessToken, AuthUrl, AuthorizationCode, ClientId, CsrfToken, RedirectUrl, RefreshToken, TokenResponse, TokenUrl};
+use anyhow::{bail, Context, Result};
+use oauth2::{basic::BasicClient, AccessToken, AuthUrl, AuthorizationCode, ClientId, CsrfToken, RedirectUrl, RefreshToken, StandardTokenResponse, TokenResponse, TokenUrl};
 use serde::{Deserialize, Serialize};
 use tauri::Url;
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, net::TcpListener};
@@ -28,6 +28,53 @@ impl ClientAccount {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs()
+    }
+
+    pub fn authenticate_request(&self, request: reqwest::RequestBuilder) -> Result<reqwest::RequestBuilder> {
+        if self.is_expired() {
+            bail!("Token expired");
+        }
+
+        Ok(request.bearer_auth(self.access_token.secret()))
+    }
+
+    pub fn get_access_token(&self) -> &AccessToken {
+        &self.access_token
+    }
+
+    pub fn get_refresh_token(&self) -> &RefreshToken {
+        &self.refresh_token
+    }
+
+    pub fn get_expires_at(&self) -> u64 {
+        self.expires_at
+    }
+
+    pub async fn from_refresh_token(&self) -> Result<ClientAccount> {
+        let client_id = ClientId::new(OAUTH_CLIENT_ID.to_string());
+        let auth_url = AuthUrl::new(AUTH_URL.to_string())
+            .context("Invalid authorization endpoint URL")?;
+        let token_url = TokenUrl::new(TOKEN_URL.to_string())
+            .context("Invalid token endpoint URL")?;
+
+        let client = BasicClient::new(client_id)
+            .set_auth_uri(auth_url)
+            .set_token_uri(token_url);
+
+        let token = client
+            .exchange_refresh_token(&self.refresh_token)
+            .request_async(&reqwest::Client::new())
+            .await?;
+
+        let expires_at = SystemTime::now() + token.expires_in().context("Missing expires_in")?;
+        Ok(ClientAccount {
+            access_token: token.access_token().clone(),
+            expires_at: expires_at
+                .duration_since(UNIX_EPOCH)
+                .context("Time went backwards")?
+                .as_secs(),
+            refresh_token: token.refresh_token().context("Missing refresh token")?.clone()
+        })
     }
 
 }

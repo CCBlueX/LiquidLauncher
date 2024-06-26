@@ -211,14 +211,27 @@
         }
 
         clientRunning = true;
+        
+        if (options.clientAccount) {
+            try {
+                progressBar.text = "Authenticating client account...";
+                console.info("Updating client account...");
+
+                const account = await invoke("client_account_update", {
+                    account: options.clientAccount,
+                });
+                options.clientAccount = account;
+            } catch (e) {
+                console.error("Failed to authenticate account", e);
+            }
+        }
 
         try {
-            progressBar.text = "Refreshing session...";
+            progressBar.text = "Refreshing minecraft session...";
 
             let account = await invoke("refresh", { accountData: options.currentAccount })
             console.info("Account Refreshed", account);
             options.currentAccount = account;
-            options.store();
         } catch (e) {
             console.error("Failed to refresh account and is now invalidated.", e);
             alert("Failed to refresh account session: " + e + "\n\nYou have been logged out. Please try logging in again.");
@@ -230,6 +243,8 @@
             clientRunning = false;
             return;
         }
+
+        options.store();
         
         try {
             progressBar.text = "Starting client...";
@@ -237,7 +252,6 @@
 
             await invoke("run_client", {
                 buildId: build.buildId,
-                accountData: options.currentAccount,
                 options: options,
                 mods: [...recommendedMods, ...customMods],
             });
