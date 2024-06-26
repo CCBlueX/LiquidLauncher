@@ -25,7 +25,7 @@ use tracing::{error, info, debug};
 use tauri::{Manager, Window};
 use uuid::Uuid;
 
-use crate::{auth::auth_with_liquidbounce, minecraft::{auth::{self, MinecraftAccount}, launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate}, HTTP_CLIENT, LAUNCHER_DIRECTORY, LAUNCHER_VERSION};
+use crate::{auth::{AccountAuthenticator, ClientAccount}, minecraft::{auth::{self, MinecraftAccount}, launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate}, HTTP_CLIENT, LAUNCHER_DIRECTORY, LAUNCHER_VERSION};
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 use crate::utils::percentage_of_total_memory;
 
@@ -50,9 +50,6 @@ async fn get_launcher_version() -> Result<String, String> {
 
 #[tauri::command]
 async fn check_health() -> Result<(), String> {
-    auth_with_liquidbounce().await
-        .map_err(|e| format!("unable to authenticate with LiquidBounce: {:?}", e))?;
-
     // Check hosts
     #[cfg(windows)]
     {
@@ -136,6 +133,16 @@ async fn login_microsoft(window: tauri::Window) -> Result<MinecraftAccount, Stri
         debug!("enter code {} on {} to sign-in", code, uri);
 
         let _ = window.emit("microsoft_code", code);
+    }).await.map_err(|e| format!("{}", e))?;
+
+  Ok(account)
+}
+
+#[tauri::command]
+async fn authenticate_client_account(window: tauri::Window) -> Result<ClientAccount, String> {
+    let account = AccountAuthenticator::start_auth(|uri| {
+        // Open the browser with the auth URL
+        let _ = window.emit("auth_url", uri);
     }).await.map_err(|e| format!("{}", e))?;
 
   Ok(account)
@@ -462,6 +469,7 @@ pub fn gui_main() {
             run_client,
             login_offline,
             login_microsoft,
+            authenticate_client_account,
             logout,
             refresh,
             fetch_news,

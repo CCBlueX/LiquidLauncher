@@ -25,8 +25,9 @@
     import CustomModSetting from "../settings/CustomModSetting.svelte";
     import { invoke } from "@tauri-apps/api";
     import { open as dialogOpen } from "@tauri-apps/api/dialog";
+    import { open as shellOpen } from "@tauri-apps/api/shell";
     import { listen } from "@tauri-apps/api/event";
-  import { exit } from "@tauri-apps/api/process";
+    import { exit } from "@tauri-apps/api/process";
 
     export let options;
 
@@ -313,6 +314,24 @@
         }
     }
 
+    async function authClientAccount() {
+        console.info("Authenticating client account...");
+        try {
+            const account = await invoke("authenticate_client_account");
+
+            options.clientAccount = account;
+            options.store();
+        } catch (e) {
+            console.error("Failed to authenticate client account", e);
+            alert("Failed to authenticate client account: " + e);
+        }
+    }
+
+    listen("auth_url", async (e) => {
+        console.info("Opening auth URL", e.payload);
+        await shellOpen(e.payload);
+    });
+
     // Refresh account data
     invoke("refresh", { accountData: options.currentAccount })
         .then((account) => {
@@ -339,6 +358,21 @@
 
 {#if settingsShown}
     <SettingsContainer title="Settings" on:hideSettings={hideSettings}>
+        {#if options.clientAccount}
+            <ButtonSetting
+                text="Logout from LiquidBounce Account"
+                on:click={() => (options.clientAccount = null)}
+                color="#B83529"
+            />
+        {:else}
+            <ButtonSetting
+                text="Login with LiquidBounce Account"
+                on:click={authClientAccount}
+                color="#4677FF"
+            />
+        {/if}
+        
+        <div class="separator"></div>
         <FileSelectorSetting
             title="JVM Location"
             placeholder="Internal"

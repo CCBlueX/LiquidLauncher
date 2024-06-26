@@ -22,7 +22,7 @@ use std::{path::Path, collections::HashMap};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
-use crate::minecraft::auth::MinecraftAccount;
+use crate::{auth::ClientAccount, minecraft::auth::MinecraftAccount};
 
 fn default_concurrent_downloads() -> i32 {
     10
@@ -44,6 +44,8 @@ pub(crate) struct LauncherOptions {
     pub selected_branch: Option<String>,
     #[serde(rename = "selectedBuild")]
     pub selected_build: Option<i32>,
+    #[serde(rename = "clientAccount")]
+    pub client_account: Option<ClientAccount>,
     #[serde(rename = "currentAccount")]
     pub current_account: Option<MinecraftAccount>,
     #[serde(rename = "branchOptions", default)]
@@ -86,6 +88,7 @@ impl Default for LauncherOptions {
             custom_java_path: String::new(),
             selected_branch: None,
             selected_build: None,
+            client_account: None,
             current_account: None,
             branch_options: HashMap::new(),
             concurrent_downloads: 10
