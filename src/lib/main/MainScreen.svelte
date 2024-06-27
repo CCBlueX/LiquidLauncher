@@ -381,8 +381,24 @@
 {#if settingsShown}
     <SettingsContainer title="Settings" on:hideSettings={hideSettings}>
         {#if options.clientAccount}
+            <div class="account-info">
+                <h2>LiquidBounce Account</h2>
+
+                <div class="account-info__userid">
+                    User ID: {options.clientAccount.userId}
+                </div>
+                <div class="account-info__premium">
+                    Premium: {options.clientAccount.premium ? "Yes" : "No"}
+                </div>
+            </div>
+
             <ButtonSetting
-                text="Logout from LiquidBounce Account"
+                text="Manage Account"
+                on:click={async () => { await shellOpen("https://user.liquidbounce.net"); }}
+                color="#4677FF"
+            />
+            <ButtonSetting
+                text="Logout"
                 on:click={() => (options.clientAccount = null)}
                 color="#B83529"
             />
@@ -393,9 +409,6 @@
                 color="#4677FF"
             />
         {/if}
-
-        <p>Account ID: {options.clientAccount.userId}</p>
-        <p>Premium: {options.clientAccount.premium}</p>
         
         <ToggleSetting
             title="Skip Advertisement"
@@ -552,3 +565,30 @@
         <NewsArea />
     </ContentWrapper>
 </VerticalFlexWrapper>
+
+<style>
+    .account-info {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 10px;
+        overflow-wrap: break-word;
+    }
+
+    .account-info h2 {
+        font-size: 16px;
+        color: white;
+        margin-bottom: 5px;
+    }
+
+    .account-info__userid {
+        margin-top: -7px;
+        font-size: 12px;
+        font-weight: normal;
+        color: white;
+    }
+
+    .account-info__premium {
+        font-size: 12px;
+        color: white;
+    }
+</style>

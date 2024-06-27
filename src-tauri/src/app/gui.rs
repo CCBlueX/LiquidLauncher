@@ -19,7 +19,7 @@
  
 use std::{sync::{Arc, Mutex}, thread, path::PathBuf};
 
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
 use tokio::fs;
 use tracing::{error, info, debug};
 use tauri::{Manager, Window};
@@ -29,7 +29,7 @@ use crate::{auth::{AccountAuthenticator, ClientAccount}, minecraft::{auth::{self
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 use crate::utils::percentage_of_total_memory;
 
-use super::{api::{ApiEndpoints, Build, LoaderMod, ModSource, UserInformation}, app_data::LauncherOptions};
+use super::{api::{ApiEndpoints, Build, LoaderMod, ModSource}, app_data::LauncherOptions};
 
 pub type ShareableWindow = Arc<Mutex<Window>>;
 
