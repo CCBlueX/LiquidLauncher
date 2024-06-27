@@ -13,6 +13,8 @@ const OAUTH_CLIENT_ID: &str = "J2hzqzCxch8hfOPRFNINOZV5Ma4X4BFdZpMjAVEW";
 const AUTH_URL: &str = "https://auth.liquidbounce.net/application/o/authorize/";
 const TOKEN_URL: &str = "https://auth.liquidbounce.net/application/o/token/";
 
+static SUCCESS_HTML: &str = include_str!("../../static/success.html");
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClientAccount {
     #[serde(rename = "accessToken")]
@@ -206,11 +208,10 @@ impl ClientAccountAuthenticator {
             .map(|(_, state)| CsrfToken::new(state.into_owned()))
             .context("Missing state in the response")?;
 
-        let message = "You have successfully authenticated. You can close this tab now.";
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}",
-            message.len(),
-            message
+            "HTTP/1.1 200 OK\r\ncontent-type: text/html\r\ncontent-length: {}\r\n\r\n{}",
+            SUCCESS_HTML.len(),
+            SUCCESS_HTML
         );
         writer.write_all(response.as_bytes()).await?;
         writer.flush().await?;
