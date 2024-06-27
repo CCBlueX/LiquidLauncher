@@ -33,7 +33,12 @@
             options.currentAccount = accountData;
             options.store();
         } catch (err) {
-            alert(err);
+            alert(
+                "Microsoft authentication failed.\n\n" +
+                 err + "\n\n" +
+                "Should you be unable to resolve this issue, please use the 'Offline' login option " +
+                "and attempt to log in through the client's inbuilt account manager."
+            );
             cancelMicrosoft();
         }
     }
