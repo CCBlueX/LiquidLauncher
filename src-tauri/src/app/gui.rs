@@ -25,7 +25,7 @@ use tracing::{error, info, debug};
 use tauri::{Manager, Window};
 use uuid::Uuid;
 
-use crate::{auth::{AccountAuthenticator, ClientAccount}, minecraft::{auth::{self, MinecraftAccount}, launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate}, HTTP_CLIENT, LAUNCHER_DIRECTORY, LAUNCHER_VERSION};
+use crate::{auth::{ClientAccountAuthenticator, ClientAccount}, minecraft::{auth::{self, MinecraftAccount}, launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate}, HTTP_CLIENT, LAUNCHER_DIRECTORY, LAUNCHER_VERSION};
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 use crate::utils::percentage_of_total_memory;
 
@@ -140,7 +140,7 @@ async fn login_microsoft(window: tauri::Window) -> Result<MinecraftAccount, Stri
 
 #[tauri::command]
 async fn client_account_authenticate(window: tauri::Window) -> Result<ClientAccount, String> {
-    let mut account = AccountAuthenticator::start_auth(|uri| {
+    let mut account = ClientAccountAuthenticator::start_auth(|uri| {
         // Open the browser with the auth URL
         let _ = window.emit("auth_url", uri);
     }).await.map_err(|e| format!("{}", e))?;
