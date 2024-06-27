@@ -29,7 +29,7 @@ use crate::{auth::{AccountAuthenticator, ClientAccount}, minecraft::{auth::{self
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 use crate::utils::percentage_of_total_memory;
 
-use super::{api::{ApiEndpoints, Build, LoaderMod, ModSource}, app_data::LauncherOptions};
+use super::{api::{ApiEndpoints, Build, LoaderMod, ModSource, UserInformation}, app_data::LauncherOptions};
 
 pub type ShareableWindow = Arc<Mutex<Window>>;
 
@@ -140,18 +140,26 @@ async fn login_microsoft(window: tauri::Window) -> Result<MinecraftAccount, Stri
 
 #[tauri::command]
 async fn client_account_authenticate(window: tauri::Window) -> Result<ClientAccount, String> {
-    let account = AccountAuthenticator::start_auth(|uri| {
+    let mut account = AccountAuthenticator::start_auth(|uri| {
         // Open the browser with the auth URL
         let _ = window.emit("auth_url", uri);
     }).await.map_err(|e| format!("{}", e))?;
+
+    // Fetch user information
+    account.update_info().await
+        .map_err(|e| format!("unable to fetch user information: {:?}", e))?;
 
   Ok(account)
 }
 
 #[tauri::command]
 async fn client_account_update(account: ClientAccount) -> Result<ClientAccount, String> {
-    let account = account.renew().await
+    let mut account = account.renew().await
         .map_err(|e| format!("unable to update access token: {:?}", e))?;
+
+    // Fetch user information
+    account.update_info().await
+        .map_err(|e| format!("unable to fetch user information: {:?}", e))?;
     Ok(account)
 }
 
@@ -281,8 +289,11 @@ async fn run_client(
         MinecraftAccount::LegacyMsaAccount { name, uuid, token, .. } => (name, uuid.to_string(), token, "msa".to_string()),
         MinecraftAccount::OfflineAccount { name, id, .. } => (name, id.to_string(), "-".to_string(), "legacy".to_string())
     };
-
+    
     let client_account = options.client_account;
+    let skip_advertisement = options.skip_advertisement && client_account.as_ref().is_some_and(|x| 
+        x.get_user_information().is_some_and(|u| u.premium)
+    );
 
     // Random XUID
     let xuid = Uuid::new_v4().to_string();
@@ -299,7 +310,8 @@ async fn run_client(
         user_type,
         keep_launcher_open: options.keep_launcher_open,
         concurrent_downloads: options.concurrent_downloads,
-        client_account
+        client_account,
+        skip_advertisement: skip_advertisement
     };
 
     let runner_instance = &app_state.runner_instance;

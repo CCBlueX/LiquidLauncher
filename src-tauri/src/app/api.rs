@@ -125,6 +125,11 @@ impl ApiEndpoints {
     }
 
     /// Resolve direct download link from skip file pid
+    pub async fn user(client_account: &ClientAccount) -> Result<UserInformation> {
+        Self::request_with_client_account("oauth/user", client_account).await
+    }
+
+    /// Resolve direct download link from skip file pid
     pub async fn resolve_skip_file(client_account: &ClientAccount, pid: &str) -> Result<SkipFileResolve> {
         Self::request_with_client_account(&format!("file/resolve/{}", pid), client_account).await
     }
@@ -282,4 +287,11 @@ pub struct SkipFileResolve {
     pub target_pid: Option<String>,
     pub download_url: Option<String>,
     pub direct_url: Option<String>
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserInformation {
+    #[serde(rename = "userId", alias = "user_id")]
+    pub user_id: String,
+    pub premium: bool,
 }

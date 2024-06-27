@@ -355,7 +355,7 @@
     async function authClientAccount() {
         console.info("Authenticating client account...");
         try {
-            const account = await invoke("authenticate_client_account");
+            const account = await invoke("client_account_authenticate");
 
             options.clientAccount = account;
             options.store();
@@ -393,8 +393,16 @@
                 color="#4677FF"
             />
         {/if}
+
+        <p>Account ID: {options.clientAccount.userId}</p>
+        <p>Premium: {options.clientAccount.premium}</p>
         
-        <div class="separator"></div>
+        <ToggleSetting
+            title="Skip Advertisement"
+            disabled={!options.clientAccount || !options.clientAccount.premium}
+            bind:value={options.skipAdvertisement}
+        />
+
         <FileSelectorSetting
             title="JVM Location"
             placeholder="Internal"
@@ -416,6 +424,7 @@
             valueSuffix="%"
             step={1}
         />
+
         <RangeSetting
             title="Concurrent Downloads"
             min={1}

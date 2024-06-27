@@ -259,7 +259,8 @@ pub struct LaunchingParameter {
     pub user_type: String,
     pub keep_launcher_open: bool,
     pub concurrent_downloads: i32,
-    pub client_account: Option<ClientAccount>
+    pub client_account: Option<ClientAccount>,
+    pub skip_advertisement: bool,
 }
 
 fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(

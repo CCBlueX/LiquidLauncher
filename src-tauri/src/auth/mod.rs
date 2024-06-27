@@ -1,11 +1,13 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Context, Result};
-use oauth2::{basic::BasicClient, AccessToken, AuthUrl, AuthorizationCode, ClientId, CsrfToken, RedirectUrl, RefreshToken, StandardTokenResponse, TokenResponse, TokenUrl};
+use oauth2::{basic::BasicClient, AccessToken, AuthUrl, AuthorizationCode, ClientId, CsrfToken, RedirectUrl, RefreshToken, TokenResponse, TokenUrl};
 use serde::{Deserialize, Serialize};
 use tauri::Url;
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, net::TcpListener};
 use tracing::debug;
+
+use crate::app::api::{ApiEndpoints, UserInformation};
 
 const OAUTH_CLIENT_ID: &str = "J2hzqzCxch8hfOPRFNINOZV5Ma4X4BFdZpMjAVEW";
 const AUTH_URL: &str = "https://auth.liquidbounce.net/application/o/authorize/";
@@ -18,7 +20,9 @@ pub struct ClientAccount {
     #[serde(rename = "expiresAt")]
     expires_at: u64, // SystemTime
     #[serde(rename = "refreshToken")]
-    refresh_token: RefreshToken
+    refresh_token: RefreshToken,
+    #[serde(flatten, default)]
+    user_information: Option<UserInformation>
 }
 
 impl ClientAccount {
@@ -50,6 +54,16 @@ impl ClientAccount {
         self.expires_at
     }
 
+    pub async fn update_info(&mut self) -> Result<()> {
+        let user_information = ApiEndpoints::user(self).await?;
+        self.user_information = Some(user_information.clone());
+        Ok(())
+    }
+
+    pub fn get_user_information(&self) -> Option<UserInformation> {
+        self.user_information.clone()
+    }
+    
     pub async fn renew(self) -> Result<ClientAccount> {
         let client_id = ClientId::new(OAUTH_CLIENT_ID.to_string());
         let auth_url = AuthUrl::new(AUTH_URL.to_string())
@@ -73,7 +87,8 @@ impl ClientAccount {
                 .duration_since(UNIX_EPOCH)
                 .context("Time went backwards")?
                 .as_secs(),
-            refresh_token: token.refresh_token().context("Missing refresh token")?.clone()
+            refresh_token: token.refresh_token().context("Missing refresh token")?.clone(),
+            user_information: self.user_information
         })
     }
 
@@ -152,7 +167,8 @@ impl AccountAuthenticator {
                 .duration_since(UNIX_EPOCH)
                 .context("Time went backwards")?
                 .as_secs(),
-            refresh_token: token.refresh_token().context("Missing refresh token")?.clone()
+            refresh_token: token.refresh_token().context("Missing refresh token")?.clone(),
+            user_information: None
         })
     } 
 

@@ -46,6 +46,8 @@ pub(crate) struct LauncherOptions {
     pub selected_build: Option<i32>,
     #[serde(rename = "clientAccount")]
     pub client_account: Option<ClientAccount>,
+    #[serde(rename = "skipAdvertisement", default)]
+    pub skip_advertisement: bool,
     #[serde(rename = "currentAccount")]
     pub current_account: Option<MinecraftAccount>,
     #[serde(rename = "branchOptions", default)]
@@ -91,6 +93,7 @@ impl Default for LauncherOptions {
             client_account: None,
             current_account: None,
             branch_options: HashMap::new(),
+            skip_advertisement: false,
             concurrent_downloads: 10
         }
     }

@@ -25,7 +25,7 @@ use tokio::fs;
 use tokio::io::AsyncReadExt;
 use tracing::*;
 
-use crate::app::api::{self, ApiEndpoints, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
+use crate::app::api::{ApiEndpoints, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
 use crate::app::gui::ShareableWindow;
 use crate::app::webview::open_download_page;
 use crate::auth::ClientAccount;
@@ -64,7 +64,11 @@ pub(crate) async fn launch(
         .map(|x| x.into())
         .unwrap_or_else(|| LAUNCHER_DIRECTORY.data_dir().to_path_buf());
 
-    let client_account = &launching_parameter.client_account;
+    let retriever_account = if launching_parameter.skip_advertisement {
+        &launching_parameter.client_account
+    } else {
+        &None
+    };
 
     // Copy retrieve and copy mods from manifest
     clear_mods(&data_directory, &launch_manifest).await?;
@@ -72,7 +76,7 @@ pub(crate) async fn launch(
         &data_directory,
         &launch_manifest,
         &launch_manifest.mods,
-        client_account,
+        retriever_account,
         &launcher_data,
         
     )
@@ -81,7 +85,7 @@ pub(crate) async fn launch(
         &data_directory,
         &launch_manifest,
         &additional_mods,
-        client_account,
+        retriever_account,
         &launcher_data,
     )
     .await?;
@@ -236,7 +240,6 @@ pub async fn retrieve_and_copy_mods(
                         current_mod.name
                     )));
 
-
                     let direct_url = match client_account {
                         Some(account) => {
                             // PID is taken from the URL which is the last part of the URL
@@ -246,10 +249,10 @@ pub async fn retrieve_and_copy_mods(
                             debug!("{:?}", skip_file_resolve);
                             
                             // If the skip file resolve has a direct URL, use it - if not it means that the account is not allowed for direct downloads
-                            match skip_file_resolve.direct_url {
-                                Some(url) => url,
-                                None => open_download_page(url, launcher_data).await?,
-                            }
+                            skip_file_resolve.direct_url.ok_or_else(|| anyhow!(
+                                "Failed to get direct URL for mod {}",
+                                current_mod.name
+                            ))?
                         }
                         None => open_download_page(url, launcher_data).await?,
                     };
