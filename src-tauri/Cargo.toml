@@ -1,13 +1,13 @@
 [package]
 name = "liquidlauncher"
-version = "0.2.6"
+version = "0.3.0"
 description = "A LiquidBounce launcher for Minecraft, written in Rust using Tauri."
 authors = ["1zuna <marco@ccbluex.net>", "superblaubeere27"]
 license = "GNU General Public License v3.0"
 homepage = "https://liquidbounce.net/"
 repository = "https://github.com/CCBlueX/LiquidLauncher"
 edition = "2021"
-rust-version = "1.71.1"
+rust-version = "1.79.0"
 
 [build-dependencies]
 tauri-build = { version = "1.5", features = [] }
