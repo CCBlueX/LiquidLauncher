@@ -19,6 +19,8 @@
         </button>
     </div>
 
+    <slot name="tabs" />
+
     <div class="settings">
         <slot />
     </div>
@@ -36,7 +38,7 @@
         padding: 25px;
         border-radius: 6px;
         z-index: 1000;
-        max-height: calc(100% - 140px);
+        max-height: calc(100% - 100px);
         overflow: hidden;
         display: flex;
         flex-direction: column;

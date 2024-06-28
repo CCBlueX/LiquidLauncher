@@ -28,6 +28,9 @@
     import { open as shellOpen } from "@tauri-apps/api/shell";
     import { listen } from "@tauri-apps/api/event";
     import { exit } from "@tauri-apps/api/process";
+    import Tabs from "../settings/tab/Tabs.svelte";
+    import Description from "../settings/Description.svelte";
+    import LiquidBounceAccount from "../settings/LiquidBounceAccount.svelte";
 
     export let options;
 
@@ -68,6 +71,8 @@
     }
 
     let log = [];
+
+    let activeSettingsTab = "General";
 
     invoke("get_launcher_version").then((res) => (launcherVersion = res));
 
@@ -380,84 +385,86 @@
 
 {#if settingsShown}
     <SettingsContainer title="Settings" on:hideSettings={hideSettings}>
-        {#if options.clientAccount}
-            <div class="account-info">
-                <h2>LiquidBounce Account</h2>
+        <Tabs tabs={["General", "Donator"]} bind:activeTab={activeSettingsTab} slot="tabs" />
 
-                <div class="account-info__userid">
-                    User ID: {options.clientAccount.userId}
-                </div>
-                <div class="account-info__premium">
-                    Premium: {options.clientAccount.premium ? "Yes" : "No"}
-                </div>
-            </div>
+        {#if activeSettingsTab === "General"}
+            <FileSelectorSetting
+                title="JVM Location"
+                placeholder="Internal"
+                bind:value={options.customJavaPath}
+                filters={[{ name: "javaw", extensions: [] }]}
+                windowTitle="Select custom Java wrapper"
+            />
+            <DirectorySelectorSetting
+                title="Data Location"
+                placeholder={defaultDataFolder}
+                bind:value={options.customDataPath}
+                windowTitle="Select custom data directory"
+            />
+            <RangeSetting
+                title="Memory"
+                min={20}
+                max={100}
+                bind:value={options.memoryPercentage}
+                valueSuffix="%"
+                step={1}
+            />
 
-            <ButtonSetting
-                text="Manage Account"
-                on:click={async () => { await shellOpen("https://user.liquidbounce.net"); }}
-                color="#4677FF"
+            <RangeSetting
+                title="Concurrent Downloads"
+                min={1}
+                max={50}
+                bind:value={options.concurrentDownloads}
+                valueSuffix="connections"
+                step={1}
+            />
+            <ToggleSetting
+                title="Keep launcher running"
+                disabled={false}
+                bind:value={options.keepLauncherOpen}
             />
             <ButtonSetting
                 text="Logout"
-                on:click={() => (options.clientAccount = null)}
-                color="#B83529"
-            />
-        {:else}
-            <ButtonSetting
-                text="Login with LiquidBounce Account"
-                on:click={authClientAccount}
+                on:click={() => dispatch("logout")}
                 color="#4677FF"
             />
+            <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
+            <LauncherVersion version={launcherVersion} />
+        {:else if activeSettingsTab === "Donator"}
+            <ToggleSetting
+                title="Skip Advertisements"
+                disabled={!options.clientAccount || !options.clientAccount.premium}
+                bind:value={options.skipAdvertisement}
+            />
+
+
+            {#if options.clientAccount}
+                <LiquidBounceAccount account={options.clientAccount} />
+
+                {#if !options.clientAccount.premium}
+                    <Description description="There appears to be no donation associated with this account. Please link it on the account management page." />
+                {/if}
+
+                <ButtonSetting
+                    text="Manage Account"
+                    on:click={async () => { await shellOpen("https://user.liquidbounce.net"); }}
+                    color="#4677FF"
+                />
+                <ButtonSetting
+                    text="Logout"
+                    on:click={() => (options.clientAccount = null)}
+                    color="#B83529"
+                />
+            {:else}
+                <Description description="By donating, you not only support the ongoing development of the client but also receive a donator cape and the ability to bypass ads on the launcher." />
+
+                <ButtonSetting
+                    text="Login with LiquidBounce Account"
+                    on:click={authClientAccount}
+                    color="#4677FF"
+                />
+            {/if}
         {/if}
-        
-        <ToggleSetting
-            title="Skip Advertisement"
-            disabled={!options.clientAccount || !options.clientAccount.premium}
-            bind:value={options.skipAdvertisement}
-        />
-
-        <FileSelectorSetting
-            title="JVM Location"
-            placeholder="Internal"
-            bind:value={options.customJavaPath}
-            filters={[{ name: "javaw", extensions: [] }]}
-            windowTitle="Select custom Java wrapper"
-        />
-        <DirectorySelectorSetting
-            title="Data Location"
-            placeholder={defaultDataFolder}
-            bind:value={options.customDataPath}
-            windowTitle="Select custom data directory"
-        />
-        <RangeSetting
-            title="Memory"
-            min={20}
-            max={100}
-            bind:value={options.memoryPercentage}
-            valueSuffix="%"
-            step={1}
-        />
-
-        <RangeSetting
-            title="Concurrent Downloads"
-            min={1}
-            max={50}
-            bind:value={options.concurrentDownloads}
-            valueSuffix="connections"
-            step={1}
-        />
-        <ToggleSetting
-            title="Keep launcher running"
-            disabled={false}
-            bind:value={options.keepLauncherOpen}
-        />
-        <ButtonSetting
-            text="Logout"
-            on:click={() => dispatch("logout")}
-            color="#4677FF"
-        />
-        <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
-        <LauncherVersion version={launcherVersion} />
     </SettingsContainer>
 {/if}
 
@@ -565,30 +572,3 @@
         <NewsArea />
     </ContentWrapper>
 </VerticalFlexWrapper>
-
-<style>
-    .account-info {
-        display: flex;
-        flex-direction: column;
-        margin-bottom: 10px;
-        overflow-wrap: break-word;
-    }
-
-    .account-info h2 {
-        font-size: 16px;
-        color: white;
-        margin-bottom: 5px;
-    }
-
-    .account-info__userid {
-        margin-top: -7px;
-        font-size: 12px;
-        font-weight: normal;
-        color: white;
-    }
-
-    .account-info__premium {
-        font-size: 12px;
-        color: white;
-    }
-</style>
