@@ -4,15 +4,9 @@
     export let account;
 
     const decodedJwt = jwtDecode(account.accessToken);
-
-    console.log(decodedJwt)
-    
-    let username = "Senk Ju";
-    let premium = true;
 </script>
 
 <div class="liquidbounce-account">
-    <div class="title">Account Information</div>
     <div class="stat">
         <div class="stat-title">Username</div>
         <div class="stat-value">{decodedJwt.nickname}</div>
@@ -30,12 +24,6 @@
 </div>
 
 <style>
-    .title {
-        color: white;
-        font-weight: 500;
-        margin-bottom: 5px;
-    }
-
     .stat {
         color: white;
         display: flex;

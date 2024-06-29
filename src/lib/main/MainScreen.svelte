@@ -439,7 +439,9 @@
 
 
             {#if options.clientAccount}
-                <LiquidBounceAccount account={options.clientAccount} />
+                <SettingWrapper title="Account Information">
+                    <LiquidBounceAccount account={options.clientAccount} />
+                </SettingWrapper>
 
                 {#if !options.clientAccount.premium}
                     <Description description="There appears to be no donation associated with this account. Please link it on the account management page." />
