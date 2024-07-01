@@ -28,6 +28,7 @@ use path_absolutize::Absolutize;
 use tracing::*;
 
 use crate::app::api::LaunchManifest;
+use crate::auth::ClientAccount;
 use crate::error::LauncherError;
 use crate::minecraft::java::JavaRuntime;
 use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
@@ -258,6 +259,8 @@ pub struct LaunchingParameter {
     pub user_type: String,
     pub keep_launcher_open: bool,
     pub concurrent_downloads: i32,
+    pub client_account: Option<ClientAccount>,
+    pub skip_advertisement: bool,
 }
 
 fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(
