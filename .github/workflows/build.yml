@@ -74,3 +74,9 @@ jobs:
         with:
           name: liquidlauncher-macos
           path: ./src-tauri/target/release/bundle/macos/liquidlauncher.app.tar.*
+
+      - uses: actions/upload-artifact@v3
+        if: matrix.platform == 'macos-latest-large'
+        with:
+          name: liquidlauncher-macos-large
+          path: ./src-tauri/target/release/bundle/macos/liquidlauncher.app.tar.*
