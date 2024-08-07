@@ -360,7 +360,7 @@ async fn run_client(
                         shareable_window.lock().unwrap().show().unwrap();
                     }
 
-                    let message = format!("An error occourd:\n\n{:?}", e);
+                    let message = format!("An error occured:\n\n{:?}", e);
                     shareable_window.lock().unwrap().emit("client-error", format!("{}\n\n{}", message, ERROR_MSG)).unwrap();
                     handle_stderr(&shareable_window, message.as_bytes()).unwrap();
                 };
