@@ -11,7 +11,7 @@
     }
 </script>
 
-<div class="container" transition:fly={{ y: -10, duration: 200 }}>
+<div class="container" in:fly={{ y: -10, duration: 200 }} out:fly={{ y: -10, duration: 200 }}>
     <div class="header">
         <div class="title">{title}</div>
         <button class="button-hide" on:click={handleHideClick}>
