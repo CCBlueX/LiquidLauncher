@@ -38,7 +38,7 @@ impl ClientAccount {
 
     pub fn authenticate_request(&self, request: reqwest::RequestBuilder) -> Result<reqwest::RequestBuilder> {
         if self.is_expired() {
-            bail!("Token expired");
+            bail!("Your client account session has expired! Re-login!");
         }
 
         Ok(request.bearer_auth(self.access_token.secret()))
