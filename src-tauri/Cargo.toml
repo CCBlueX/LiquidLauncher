@@ -1,6 +1,6 @@
 [package]
 name = "liquidlauncher"
-version = "0.3.0"
+version = "0.3.1"
 description = "A LiquidBounce launcher for Minecraft, written in Rust using Tauri."
 authors = ["1zuna <marco@ccbluex.net>", "superblaubeere27"]
 license = "GNU General Public License v3.0"
