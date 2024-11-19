@@ -24,7 +24,7 @@ use anyhow::{bail, Result};
 use path_absolutize::Absolutize;
 use tokio::fs;
 
-use crate::utils::{download_file, tar_gz_extract, zip_extract, OperatingSystem, ARCHITECTURE, OS};
+use crate::utils::{download_file, tar_gz_extract, zip_extract, OperatingSystem, OS};
 
 use super::JavaDistribution;
 
@@ -73,7 +73,7 @@ pub async fn find_java_binary(
         }
     }
 
-    return Err(anyhow::anyhow!("Failed to find JRE"));
+    Err(anyhow::anyhow!("Failed to find JRE"))
 }
 
 /// Download specific JRE to runtimes
@@ -90,21 +90,11 @@ where
         runtimes_folder.join(format!("{}_{}", jre_distribution.get_name(), jre_version));
 
     if runtime_path.exists() {
-        // Clear out folder
         fs::remove_dir_all(&runtime_path).await?;
     }
-
     fs::create_dir_all(&runtime_path).await?;
 
-    // OS details
-    let os_name = OS.get_graal_name()?;
-    let os_arch = ARCHITECTURE.get_simple_name()?;
-    let archive_type = OS.get_archive_type()?;
-    let url = jre_distribution.get_url(jre_version, os_name, os_arch, archive_type);
-
-    // Download from JRE source and extract runtime files
-    fs::create_dir_all(&runtime_path).await?;
-
+    let url = jre_distribution.get_url(jre_version)?;
     let retrieved_bytes = download_file(&url, on_progress).await?;
     let cursor = Cursor::new(&retrieved_bytes[..]);
 

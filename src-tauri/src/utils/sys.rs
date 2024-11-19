@@ -100,11 +100,20 @@ impl OperatingSystem {
         })
     }
 
-    pub fn get_graal_name(&self) -> Result<&'static str> {
+    pub fn get_adoptium_name(&self) -> Result<&'static str> {
         Ok(match self {
             OperatingSystem::WINDOWS => "windows",
             OperatingSystem::LINUX => "linux",
             OperatingSystem::OSX => "mac",
+            _ => bail!("Invalid OS")
+        })
+    }
+
+    pub fn get_graal_name(&self) -> Result<&'static str> {
+        Ok(match self {
+            OperatingSystem::WINDOWS => "windows",
+            OperatingSystem::LINUX => "linux",
+            OperatingSystem::OSX => "macos",
             _ => bail!("Invalid OS")
         })
     }
