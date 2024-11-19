@@ -31,6 +31,7 @@ use crate::HTTP_CLIENT;
 
 /// The client ID of the Azure app used for authentication
 pub(crate) const AZURE_CLIENT_ID: &str = "0add8caf-2cc6-4546-b798-c3d171217dd9";
+const AZURE_SCOPE: &str = "XboxLive.signin offline_access";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -83,11 +84,11 @@ impl MinecraftAccount {
         F: Fn(&String, &String),
     {
         // Request new device code from Azure
-        let device_code = get_ms_link_code(&HTTP_CLIENT)
+        let device_code = get_ms_link_code(&HTTP_CLIENT, Some(AZURE_CLIENT_ID), Some(AZURE_SCOPE))
             .await?;
         on_code(&device_code.verification_uri, &device_code.user_code);
 
-        let msa: ExpiringValue<AccessTokenResponse> = get_ms_auth_token(&HTTP_CLIENT, device_code)
+        let msa: ExpiringValue<AccessTokenResponse> = get_ms_auth_token(&HTTP_CLIENT, device_code, Some(AZURE_CLIENT_ID))
             .await?;
 
         login_msa(msa).await
@@ -145,7 +146,7 @@ impl MinecraftAccount {
                 // Refresh Microsoft auth token if necessary
                 let msa = if msa.is_expired() {
                     trace!("refreshing Microsoft auth token");
-                    match refresh_ms_auth_token(&HTTP_CLIENT, &msa.data.refresh_token).await {
+                    match refresh_ms_auth_token(&HTTP_CLIENT, &msa.data.refresh_token, Some(AZURE_CLIENT_ID), Some(AZURE_SCOPE)).await {
                         Ok(new_msa) => new_msa,
                         Err(e) => {
                             // can't refresh, re-authenticate required
@@ -161,7 +162,7 @@ impl MinecraftAccount {
             }
             MinecraftAccount::LegacyMsaAccount { ms_auth, .. } => {
                 let msa = refresh_ms_auth_token(&HTTP_CLIENT, 
-                    &ms_auth.refresh_token).await?;
+                    &ms_auth.refresh_token, Some(AZURE_CLIENT_ID), Some(AZURE_SCOPE)).await?;
                 return Ok(login_msa(msa).await?);
             }
             MinecraftAccount::OfflineAccount { name, id, .. } => {
