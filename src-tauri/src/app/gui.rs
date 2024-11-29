@@ -27,7 +27,6 @@ use uuid::Uuid;
 
 use crate::{auth::{ClientAccountAuthenticator, ClientAccount}, minecraft::{auth::{self, MinecraftAccount}, launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate}, HTTP_CLIENT, LAUNCHER_DIRECTORY, LAUNCHER_VERSION};
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
-use crate::utils::percentage_of_total_memory;
 
 use super::{api::{ApiEndpoints, Build, LoaderMod, ModSource}, app_data::LauncherOptions};
 
@@ -299,7 +298,7 @@ async fn run_client(
     let xuid = Uuid::new_v4().to_string();
 
     let parameters = LaunchingParameter {
-        memory: percentage_of_total_memory(options.memory_percentage),
+        memory: options.allocated_memory,
         custom_data_path: if !options.custom_data_path.is_empty() { Some(options.custom_data_path) } else { None },
         custom_java_path: if !options.custom_java_path.is_empty() { Some(options.custom_java_path) } else { None },
         auth_player_name: account_name,
@@ -403,11 +402,6 @@ async fn logout(account_data: MinecraftAccount) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn mem_percentage(memory_percentage: i32) -> i64 {
-    percentage_of_total_memory(memory_percentage)
-}
-
-#[tauri::command]
 async fn fetch_news() -> Result<Vec<News>, String> {
     ContentDelivery::news()
         .await
@@ -505,7 +499,6 @@ pub fn gui_main() {
             fetch_news,
             fetch_changelog,
             clear_data,
-            mem_percentage,
             default_data_folder_path,
             terminate,
             get_launcher_version,

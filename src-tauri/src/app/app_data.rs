@@ -22,7 +22,7 @@ use std::{path::Path, collections::HashMap};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
-use crate::{auth::ClientAccount, minecraft::auth::MinecraftAccount};
+use crate::{auth::ClientAccount, minecraft::auth::MinecraftAccount, utils::total_system_memory_in_mb};
 
 fn default_concurrent_downloads() -> i32 {
     10
@@ -36,10 +36,12 @@ pub(crate) struct LauncherOptions {
     pub custom_data_path: String,
     #[serde(rename = "showNightlyBuilds")]
     pub show_nightly_builds: bool,
-    #[serde(rename = "memoryPercentage")]
-    pub memory_percentage: i32,
     #[serde(rename = "customJavaPath", default)]
     pub custom_java_path: String,
+    #[serde(rename = "systemMemory")]
+    pub system_memory: i64,
+    #[serde(rename = "allocatedMemory")]
+    pub allocated_memory: i64,
     #[serde(rename = "selectedBranch")]
     pub selected_branch: Option<String>,
     #[serde(rename = "selectedBuild")]
@@ -86,8 +88,9 @@ impl Default for LauncherOptions {
             keep_launcher_open: false,
             custom_data_path: String::new(),
             show_nightly_builds: false,
-            memory_percentage: 80, // 80% memory of computer allocated to game
             custom_java_path: String::new(),
+            system_memory: total_system_memory_in_mb(),
+            allocated_memory: total_system_memory_in_mb() / 2,
             selected_branch: None,
             selected_build: None,
             client_account: None,

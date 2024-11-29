@@ -402,11 +402,11 @@
                 windowTitle="Select custom data directory"
             />
             <RangeSetting
-                title="Memory"
-                min={20}
-                max={100}
-                bind:value={options.memoryPercentage}
-                valueSuffix="%"
+                title="Allocated Memory"
+                min={1}
+                max={options.systemMemory}
+                bind:value={options.allocatedMemory}
+                valueSuffix="MB"
                 step={1}
             />
 
