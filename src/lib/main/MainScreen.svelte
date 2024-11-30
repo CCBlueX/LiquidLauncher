@@ -18,14 +18,19 @@
     import ProgressStatus from "./statusbar/ProgressStatus.svelte";
     import StatusBar from "./statusbar/StatusBar.svelte";
     import TextStatus from "./statusbar/TextStatus.svelte";
-    import { invoke } from "@tauri-apps/api/core";
-    import { listen } from "@tauri-apps/api/event";
     import DirectorySelectorSetting from "../settings/DirectorySelectorSetting.svelte";
     import FileSelectorSetting from "../settings/FileSelectorSetting.svelte";
     import LauncherVersion from "../settings/LauncherVersion.svelte";
     import IconButtonSetting from "../settings/IconButtonSetting.svelte";
     import CustomModSetting from "../settings/CustomModSetting.svelte";
-    import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
+    import { invoke } from "@tauri-apps/api";
+    import { open as dialogOpen } from "@tauri-apps/api/dialog";
+    import { open as shellOpen } from "@tauri-apps/api/shell";
+    import { listen } from "@tauri-apps/api/event";
+    import { exit } from "@tauri-apps/api/process";
+    import Tabs from "../settings/tab/Tabs.svelte";
+    import Description from "../settings/Description.svelte";
+    import LiquidBounceAccount from "../settings/LiquidBounceAccount.svelte";
 
     export let options;
 
@@ -66,6 +71,8 @@
     }
 
     let log = [];
+
+    let activeSettingsTab = "General";
 
     invoke("get_launcher_version").then((res) => (launcherVersion = res));
 
@@ -201,19 +208,64 @@
     }
 
     async function runClient() {
-        console.log("Client started");
         log = [];
-        clientRunning = true;
 
         let build = getBuild();
-        console.debug("Running build", build);
+        if (!build) {
+            return;
+        }
+
+        clientRunning = true;
         
-        await invoke("run_client", {
-            buildId: build.buildId,
-            accountData: options.currentAccount,
-            options: options,
-            mods: [...recommendedMods, ...customMods],
-        });
+        if (options.clientAccount) {
+            try {
+                progressBar.text = "Authenticating client account...";
+                console.info("Updating client account...");
+
+                const account = await invoke("client_account_update", {
+                    account: options.clientAccount,
+                });
+                options.clientAccount = account;
+            } catch (e) {
+                console.error("Failed to authenticate account", e);
+            }
+        }
+
+        try {
+            progressBar.text = "Refreshing minecraft session...";
+
+            let account = await invoke("refresh", { accountData: options.currentAccount })
+            console.info("Account Refreshed", account);
+            options.currentAccount = account;
+        } catch (e) {
+            console.error("Failed to refresh account and is now invalidated.", e);
+            alert("Failed to refresh account session: " + e + "\n\nYou have been logged out. Please try logging in again.");
+            
+            // Invalidate account for this session (do not store it)
+            options.currentAccount = null;
+
+            // Do not start client if account is not valid
+            clientRunning = false;
+            return;
+        }
+
+        options.store();
+        
+        try {
+            progressBar.text = "Starting client...";
+            console.info("Starting client build", build);
+
+            await invoke("run_client", {
+                buildId: build.buildId,
+                options: options,
+                mods: [...recommendedMods, ...customMods],
+            });
+        } catch (e) {
+            console.error("Failed to start client", e);
+            alert("Failed to start client: " + e);
+            
+            clientRunning = false;
+        }
     }
 
     async function terminateClient() {
@@ -235,7 +287,13 @@
             // request builds of branch
             requestBuilds();
         })
-        .catch((e) => console.error(e));
+        .catch((e) => {
+            alert(e);
+            console.error(e);
+            
+            // exit app
+            exit(1);
+        });
 
     listen("client-exited", () => {
         clientRunning = false;
@@ -291,23 +349,31 @@
         });
 
         if (selected) {
-            for (const file of selected) {
-                await invoke("install_custom_mod", { branch, mcVersion, path: file.path });
+            for (const path of selected) {
+                await invoke("install_custom_mod", { branch, mcVersion, path });
             }
 
             requestMods();
         }
     }
 
-    // Refresh account data
-    invoke("refresh", { accountData: options.currentAccount })
-        .then((account) => {
-            console.info("Account Refreshed", account);
+    async function authClientAccount() {
+        console.info("Authenticating client account...");
+        try {
+            const account = await invoke("client_account_authenticate");
 
-            options.currentAccount = account;
+            options.clientAccount = account;
             options.store();
-        })
-        .catch((e) => console.error(e));
+        } catch (e) {
+            console.error("Failed to authenticate client account", e);
+            alert("Failed to authenticate client account: " + e);
+        }
+    }
+
+    listen("auth_url", async (e) => {
+        console.info("Opening auth URL", e.payload);
+        await shellOpen(e.payload);
+    });
 </script>
 
 {#if clientLogShown}
@@ -319,47 +385,88 @@
 
 {#if settingsShown}
     <SettingsContainer title="Settings" on:hideSettings={hideSettings}>
-        <FileSelectorSetting
-            title="JVM Location"
-            placeholder="Internal"
-            bind:value={options.customJavaPath}
-            filters={[{ name: "javaw", extensions: [] }]}
-            windowTitle="Select custom Java wrapper"
-        />
-        <DirectorySelectorSetting
-            title="Data Location"
-            placeholder={defaultDataFolder}
-            bind:value={options.customDataPath}
-            windowTitle="Select custom data directory"
-        />
-        <RangeSetting
-            title="Memory"
-            min={20}
-            max={100}
-            bind:value={options.memoryPercentage}
-            valueSuffix="%"
-            step={1}
-        />
-        <RangeSetting
-            title="Concurrent Downloads"
-            min={1}
-            max={50}
-            bind:value={options.concurrentDownloads}
-            valueSuffix="connections"
-            step={1}
-        />
-        <ToggleSetting
-            title="Keep launcher running"
-            disabled={false}
-            bind:value={options.keepLauncherOpen}
-        />
-        <ButtonSetting
-            text="Logout"
-            on:click={() => dispatch("logout")}
-            color="#4677FF"
-        />
-        <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
-        <LauncherVersion version={launcherVersion} />
+        <Tabs tabs={["General", "Donator"]} bind:activeTab={activeSettingsTab} slot="tabs" />
+
+        {#if activeSettingsTab === "General"}
+            <FileSelectorSetting
+                title="JVM Location"
+                placeholder="Internal"
+                bind:value={options.customJavaPath}
+                filters={[{ name: "javaw", extensions: [] }]}
+                windowTitle="Select custom Java wrapper"
+            />
+            <DirectorySelectorSetting
+                title="Data Location"
+                placeholder={defaultDataFolder}
+                bind:value={options.customDataPath}
+                windowTitle="Select custom data directory"
+            />
+            <RangeSetting
+                title="Memory"
+                min={20}
+                max={100}
+                bind:value={options.memoryPercentage}
+                valueSuffix="%"
+                step={1}
+            />
+
+            <RangeSetting
+                title="Concurrent Downloads"
+                min={1}
+                max={50}
+                bind:value={options.concurrentDownloads}
+                valueSuffix="connections"
+                step={1}
+            />
+            <ToggleSetting
+                title="Keep launcher running"
+                disabled={false}
+                bind:value={options.keepLauncherOpen}
+            />
+            <ButtonSetting
+                text="Logout"
+                on:click={() => dispatch("logout")}
+                color="#4677FF"
+            />
+            <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
+            <LauncherVersion version={launcherVersion} />
+        {:else if activeSettingsTab === "Donator"}
+            <ToggleSetting
+                title="Skip Advertisements"
+                disabled={!options.clientAccount || !options.clientAccount.premium}
+                bind:value={options.skipAdvertisement}
+            />
+
+
+            {#if options.clientAccount}
+                <SettingWrapper title="Account Information">
+                    <LiquidBounceAccount account={options.clientAccount} />
+                </SettingWrapper>
+
+                {#if !options.clientAccount.premium}
+                    <Description description="There appears to be no donation associated with this account. Please link it on the account management page." />
+                {/if}
+
+                <ButtonSetting
+                    text="Manage Account"
+                    on:click={async () => { await shellOpen("https://user.liquidbounce.net"); }}
+                    color="#4677FF"
+                />
+                <ButtonSetting
+                    text="Logout"
+                    on:click={() => (options.clientAccount = null)}
+                    color="#B83529"
+                />
+            {:else}
+                <Description description="By donating, you not only support the ongoing development of the client but also receive a donator cape and the ability to bypass ads on the launcher." />
+
+                <ButtonSetting
+                    text="Login with LiquidBounce Account"
+                    on:click={authClientAccount}
+                    color="#4677FF"
+                />
+            {/if}
+        {/if}
     </SettingsContainer>
 {/if}
 

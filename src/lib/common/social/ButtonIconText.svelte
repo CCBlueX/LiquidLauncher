@@ -1,6 +1,5 @@
 <script>
-    import { invoke } from "@tauri-apps/api/core";
-    import { open } from "@tauri-apps/plugin-shell";
+    import { open } from "@tauri-apps/api/shell";
 
     export let text;
     export let icon;

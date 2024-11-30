@@ -17,10 +17,10 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 
 use azalea_auth::{
-    cache::ExpiringValue, check_ownership, get_minecraft_token, get_ms_auth_token, get_ms_link_code, get_profile, refresh_ms_auth_token, AccessTokenResponse, AuthError, MinecraftAuthResponse, ProfileResponse, XboxLiveAuth
+    cache::ExpiringValue, get_minecraft_token, get_ms_auth_token, get_ms_link_code, get_profile, refresh_ms_auth_token, AccessTokenResponse, AuthError, MinecraftAuthResponse, ProfileResponse, XboxLiveAuth
 };
 use serde::{Deserialize, Serialize};
 use tracing::{error, trace};
@@ -31,6 +31,7 @@ use crate::HTTP_CLIENT;
 
 /// The client ID of the Azure app used for authentication
 pub(crate) const AZURE_CLIENT_ID: &str = "0add8caf-2cc6-4546-b798-c3d171217dd9";
+const AZURE_SCOPE: &str = "XboxLive.signin offline_access";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -58,7 +59,7 @@ pub enum MinecraftAccount {
     OfflineAccount {
         name: String,
         #[serde(alias = "uuid")]
-        id: Uuid
+        id: Uuid,
     },
 }
 
@@ -83,30 +84,42 @@ impl MinecraftAccount {
         F: Fn(&String, &String),
     {
         // Request new device code from Azure
-        let device_code = get_ms_link_code(&HTTP_CLIENT)
+        let device_code = get_ms_link_code(&HTTP_CLIENT, Some(AZURE_CLIENT_ID), Some(AZURE_SCOPE))
             .await?;
         on_code(&device_code.verification_uri, &device_code.user_code);
 
-        let msa: ExpiringValue<AccessTokenResponse> = get_ms_auth_token(&HTTP_CLIENT, device_code)
+        let msa: ExpiringValue<AccessTokenResponse> = get_ms_auth_token(&HTTP_CLIENT, device_code, Some(AZURE_CLIENT_ID))
             .await?;
 
         login_msa(msa).await
     }
 
     /// Authenticate using an offline account
-    /// Requests the UUID of the username from Mojang's API. If the username is invalid, the UUID will be `-`.
+    /// Generates UUID from following format: OfflinePlayer:<username>
+    /// Java/Kotlin equivalent: UUID.nameUUIDFromBytes("OfflinePlayer:$name".toByteArray())
+    /// 
+    // Explanation: [nameUUIDFromBytes] uses MD5 to generate a UUID from the input bytes.
+    // The input bytes are the UTF-8 bytes of the string "OfflinePlayer:$name".
+    // The UUID generated is a version 3 UUID, which is based on the MD5 hash of the input bytes.
     ///
     /// Returns a `MinecraftAccount::OfflineAccount` if successful
     pub async fn auth_offline(username: String) -> Self {
-        // Request UUID from Mojang's API
-        let uuid = uuid_of_username(&username)
-            .await
-            .unwrap_or_else(|_| Uuid::new_v4());
+        // Generate UUID from "OfflinePlayer:$name"
+        let name_str = format!("OfflinePlayer:{}", username);
+        let bytes = name_str.as_bytes();
+        let mut md5: [u8; 16] = md5::compute(bytes).into();
+
+        md5[6] &= 0x0f; // clear version
+        md5[6] |= 0x30; // version 3
+        md5[8] &= 0x3f; // clear variant
+        md5[8] |= 0x80; // IETF variant
+
+        let uuid = Uuid::from_bytes(md5);
 
         // Return offline account
         MinecraftAccount::OfflineAccount {
             name: username,
-            id: uuid,
+            id: uuid
         }
     }
 
@@ -118,6 +131,7 @@ impl MinecraftAccount {
                 xbl,
                 mca,
                 profile,
+                ..
             } => {
                 // Not necessary to refresh if the Minecraft auth token is not expired
                 if !mca.is_expired() {
@@ -125,14 +139,14 @@ impl MinecraftAccount {
                         msa,
                         xbl,
                         mca,
-                        profile,
+                        profile
                     });
                 }
 
                 // Refresh Microsoft auth token if necessary
                 let msa = if msa.is_expired() {
                     trace!("refreshing Microsoft auth token");
-                    match refresh_ms_auth_token(&HTTP_CLIENT, &msa.data.refresh_token).await {
+                    match refresh_ms_auth_token(&HTTP_CLIENT, &msa.data.refresh_token, Some(AZURE_CLIENT_ID), Some(AZURE_SCOPE)).await {
                         Ok(new_msa) => new_msa,
                         Err(e) => {
                             // can't refresh, re-authenticate required
@@ -148,10 +162,15 @@ impl MinecraftAccount {
             }
             MinecraftAccount::LegacyMsaAccount { ms_auth, .. } => {
                 let msa = refresh_ms_auth_token(&HTTP_CLIENT, 
-                    &ms_auth.refresh_token).await?;
+                    &ms_auth.refresh_token, Some(AZURE_CLIENT_ID), Some(AZURE_SCOPE)).await?;
                 return Ok(login_msa(msa).await?);
             }
-            MinecraftAccount::OfflineAccount { .. } => Ok(self),
+            MinecraftAccount::OfflineAccount { name, id, .. } => {
+                Ok(MinecraftAccount::OfflineAccount {
+                    name,
+                    id
+                })
+            },
         };
     }
 
@@ -159,6 +178,15 @@ impl MinecraftAccount {
     pub async fn logout(&self) -> Result<()> {
         Ok(())
     }
+
+    pub fn get_username(&self) -> &str {
+        match self {
+            MinecraftAccount::MsaAccount { profile, .. } => &profile.name,
+            MinecraftAccount::LegacyMsaAccount { name, .. } => name,
+            MinecraftAccount::OfflineAccount { name, .. } => name,
+        }
+    }
+
 }
 
 async fn login_msa(msa: ExpiringValue<AccessTokenResponse>) -> Result<MinecraftAccount, AuthError> {
@@ -166,12 +194,6 @@ async fn login_msa(msa: ExpiringValue<AccessTokenResponse>) -> Result<MinecraftA
     trace!("Got access token: {msa_token}");
 
     let minecraft = get_minecraft_token(&HTTP_CLIENT, msa_token).await?;
-
-    let has_game = check_ownership(&HTTP_CLIENT, &minecraft.minecraft_access_token).await?;
-    if !has_game {
-        return Err(AuthError::DoesNotOwnGame);
-    }
-
     let profile = get_profile(&HTTP_CLIENT, &minecraft.minecraft_access_token).await?;
 
     // Return account
@@ -179,43 +201,6 @@ async fn login_msa(msa: ExpiringValue<AccessTokenResponse>) -> Result<MinecraftA
         msa,
         xbl: minecraft.xbl,
         mca: minecraft.mca,
-        profile,
+        profile
     })
-}
-
-/// Get the UUID of a username
-pub async fn uuid_of_username(username: &String) -> Result<Uuid> {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    pub enum ApiMojangProfile {
-        Success {
-            id: Uuid,
-            name: String,
-        },
-        Error {
-            error: String,
-            #[serde(rename(deserialize = "errorMessage"))]
-            error_message: String,
-        },
-    }
-
-    // https://api.mojang.com/users/profiles/minecraft/<username>
-
-    let response = HTTP_CLIENT
-        .get(format!(
-            "https://api.mojang.com/users/profiles/minecraft/{}",
-            username
-        ))
-        .send()
-        .await?
-        .json::<ApiMojangProfile>()
-        .await?;
-
-    match response {
-        ApiMojangProfile::Success { id, name: _name } => Ok(id),
-        ApiMojangProfile::Error {
-            error,
-            error_message,
-        } => Err(anyhow!("{}: {}", error, error_message)),
-    }
 }

@@ -25,11 +25,13 @@ use tracing::{error, info, debug};
 use tauri::{Manager, Window};
 use uuid::Uuid;
 
-use crate::{LAUNCHER_DIRECTORY, minecraft::{launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate, auth::{MinecraftAccount, self}}, HTTP_CLIENT, LAUNCHER_VERSION};
+use crate::{auth::{ClientAccountAuthenticator, ClientAccount}, minecraft::{auth::{self, MinecraftAccount}, launcher::{LauncherData, LaunchingParameter}, prelauncher, progress::ProgressUpdate}, HTTP_CLIENT, LAUNCHER_DIRECTORY, LAUNCHER_VERSION};
 use crate::app::api::{Branches, Changelog, ContentDelivery, News};
 use crate::utils::percentage_of_total_memory;
 
 use super::{api::{ApiEndpoints, Build, LoaderMod, ModSource}, app_data::LauncherOptions};
+
+pub type ShareableWindow = Arc<Mutex<Window>>;
 
 struct RunnerInstance {
     terminator: tokio::sync::oneshot::Sender<()>,
@@ -137,6 +139,31 @@ async fn login_microsoft(window: tauri::Window) -> Result<MinecraftAccount, Stri
 }
 
 #[tauri::command]
+async fn client_account_authenticate(window: tauri::Window) -> Result<ClientAccount, String> {
+    let mut account = ClientAccountAuthenticator::start_auth(|uri| {
+        // Open the browser with the auth URL
+        let _ = window.emit("auth_url", uri);
+    }).await.map_err(|e| format!("{}", e))?;
+
+    // Fetch user information
+    account.update_info().await
+        .map_err(|e| format!("unable to fetch user information: {:?}", e))?;
+
+  Ok(account)
+}
+
+#[tauri::command]
+async fn client_account_update(account: ClientAccount) -> Result<ClientAccount, String> {
+    let mut account = account.renew().await
+        .map_err(|e| format!("unable to update access token: {:?}", e))?;
+
+    // Fetch user information
+    account.update_info().await
+        .map_err(|e| format!("unable to fetch user information: {:?}", e))?;
+    Ok(account)
+}
+
+#[tauri::command]
 async fn get_custom_mods(branch: &str, mc_version: &str) -> Result<Vec<LoaderMod>, String> {
     let data = LAUNCHER_DIRECTORY.data_dir();
     let mod_cache_path = data.join("custom_mods").join(format!("{}-{}", branch, mc_version));
@@ -204,15 +231,7 @@ async fn delete_custom_mod(branch: &str, mc_version: &str, mod_name: &str) -> Re
     Ok(())
 }
 
-pub fn log(window: &Arc<std::sync::Mutex<Window>>, msg: &str) {
-    info!("{}", msg);
-    
-    if let Ok(k) = window.lock() {
-        let _ = k.emit("process-output", msg);
-    }
-}
-
-fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
+fn handle_stdout(window: &ShareableWindow, data: &[u8]) -> anyhow::Result<()> {
     let data = String::from_utf8(data.to_vec())?;
     if data.is_empty() {
         return Ok(()); // ignore empty lines
@@ -223,7 +242,7 @@ fn handle_stdout(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow:
     Ok(())
 }
 
-fn handle_stderr(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow::Result<()> {
+fn handle_stderr(window: &ShareableWindow, data: &[u8]) -> anyhow::Result<()> {
     let data = String::from_utf8(data.to_vec())?;
     if data.is_empty() {
         return Ok(()); // ignore empty lines
@@ -234,20 +253,47 @@ fn handle_stderr(window: &Arc<std::sync::Mutex<Window>>, data: &[u8]) -> anyhow:
     Ok(())
 }
 
-fn handle_progress(window: &Arc<std::sync::Mutex<Window>>, progress_update: ProgressUpdate) -> anyhow::Result<()> {
-    window.lock().map_err(|_| anyhow!("Window lock is poisoned"))?.emit("progress-update", progress_update)?;
+fn handle_progress(window: &ShareableWindow, progress_update: ProgressUpdate) -> anyhow::Result<()> {
+    window.lock().map_err(|_| anyhow!("Window lock is poisoned"))?.emit("progress-update", &progress_update)?;
+
+    // Check if progress update is label update
+    if let ProgressUpdate::SetLabel(label) = progress_update {
+        handle_log(window, &label)?;
+    }
+    Ok(())
+}
+
+fn handle_log(window: &ShareableWindow, msg: &str) -> anyhow::Result<()> {
+    info!("{}", msg);
+    
+    if let Ok(k) = window.lock() {
+        let _ = k.emit("process-output", msg);
+    }
     Ok(())
 }
 
 #[tauri::command]
-async fn run_client(build_id: u32, account_data: MinecraftAccount, options: LauncherOptions, mods: Vec<LoaderMod>, window: Window, app_state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let window_mutex = Arc::new(std::sync::Mutex::new(window));
+async fn run_client(
+    build_id: u32,
+    options: LauncherOptions,
+    mods: Vec<LoaderMod>,
+    window: Window,
+    app_state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    // A shared mutex for the window object.
+    let shareable_window: ShareableWindow = Arc::new(Mutex::new(window));
 
-    let (account_name, uuid, token, user_type) = match account_data {
-        MinecraftAccount::MsaAccount { msa: _, xbl: _, mca, profile } => (profile.name, profile.id.to_string(), mca.data.access_token, "msa".to_string()),
+    let minecraft_account = options.current_account.ok_or("no account selected")?;
+    let (account_name, uuid, token, user_type) = match minecraft_account {
+        MinecraftAccount::MsaAccount { msa: _, xbl: _, mca, profile, .. } => (profile.name, profile.id.to_string(), mca.data.access_token, "msa".to_string()),
         MinecraftAccount::LegacyMsaAccount { name, uuid, token, .. } => (name, uuid.to_string(), token, "msa".to_string()),
-        MinecraftAccount::OfflineAccount { name, id } => (name, id.to_string(), "-".to_string(), "legacy".to_string())
+        MinecraftAccount::OfflineAccount { name, id, .. } => (name, id.to_string(), "-".to_string(), "legacy".to_string())
     };
+    
+    let client_account = options.client_account;
+    let skip_advertisement = options.skip_advertisement && client_account.as_ref().is_some_and(|x| 
+        x.get_user_information().is_some_and(|u| u.premium)
+    );
 
     // Random XUID
     let xuid = Uuid::new_v4().to_string();
@@ -264,6 +310,8 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
         user_type,
         keep_launcher_open: options.keep_launcher_open,
         concurrent_downloads: options.concurrent_downloads,
+        client_account,
+        skip_advertisement: skip_advertisement
     };
 
     let runner_instance = &app_state.runner_instance;
@@ -292,31 +340,34 @@ async fn run_client(build_id: u32, account_data: MinecraftAccount, options: Laun
             .block_on(async {
                 let keep_launcher_open = parameters.keep_launcher_open;
 
+                let launcher_data = LauncherData {
+                    on_stdout: handle_stdout,
+                    on_stderr: handle_stderr,
+                    on_progress: handle_progress,
+                    on_log: handle_log,
+                    hide_window: |w| w.lock().unwrap().hide().unwrap(),
+                    data: Box::new(shareable_window.clone()),
+                    terminator: terminator_rx
+                };
+
                 if let Err(e) = prelauncher::launch(
                     launch_manifest,
                     parameters,
                     mods,
-                    LauncherData {
-                        on_stdout: handle_stdout,
-                        on_stderr: handle_stderr,
-                        on_progress: handle_progress,
-                        data: Box::new(window_mutex.clone()),
-                        terminator: terminator_rx
-                    },
-                    window_mutex.clone()
+                    launcher_data
                 ).await {
                     if !keep_launcher_open {
-                        window_mutex.lock().unwrap().show().unwrap();
+                        shareable_window.lock().unwrap().show().unwrap();
                     }
 
-                    let message = format!("An error occourd:\n\n{:?}", e);
-                    window_mutex.lock().unwrap().emit("client-error", format!("{}\n\n{}", message, ERROR_MSG)).unwrap();
-                    handle_stderr(&window_mutex, message.as_bytes()).unwrap();
+                    let message = format!("An error occured:\n\n{:?}", e);
+                    shareable_window.lock().unwrap().emit("client-error", format!("{}\n\n{}", message, ERROR_MSG)).unwrap();
+                    handle_stderr(&shareable_window, message.as_bytes()).unwrap();
                 };
 
                 *copy_of_runner_instance.lock().map_err(|e| format!("unable to lock runner instance: {:?}", e)).unwrap()
                     = None;
-                window_mutex.lock().unwrap().emit("client-exited", ()).unwrap()
+                shareable_window.lock().unwrap().emit("client-exited", ()).unwrap()
             });
     });
 
@@ -339,8 +390,10 @@ async fn terminate(app_state: tauri::State<'_, AppState>) -> Result<(), String> 
 
 #[tauri::command]
 async fn refresh(account_data: MinecraftAccount) -> Result<MinecraftAccount, String> {
+    info!("Refreshing account...");
     let account = account_data.refresh().await
         .map_err(|e| format!("unable to refresh: {:?}", e))?;
+    info!("Account was refreshed - username {}", account.get_username());
     Ok(account)
 }
 
@@ -399,10 +452,39 @@ async fn clear_data(options: LauncherOptions) -> Result<(), String> {
 /// Runs the GUI and returns when the window is closed.
 pub fn gui_main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            let window = app.get_window("main").unwrap();
+
+            #[cfg(target_os = "macos")]
+            {
+                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+                if let Err(e) = apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None) {
+                    error!("Failed to apply vibrancy: {:?}", e);
+                }
+            }
+            
+            // Applies blur to the window and make corners rounded
+            #[cfg(target_os = "windows")]
+            {
+                use window_vibrancy::{apply_acrylic, apply_blur, apply_rounded_corners};
+
+                if let Err(e) = apply_acrylic(&window, None) {
+                    error!("Failed to apply acrylic vibrancy: {:?}", e);
+
+                    if let Err(e) = apply_blur(&window) {
+                        error!("Failed to apply blur vibrancy: {:?}", e);
+                    }
+                }
+
+                if let Err(e) = apply_rounded_corners(&window) {
+                    error!("Failed to apply rounded corners: {:?}", e);
+                    
+                    // todo: fallback to HTML corners
+                }
+            }
+
+            Ok(())
+        })
         .manage(AppState { 
             runner_instance: Arc::new(Mutex::new(None))
         })
@@ -416,6 +498,8 @@ pub fn gui_main() {
             run_client,
             login_offline,
             login_microsoft,
+            client_account_authenticate,
+            client_account_update,
             logout,
             refresh,
             fetch_news,

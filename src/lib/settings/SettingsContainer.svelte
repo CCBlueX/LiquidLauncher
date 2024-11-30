@@ -11,13 +11,15 @@
     }
 </script>
 
-<div class="container" transition:fly={{ y: -10, duration: 200 }}>
+<div class="container" in:fly={{ y: -10, duration: 200 }} out:fly={{ y: -10, duration: 200 }}>
     <div class="header">
         <div class="title">{title}</div>
         <button class="button-hide" on:click={handleHideClick}>
             <img class="icon" src="img/icon/icon-button-close.svg" alt="hide">
         </button>
     </div>
+
+    <slot name="tabs" />
 
     <div class="settings">
         <slot />
@@ -36,7 +38,7 @@
         padding: 25px;
         border-radius: 6px;
         z-index: 1000;
-        max-height: calc(100% - 140px);
+        max-height: calc(100% - 100px);
         overflow: hidden;
         display: flex;
         flex-direction: column;

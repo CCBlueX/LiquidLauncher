@@ -1,7 +1,7 @@
 <script>
+    import { invoke } from "@tauri-apps/api";
     import SocialBar from "../../common/social/SocialBar.svelte";
     import News from "./News.svelte";
-    import { invoke } from "@tauri-apps/api/core";
 
     let news = [];
 

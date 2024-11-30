@@ -36,6 +36,8 @@ impl JavaRuntime {
         if !self.0.exists() {
             bail!("Java runtime not found at: {}", self.0.display());
         }
+
+        debug!("Executing Java runtime: {}", self.0.display());
         
         let mut command = Command::new(&self.0);
         command.current_dir(game_dir);

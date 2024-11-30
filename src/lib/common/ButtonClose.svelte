@@ -1,5 +1,5 @@
 <script>
-    import { exit } from "@tauri-apps/plugin-process";
+    import { exit } from "@tauri-apps/api/process";
 
     async function handleClick() {
         await exit(0);

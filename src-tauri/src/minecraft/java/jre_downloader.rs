@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
+
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
@@ -24,13 +24,18 @@ use anyhow::{bail, Result};
 use path_absolutize::Absolutize;
 use tokio::fs;
 
-use crate::utils::{download_file, tar_gz_extract, zip_extract, ARCHITECTURE, OperatingSystem, OS};
+use crate::utils::{download_file, tar_gz_extract, zip_extract, OperatingSystem, OS};
 
 use super::JavaDistribution;
 
 /// Find java binary in JRE folder
-pub async fn find_java_binary(runtimes_folder: &Path, jre_distribution: &JavaDistribution, jre_version: &str) -> Result<PathBuf> {
-    let runtime_path = runtimes_folder.join(format!("{}_{}", jre_distribution.get_name(), jre_version));
+pub async fn find_java_binary(
+    runtimes_folder: &Path,
+    jre_distribution: &JavaDistribution,
+    jre_version: &u32,
+) -> Result<PathBuf> {
+    let runtime_path =
+        runtimes_folder.join(format!("{}_{}", jre_distribution.get_name(), jre_version));
 
     // Find JRE in runtime folder
     let mut files = fs::read_dir(&runtime_path).await?;
@@ -40,8 +45,12 @@ pub async fn find_java_binary(runtimes_folder: &Path, jre_distribution: &JavaDis
 
         let java_binary = match OS {
             OperatingSystem::WINDOWS => folder_path.join("bin").join("javaw.exe"),
-            OperatingSystem::OSX => folder_path.join("Contents").join("Home").join("bin").join("java"),
-            _ => folder_path.join("bin").join("java")
+            OperatingSystem::OSX => folder_path
+                .join("Contents")
+                .join("Home")
+                .join("bin")
+                .join("java"),
+            _ => folder_path.join("bin").join("java"),
         };
 
         if java_binary.exists() {
@@ -64,38 +73,39 @@ pub async fn find_java_binary(runtimes_folder: &Path, jre_distribution: &JavaDis
         }
     }
 
-    return Err(anyhow::anyhow!("Failed to find JRE"));
+    Err(anyhow::anyhow!("Failed to find JRE"))
 }
 
 /// Download specific JRE to runtimes
-pub async fn jre_download<F>(runtimes_folder: &Path, jre_distribution: &JavaDistribution, jre_version: &str, on_progress: F) -> Result<PathBuf> where F : Fn(u64, u64) {
-    let runtime_path = runtimes_folder.join(format!("{}_{}", jre_distribution.get_name(), jre_version));
+pub async fn jre_download<F>(
+    runtimes_folder: &Path,
+    jre_distribution: &JavaDistribution,
+    jre_version: &u32,
+    on_progress: F,
+) -> Result<PathBuf>
+where
+    F: Fn(u64, u64),
+{
+    let runtime_path =
+        runtimes_folder.join(format!("{}_{}", jre_distribution.get_name(), jre_version));
 
     if runtime_path.exists() {
-        // Clear out folder
         fs::remove_dir_all(&runtime_path).await?;
     }
-
     fs::create_dir_all(&runtime_path).await?;
 
-    // OS details
-    let os_name = OS.get_graal_name()?;
-    let os_arch = ARCHITECTURE.get_simple_name()?;
-    let url = jre_distribution.get_url(jre_version, os_name, os_arch);
-
-    // Download from JRE source and extract runtime files
-    fs::create_dir_all(&runtime_path).await?;
-
+    let url = jre_distribution.get_url(jre_version)?;
     let retrieved_bytes = download_file(&url, on_progress).await?;
     let cursor = Cursor::new(&retrieved_bytes[..]);
 
     match OS {
         OperatingSystem::WINDOWS => zip_extract(cursor, runtime_path.as_path()).await?,
-        OperatingSystem::LINUX | OperatingSystem::OSX => tar_gz_extract(cursor, runtime_path.as_path()).await?,
-        _ => bail!("Unsupported OS")
+        OperatingSystem::LINUX | OperatingSystem::OSX => {
+            tar_gz_extract(cursor, runtime_path.as_path()).await?
+        }
+        _ => bail!("Unsupported OS"),
     }
 
     // Find JRE afterwards
     find_java_binary(runtimes_folder, jre_distribution, jre_version).await
 }
-

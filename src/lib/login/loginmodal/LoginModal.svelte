@@ -1,10 +1,9 @@
 <script>
-    import { open } from "@tauri-apps/plugin-shell";
+    import { invoke } from "@tauri-apps/api";
     import ModalButton from "./ModalButton.svelte";
     import ModalInput from "./ModalInput.svelte";
-    
-    import { invoke } from "@tauri-apps/api/core";
     import { listen } from "@tauri-apps/api/event";
+    import { open } from "@tauri-apps/api/shell";
 
     export let options;
 
@@ -34,7 +33,12 @@
             options.currentAccount = accountData;
             options.store();
         } catch (err) {
-            alert(err);
+            alert(
+                "Microsoft authentication failed.\n\n" +
+                 err + "\n\n" +
+                "Should you be unable to resolve this issue, please use the 'Offline' login option " +
+                "and attempt to log in through the client's inbuilt account manager."
+            );
             cancelMicrosoft();
         }
     }

@@ -27,7 +27,6 @@ use void::Void;
 use std::collections::HashSet;
 use crate::{error::LauncherError, HTTP_CLIENT, utils::{download_file_untracked, Architecture}};
 use crate::utils::{get_maven_artifact_path, sha1sum};
-use std::sync::Arc;
 use crate::minecraft::launcher::LaunchingParameter;
 use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
 
@@ -357,7 +356,7 @@ pub struct AssetObject {
 
 impl AssetObject {
 
-    pub async fn download(&self, assets_objects_folder: impl AsRef<Path>, progress: Arc<impl ProgressReceiver>) -> Result<bool> {
+    pub async fn download(&self, assets_objects_folder: impl AsRef<Path>, progress: &impl ProgressReceiver) -> Result<bool> {
         let assets_objects_folder = assets_objects_folder.as_ref().to_owned();
         let asset_folder = assets_objects_folder.join(&self.hash[0..2]);
 
@@ -380,7 +379,7 @@ impl AssetObject {
         }
     }
 
-    pub async fn download_destructing(self, assets_objects_folder: impl AsRef<Path>, progress: Arc<impl ProgressReceiver>) -> Result<bool> {
+    pub async fn download_destructing(self, assets_objects_folder: impl AsRef<Path>, progress: &impl ProgressReceiver) -> Result<bool> {
         return self.download(assets_objects_folder, progress).await;
     }
 
@@ -507,32 +506,30 @@ impl LibraryDownloadInfo {
             .error_for_status()?
             .text()
             .await
-            .map_err(|e| anyhow::anyhow!(e))
+            .context("Failed to fetch SHA1 of library")
     }
 
-    pub async fn download(&self, name: String, libraries_folder: &Path, progress: Arc<impl ProgressReceiver>) -> Result<PathBuf> {
-        info!("Downloading library {}, sha1: {:?}, size: {:?}", name, &self.sha1, &self.size);
-        debug!("Library download url: {}", &self.url);
-
-        let path = libraries_folder.to_path_buf();
-        let library_path = path.join(&self.path);
-
+    pub async fn download(&self, name: &str, libraries_folder: PathBuf, progress: &impl ProgressReceiver) -> Result<PathBuf> {
+        let library_path = libraries_folder.join(&self.path);
+        let parent = library_path.parent().context("Failed to get parent of library path")?;
+        
         // Create parent directories
-        fs::create_dir_all(&library_path.parent().unwrap()).await?;
+        fs::create_dir_all(parent).await
+            .context("Failed to create parent directories for library")?;
 
         // SHA1
         let sha1 = if let Some(sha1) = &self.sha1 {
             Some(sha1.clone())
         } else {
             // Check if sha1 file exists
-            let sha1_path = path.join(&self.path).with_extension("sha1");
+            let sha1_path = library_path.with_extension("sha1");
 
+            // Fetch sha1 file
             if sha1_path.exists() {
-                // If sha1 file exists, read it
-                let sha1 = fs::read_to_string(&sha1_path).await?;
-                Some(sha1)
+                Some(fs::read_to_string(&sha1_path).await?)
             } else {
                 // If sha1 file doesn't exist, fetch it
+                progress.log(&format!("Fetching SHA1 of library {}", name));
                 let sha1 = self.fetch_sha1().await
                     .map(Some)
                     .unwrap_or(None);
@@ -541,7 +538,6 @@ impl LibraryDownloadInfo {
                 if let Some(sha1) = &sha1 {
                     fs::write(&sha1_path, &sha1).await?;
                 }
-
                 sha1
             }
         };
@@ -549,36 +545,40 @@ impl LibraryDownloadInfo {
         // Check if library already exists
         if library_path.exists() {
             // Check if sha1 matches
-            let hash = sha1sum(&library_path)?;
+            let hash = sha1sum(&library_path)
+                .context("Failed to calculate SHA1 of library")?;
 
             if let Some(sha1) = &sha1 {
                 if hash == *sha1 {
                     // If sha1 matches, return
-                    info!("Library {} already exists and matches sha1.", name);
+                    progress.log(&format!("Library {} already exists and SHA1 matches.", name));
                     return Ok(library_path);
                 }
             } else {
                 // If sha1 is not available, assume it matches
-                info!("Library {} already exists.", name);
+                progress.log(&format!("Library {} already exists.", name));
                 return Ok(library_path);
             }
 
-            // If sha1 doesn't match, remove the file
-            info!("Library {} already exists but sha1 doesn't match, redownloading", name);
-            fs::remove_file(&library_path).await?;
+            // If SHA1 doesn't match, remove the file
+            progress.log(&format!("Library {} already exists but sha1 does not match.", name));
+            fs::remove_file(&library_path).await
+                .context("Failed to remove library file")?;
         }
 
         // Download library
         progress.progress_update(ProgressUpdate::set_label(format!("Downloading library {}", name)));
+        progress.log(&format!("Downloading library {} (sha1: {:?}, size: {:?}) from {} to {:}", name, &self.sha1, &self.size, &self.url, &library_path.display()));
 
-        download_file_untracked(&self.url, &library_path).await?;
-        info!("Downloaded {}", self.url);
-
-        // After downloading, check sha1
+        download_file_untracked(&self.url, &library_path).await
+            .context("Failed to download library")?;
+        
+        // After downloading, check SHA1
         if let Some(sha1) = &sha1 {
-            let hash = sha1sum(&library_path)?;
+            let hash = sha1sum(&library_path)
+                .context("Failed to calculate SHA1 of library")?;
             if hash != *sha1 {
-                anyhow::bail!("sha1 of downloaded library {} doesn't match", name);
+                anyhow::bail!("SHA1 of library {} does not match.", name);
             }
         }
 

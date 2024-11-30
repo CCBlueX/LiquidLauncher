@@ -21,15 +21,15 @@ use std::{sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, time::Duration};
 use serde::Deserialize;
 use anyhow::{anyhow, bail, Context, Result};
 use tracing::{info, debug};
-use tauri::{Manager, Url, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Manager, Url, WindowBuilder};
 use tokio::time::sleep;
-use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
+use crate::minecraft::{launcher::LauncherData, progress::{ProgressReceiver, ProgressUpdate}};
 
-use super::gui::log;
+use super::gui::ShareableWindow;
 
-const MAX_DOWNLOAD_ATTEMPTS: u8 = 5;
+const MAX_DOWNLOAD_ATTEMPTS: u8 = 2;
 
-pub async fn open_download_page(url: &str, on_progress: &impl ProgressReceiver, window: &Arc<Mutex<tauri::Window>>) -> Result<String> {
+pub async fn open_download_page(url: &str, launcher_data: &LauncherData<ShareableWindow>) -> Result<String> {
     let download_page: Url = format!("{}&liquidlauncher=1", url).parse()
         .context("Failed to parse download page URL")?;
 
@@ -39,16 +39,18 @@ pub async fn open_download_page(url: &str, on_progress: &impl ProgressReceiver, 
         count += 1;
 
         if count > MAX_DOWNLOAD_ATTEMPTS {
-            bail!("Failed to open download page after {} attempts", MAX_DOWNLOAD_ATTEMPTS);
+            bail!("Failed to open download page after {} attempts.\n\n\
+            If the download window does not appear, please try restarting LiquidLauncher with administrator privileges.\n\
+            If this does not help, please install LiquidBounce manually (https://liquidbounce.net/docs/Tutorials/Installation).\n\
+            Or try our advice at https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher.", MAX_DOWNLOAD_ATTEMPTS);
         }
 
-        log(&window, &format!("Opening download page... (Attempt {}/{})", count, MAX_DOWNLOAD_ATTEMPTS));
-        on_progress.progress_update(ProgressUpdate::SetLabel(format!("Opening download page... (Attempt {}/{})", count, MAX_DOWNLOAD_ATTEMPTS)));
+        launcher_data.progress_update(ProgressUpdate::SetLabel(format!("Opening download page... (Attempt {}/{})", count, MAX_DOWNLOAD_ATTEMPTS)));
 
-        match show_webview(download_page.clone(), window).await {
+        match show_webview(download_page.clone(), &launcher_data.data).await {
             Ok(url) => break url,
             Err(e) => {
-                log(&window, &format!("Failed to open download page: {:?}", e));
+                launcher_data.log(&format!("Failed to open download page: {:?}", e));
                 sleep(Duration::from_millis(500)).await;
             }
         }
@@ -59,30 +61,32 @@ pub async fn open_download_page(url: &str, on_progress: &impl ProgressReceiver, 
 
 async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<String> {
     // Find download_view window from the window manager
-    let mut download_view = {
+    let download_view = {
         let window = window.lock()
             .map_err(|_| anyhow!("Failed to lock window"))?;
         
-        match window.get_webview_window("download_view") {
+        match window.get_window("download_view") {
             Some(window) => Ok(window),
             None => {
                 // todo: do not hardcode index
-                let config = window.config().app.windows.get(1)
-                    .context("Unable to find window config")?;
+                let config = window.config().tauri.windows.get(1)
+                    .context("Unable to find window config")?.clone();
 
-                WebviewWindowBuilder::from_config(window.app_handle(), config)
-                    .map_err(|e| anyhow!("Failed to build window: {:?}", e))?
+                WindowBuilder::from_config(&window.app_handle(), config)
                     .build()
             },
         }
     }?;
 
     // Redirect the download view to the download page
-    download_view.navigate(url);
+    download_view.eval(&format!("window.location.href = '{}';", url.to_string()))
+        .context("Failed to redirect download view to download page")?;
 
     // Show and maximize the download view
     download_view.show()
         .context("Failed to show the download view")?;
+    download_view.maximize()
+        .context("Failed to maximize the download view")?;
 
     // Wait for the download to finish
     let download_link_cell = Arc::new(Mutex::new(None));
@@ -99,17 +103,17 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
 
     download_view.once("download", move |event| {
         debug!("Download Event received: {:?}", event);
-        let payload = event.payload();
+        if let Some(payload) = event.payload() {
+            #[derive(Deserialize)]
+            struct DownloadPayload {
+                url: String
+            }
 
-        #[derive(Deserialize)]
-        struct DownloadPayload {
-            url: String
+            let payload = serde_json::from_str::<DownloadPayload>(payload).unwrap();
+
+            info!("Received download link: {}", payload.url);
+            *cloned_cell.lock().unwrap() = Some(payload.url);
         }
-
-        let payload = serde_json::from_str::<DownloadPayload>(payload).unwrap();
-
-        info!("Received download link: {}", payload.url);
-        *cloned_cell.lock().unwrap() = Some(payload.url);
     });
 
     let url = loop {
