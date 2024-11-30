@@ -20,7 +20,7 @@
 use std::{path::PathBuf, sync::{Arc, Mutex}, thread};
 
 use anyhow::anyhow;
-use tauri::{Manager, Window};
+use tauri::{Emitter, Manager, Window};
 use tokio::fs;
 use tracing::{debug, error, info};
 use uuid::Uuid;

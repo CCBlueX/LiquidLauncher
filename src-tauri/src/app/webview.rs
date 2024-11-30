@@ -21,7 +21,7 @@ use crate::minecraft::{launcher::LauncherData, progress::{ProgressReceiver, Prog
 use anyhow::{anyhow, bail, Context, Result};
 use serde::Deserialize;
 use std::{sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, time::Duration};
-use tauri::{Manager, Url, WindowBuilder};
+use tauri::{Listener, Manager, Url, WebviewWindowBuilder};
 use tokio::time::sleep;
 use tracing::{debug, info};
 

@@ -60,15 +60,7 @@
     "license": "GPL-3.0",
     "licenseFile": "../LICENSE",
     "resources": [],
-    "targets": [
-      "updater",
-      "msi",
-      "appimage",
-      "deb",
-      "appimage",
-      "app",
-      "nsis"
-    ],
+    "targets": "all",
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
