@@ -80,7 +80,7 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
     }?;
 
     // Redirect the download view to the download page
-    download_view.navigate(url);
+    download_view.navigate(url)?;
 
     // Show and maximize the download view
     download_view.show()
