@@ -1,5 +1,5 @@
 <script>
-    import {createEventDispatcher} from "svelte";
+    import { createEventDispatcher } from "svelte";
     import ButtonClose from "../common/ButtonClose.svelte";
     import Logo from "../common/Logo.svelte";
     import TitleBar from "../common/TitleBar.svelte";
@@ -23,10 +23,10 @@
     import LauncherVersion from "../settings/LauncherVersion.svelte";
     import IconButtonSetting from "../settings/IconButtonSetting.svelte";
     import CustomModSetting from "../settings/CustomModSetting.svelte";
-    import {invoke} from "@tauri-apps/api/core";
-    import {listen} from "@tauri-apps/api/event";
-    import {open as dialogOpen} from "@tauri-apps/plugin-dialog";
-    import {open as shellOpen} from "@tauri-apps/plugin-shell";
+    import { invoke } from "@tauri-apps/api/core";
+    import { listen } from "@tauri-apps/api/event";
+    import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
+    import { open as shellOpen } from "@tauri-apps/plugin-shell";
     import Tabs from "../settings/tab/Tabs.svelte";
     import Description from "../settings/Description.svelte";
     import LiquidBounceAccount from "../settings/LiquidBounceAccount.svelte";
@@ -40,6 +40,9 @@
     let settingsShown = false;
     let versionSelectShown = false;
     let clientLogShown = false;
+    let launchVersionWarningShown = false;
+
+    let launchVersionWarningCountdown = 0;
 
     let clientRunning = false;
 
@@ -97,6 +100,16 @@
             }
         }
     });
+
+    function startLaunchAnywayCountdown() {
+        launchVersionWarningCountdown = 3;
+        let countdown = setInterval(() => {
+            launchVersionWarningCountdown--;
+            if (launchVersionWarningCountdown <= 0) {
+                clearInterval(countdown);
+            }
+        }, 1000);
+    }
 
     function getBuild() {
         if (options.selectedBuild === -1) {
@@ -206,6 +219,19 @@
         }
     }
 
+    function runClientAnyway() {
+        launchVersionWarningShown = false;
+        runClient();
+    }
+
+    async function switchToNextgen() {
+        launchVersionWarningShown = false;
+        options.selectedBranch = "nextgen";
+        options.selectedBuild = -1;
+        await options.store();
+        runClient();
+    }
+
     async function runClient() {
         log = [];
 
@@ -233,12 +259,21 @@
         try {
             progressBar.text = "Refreshing minecraft session...";
 
-            let account = await invoke("refresh", { accountData: options.currentAccount })
+            let account = await invoke("refresh", {
+                accountData: options.currentAccount,
+            });
             console.info("Account Refreshed", account);
             options.currentAccount = account;
         } catch (e) {
-            console.error("Failed to refresh account and is now invalidated.", e);
-            alert("Failed to refresh account session: " + e + "\n\nYou have been logged out. Please try logging in again.");
+            console.error(
+                "Failed to refresh account and is now invalidated.",
+                e,
+            );
+            alert(
+                "Failed to refresh account session: " +
+                    e +
+                    "\n\nYou have been logged out. Please try logging in again.",
+            );
 
             // Invalidate account for this session (do not store it)
             options.currentAccount = null;
@@ -264,6 +299,15 @@
             alert("Failed to start client: " + e);
 
             clientRunning = false;
+        }
+    }
+
+    function runClientWithWarning() {
+        launchVersionWarningShown = options.selectedBranch === "legacy" || (options.selectedBranch === "nextgen" && options.selectedBuild !== -1);
+        if (launchVersionWarningShown) {
+            startLaunchAnywayCountdown();
+        } else {
+            runClient();
         }
     }
 
@@ -350,7 +394,11 @@
 
         if (selected) {
             for (const file of selected) {
-                await invoke("install_custom_mod", { branch, mcVersion, path: file.path });
+                await invoke("install_custom_mod", {
+                    branch,
+                    mcVersion,
+                    path: file.path,
+                });
             }
 
             requestMods();
@@ -376,67 +424,94 @@
     });
 </script>
 
+{#if launchVersionWarningShown}
+    <SettingsContainer title="You are about to launch an unsupported version!" on:hideSettings={() => launchVersionWarningShown = false}>
+        <Description
+            description="The selected version of LiquidBounce is no longer officially supported. We recommend upgrading to the latest version of LiquidBounce Nextgen, which works with all Minecraft versions from 1.7 onward."
+        />
+        <ButtonSetting
+            text="Switch to Nextgen now"
+            on:click={switchToNextgen}
+            color="#4677FF"
+        />
+        <ButtonSetting
+            disabled={launchVersionWarningCountdown > 0}
+            text="Launch anyway{launchVersionWarningCountdown > 0 ? ` (${launchVersionWarningCountdown})` : ""}"
+            on:click={runClientAnyway}
+            color="#B83529"
+        />
+    </SettingsContainer>
+{/if}
+
 {#if clientLogShown}
     <ClientLog
-            messages={log}
-            on:hideClientLog={() => (clientLogShown = false)}
+        messages={log}
+        on:hideClientLog={() => (clientLogShown = false)}
     />
 {/if}
 
 {#if settingsShown}
     <SettingsContainer title="Settings" on:hideSettings={hideSettings}>
-        <Tabs tabs={["General", "Donator"]} bind:activeTab={activeSettingsTab} slot="tabs" />
+        <Tabs
+            tabs={["General", "Donator"]}
+            bind:activeTab={activeSettingsTab}
+            slot="tabs"
+        />
 
         {#if activeSettingsTab === "General"}
             <FileSelectorSetting
-                    title="JVM Location"
-                    placeholder="Internal"
-                    bind:value={options.customJavaPath}
-                    filters={[{ name: "javaw", extensions: [] }]}
-                    windowTitle="Select custom Java wrapper"
+                title="JVM Location"
+                placeholder="Internal"
+                bind:value={options.customJavaPath}
+                filters={[{ name: "javaw", extensions: [] }]}
+                windowTitle="Select custom Java wrapper"
             />
             <DirectorySelectorSetting
-                    title="Data Location"
-                    placeholder={defaultDataFolder}
-                    bind:value={options.customDataPath}
-                    windowTitle="Select custom data directory"
+                title="Data Location"
+                placeholder={defaultDataFolder}
+                bind:value={options.customDataPath}
+                windowTitle="Select custom data directory"
             />
             <RangeSetting
-                    title="Memory"
-                    min={20}
-                    max={100}
-                    bind:value={options.memoryPercentage}
-                    valueSuffix="%"
-                    step={1}
+                title="Memory"
+                min={20}
+                max={100}
+                bind:value={options.memoryPercentage}
+                valueSuffix="%"
+                step={1}
             />
 
             <RangeSetting
-                    title="Concurrent Downloads"
-                    min={1}
-                    max={50}
-                    bind:value={options.concurrentDownloads}
-                    valueSuffix="connections"
-                    step={1}
+                title="Concurrent Downloads"
+                min={1}
+                max={50}
+                bind:value={options.concurrentDownloads}
+                valueSuffix="connections"
+                step={1}
             />
             <ToggleSetting
-                    title="Keep launcher running"
-                    disabled={false}
-                    bind:value={options.keepLauncherOpen}
+                title="Keep launcher running"
+                disabled={false}
+                bind:value={options.keepLauncherOpen}
             />
             <ButtonSetting
-                    text="Logout"
-                    on:click={() => dispatch("logout")}
-                    color="#4677FF"
+                text="Logout"
+                on:click={() => dispatch("logout")}
+                color="#4677FF"
             />
-            <ButtonSetting text="Clear data" on:click={clearData} color="#B83529" />
+            <ButtonSetting
+                text="Clear data"
+                on:click={clearData}
+                color="#B83529"
+            />
             <LauncherVersion version={launcherVersion} />
         {:else if activeSettingsTab === "Donator"}
             <ToggleSetting
-                    title="Skip Advertisements"
-                    disabled={!options.clientAccount || !options.clientAccount.premium}
-                    bind:value={options.skipAdvertisement}
+                title="Skip Advertisements"
+                disabled={!options.clientAccount ||
+                    !options.clientAccount.premium}
+                bind:value={options.skipAdvertisement}
             />
-
 
             {#if options.clientAccount}
                 <SettingWrapper title="Account Information">
@@ -444,26 +519,32 @@
                 </SettingWrapper>
 
                 {#if !options.clientAccount.premium}
-                    <Description description="There appears to be no donation associated with this account. Please link it on the account management page." />
+                    <Description
+                        description="There appears to be no donation associated with this account. Please link it on the account management page."
+                    />
                 {/if}
 
                 <ButtonSetting
-                        text="Manage Account"
-                        on:click={async () => { await shellOpen("https://user.liquidbounce.net"); }}
-                        color="#4677FF"
+                    text="Manage Account"
+                    on:click={async () => {
+                        await shellOpen("https://user.liquidbounce.net");
+                    }}
+                    color="#4677FF"
                 />
                 <ButtonSetting
-                        text="Logout"
-                        on:click={() => (options.clientAccount = null)}
-                        color="#B83529"
+                    text="Logout"
+                    on:click={() => (options.clientAccount = null)}
+                    color="#B83529"
                 />
             {:else}
-                <Description description="By donating, you not only support the ongoing development of the client but also receive a donator cape and the ability to bypass ads on the launcher." />
+                <Description
+                    description="By donating, you not only support the ongoing development of the client but also receive a donator cape and the ability to bypass ads on the launcher."
+                />
 
                 <ButtonSetting
-                        text="Login with LiquidBounce Account"
-                        on:click={authClientAccount}
-                        color="#4677FF"
+                    text="Login with LiquidBounce Account"
+                    on:click={authClientAccount}
+                    color="#4677FF"
                 />
             {/if}
         {/if}
@@ -472,18 +553,18 @@
 
 {#if versionSelectShown}
     <SettingsContainer
-            title="Select version"
-            on:hideSettings={hideVersionSelection}
+        title="Select version"
+        on:hideSettings={hideVersionSelection}
     >
         <SelectSetting
-                title="Branch"
-                items={branches.map((e) => ({ value: e, text: e }))}
-                bind:value={options.selectedBranch}
-                on:change={requestBuilds}
+            title="Branch"
+            items={branches.map((e) => ({ value: e, text: e }))}
+            bind:value={options.selectedBranch}
+            on:change={requestBuilds}
         />
         <SelectSetting
-                title="Build"
-                items={[
+            title="Build"
+            items={[
                 { value: -1, text: "Latest" },
                 ...builds
                     .filter((e) => e.release || options.showNightlyBuilds)
@@ -497,40 +578,40 @@
                             e.date,
                     })),
             ]}
-                bind:value={options.selectedBuild}
-                on:change={updateData}
+            bind:value={options.selectedBuild}
+            on:change={updateData}
         />
         <ToggleSetting
-                title="Show nightly builds"
-                bind:value={options.showNightlyBuilds}
-                disabled={false}
-                on:change={updateData}
+            title="Show nightly builds"
+            bind:value={options.showNightlyBuilds}
+            disabled={false}
+            on:change={updateData}
         />
         <SettingWrapper title="Recommended mods">
             {#each recommendedMods as m}
                 <ToggleSetting
-                        title={m.name}
-                        bind:value={m.enabled}
-                        disabled={m.required}
-                        on:change={updateModStates}
+                    title={m.name}
+                    bind:value={m.enabled}
+                    disabled={m.required}
+                    on:change={updateModStates}
                 />
             {/each}
         </SettingWrapper>
         <SettingWrapper title={additionalModsTitle}>
             <div slot="title-element">
                 <IconButtonSetting
-                        text="Install"
-                        icon="icon-plus"
-                        on:click={handleInstallMod}
+                    text="Install"
+                    icon="icon-plus"
+                    on:click={handleInstallMod}
                 />
             </div>
 
             {#each customMods as m}
                 <CustomModSetting
-                        title={m.name}
-                        bind:value={m.enabled}
-                        on:change={updateModStates}
-                        on:delete={handleCustomModDelete}
+                    title={m.name}
+                    bind:value={m.enabled}
+                    on:change={updateModStates}
+                    on:delete={handleCustomModDelete}
                 />
             {/each}
         </SettingWrapper>
@@ -538,39 +619,39 @@
 {/if}
 
 <VerticalFlexWrapper
-        blur={settingsShown || versionSelectShown || clientLogShown}
+    blur={settingsShown || versionSelectShown || clientLogShown || launchVersionWarningShown}
 >
     <TitleBar>
-        <Logo/>
+        <Logo />
         <StatusBar>
             {#if !clientRunning}
                 <TextStatus
-                        text="Welcome back, {options.currentAccount.name}."
+                    text="Welcome back, {options.currentAccount.name}."
                 />
             {:else}
-                <ProgressStatus {...progressBar}/>
+                <ProgressStatus {...progressBar} />
             {/if}
         </StatusBar>
         <Account
-                username={options.currentAccount.name}
-                uuid={options.currentAccount.id}
-                accountType={options.currentAccount.type}
-                on:showSettings={() => (settingsShown = true)}
+            username={options.currentAccount.name}
+            uuid={options.currentAccount.id}
+            accountType={options.currentAccount.type}
+            on:showSettings={() => (settingsShown = true)}
         />
-        <ButtonClose/>
+        <ButtonClose />
     </TitleBar>
 
     <ContentWrapper>
         <LaunchArea
-                {versionInfo}
-                lbVersion={currentBuild.lbVersion}
-                mcVersion={currentBuild.mcVersion}
-                on:showVersionSelect={() => (versionSelectShown = true)}
-                on:showClientLog={() => (clientLogShown = true)}
-                on:launch={runClient}
-                on:terminate={terminateClient}
-                running={clientRunning}
+            {versionInfo}
+            lbVersion={currentBuild.lbVersion}
+            mcVersion={currentBuild.mcVersion}
+            on:showVersionSelect={() => (versionSelectShown = true)}
+            on:showClientLog={() => (clientLogShown = true)}
+            on:launch={runClientWithWarning}
+            on:terminate={terminateClient}
+            running={clientRunning}
         />
-        <NewsArea/>
+        <NewsArea />
     </ContentWrapper>
 </VerticalFlexWrapper>
