@@ -7,6 +7,7 @@ use std::{
 };
 
 use anyhow::Result;
+use backon::{Retryable, ExponentialBuilder};
 use futures::{stream, StreamExt};
 use tracing::error;
 
@@ -61,8 +62,15 @@ pub async fn setup_assets<'a, D: Send + Sync>(
 
             async move {
                 let hash = asset_object.hash.clone();
-                match asset_object
-                    .download_destructing(folder_clone, launcher_data)
+
+                match (|| async { asset_object.download(folder_clone.clone(), launcher_data).await })
+                    .retry(ExponentialBuilder::default())
+                    .notify(|err, dur| {
+                        launcher_data.log(&format!(
+                            "Failed to download asset: {}. Retrying in {:?}. Error: {}",
+                            hash, dur, err
+                        ));
+                    })
                     .await
                 {
                     Ok(downloaded) => {
@@ -77,7 +85,10 @@ pub async fn setup_assets<'a, D: Send + Sync>(
                             ));
                         }
                     }
-                    Err(err) => error!("Unable to download asset {}: {:?}", hash, err),
+                    Err(err) => {
+                        // We hope the asset was not important
+                        error!("Unable to download asset {}: {:?}", hash, err)
+                    },
                 }
 
                 Ok(())

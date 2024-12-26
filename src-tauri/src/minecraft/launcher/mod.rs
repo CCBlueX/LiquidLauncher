@@ -152,7 +152,6 @@ pub async fn launch<D: Send + Sync>(
     .context("Failed to setup assets")?;
 
     // Game
-
     let java_runtime = JavaRuntime::new(java_bin);
 
     let mut command_arguments = Vec::new();

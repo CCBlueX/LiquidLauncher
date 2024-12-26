@@ -152,8 +152,9 @@
             await launchClient();
         } catch (error) {
             console.error("Failed to start client:", error);
-            dispatch('error', error);
+            log = [...log, `Failed to start client: ${error}`];
             running = false;
+            logShown = true;
         }
     }
 

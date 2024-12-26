@@ -19,7 +19,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use handler::*;
+use commands::*;
 use tauri::Window;
 
 pub type ShareableWindow = Arc<Mutex<Window>>;
@@ -40,7 +40,7 @@ impl AppState {
     }
 }
 
-mod handler;
+mod commands;
 
 /// Runs the GUI and returns when the window is closed.
 pub fn gui_main() {

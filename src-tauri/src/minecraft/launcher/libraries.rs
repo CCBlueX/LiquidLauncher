@@ -4,6 +4,8 @@ use path_absolutize::Absolutize;
 use std::fmt::Write;
 use std::{collections::HashSet, path::Path};
 use tokio::fs::OpenOptions;
+use backon::ExponentialBuilder;
+use backon::Retryable;
 
 use crate::{
     error::LauncherError,
@@ -62,8 +64,14 @@ pub async fn setup_libraries<D: Send + Sync>(
                                 .get(required_natives)
                                 .map(LibraryDownloadInfo::from)
                             {
-                                let path = artifact
-                                    .download(&library.name, folder_clone.clone(), launcher_data)
+                                let path = (|| async { artifact.download(&library.name, folder_clone.clone(), launcher_data).await })
+                                    .retry(ExponentialBuilder::default())
+                                    .notify(|err, dur| {
+                                        launcher_data.log(&format!(
+                                            "Failed to download native library: {}. Retrying in {:?}. Error: {}",
+                                            &library.name, dur, err
+                                        ));
+                                    })
                                     .await
                                     .with_context(|| {
                                         format!(
@@ -95,10 +103,19 @@ pub async fn setup_libraries<D: Send + Sync>(
                     return Ok(None);
                 }
 
+
+
                 // Download regular artifact
                 let artifact = library.get_library_download()?;
-                let path = artifact
-                    .download(&library.name, folder_clone.clone(), launcher_data)
+
+                let path = (|| async {  artifact.download(&library.name, folder_clone.clone(), launcher_data).await })
+                    .retry(ExponentialBuilder::default())
+                    .notify(|err, dur| {
+                        launcher_data.log(&format!(
+                            "Failed to download library: {}. Retrying in {:?}. Error: {}",
+                            &library.name, dur, err
+                        ));
+                    })
                     .await
                     .with_context(|| format!("Failed to download library: {}", &library.name))?;
 

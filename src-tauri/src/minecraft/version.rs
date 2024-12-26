@@ -53,7 +53,8 @@ pub struct VersionManifest {
 impl VersionManifest {
     pub async fn fetch() -> Result<Self> {
         let response = HTTP_CLIENT.get("https://launchermeta.mojang.com/mc/game/version_manifest.json")
-            .send().await
+            .send()
+            .await
             .context("Connection to https://launchermeta.mojang.com/ failed. Check your internet connection.")?
             .error_for_status()
             .context("https://launchermeta.mojang.com/ returned with an error code, try again later!")?;
@@ -492,14 +493,6 @@ impl AssetObject {
         } else {
             Ok(false)
         }
-    }
-
-    pub async fn download_destructing(
-        self,
-        assets_objects_folder: impl AsRef<Path>,
-        progress: &impl ProgressReceiver,
-    ) -> Result<bool> {
-        return self.download(assets_objects_folder, progress).await;
     }
 }
 

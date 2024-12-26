@@ -39,6 +39,8 @@ use crate::minecraft::version::{VersionManifest, VersionProfile};
 use crate::utils::{download_file, get_maven_artifact_path};
 use crate::LAUNCHER_DIRECTORY;
 
+use backon::{ExponentialBuilder, Retryable};
+
 ///
 /// Prelaunching client
 ///
@@ -50,7 +52,15 @@ pub(crate) async fn launch(
 ) -> Result<()> {
     launcher_data.log("Loading minecraft version manifest...");
 
-    let mc_version_manifest = VersionManifest::fetch().await?;
+    let mc_version_manifest = VersionManifest::fetch
+        .retry(ExponentialBuilder::default())
+        .notify(|err, dur| {
+            launcher_data.log(&format!(
+                "Failed to load version manifest. Retrying in {:?}. Error: {}",
+                dur, err
+            ));
+        })
+        .await?;
 
     let build = &launch_manifest.build;
     let subsystem = &launch_manifest.subsystem;
@@ -99,7 +109,15 @@ pub(crate) async fn launch(
             ),
         LoaderSubsystem::Forge { manifest, .. } => manifest.clone(),
     };
-    let mut version = VersionProfile::load(&manifest_url).await?;
+    let mut version = (|| async { VersionProfile::load(&manifest_url).await })
+        .retry(ExponentialBuilder::default())
+        .notify(|err, dur| {
+            launcher_data.log(&format!(
+                "Failed to load version profile: {}. Retrying in {:?}. Error: {}",
+                manifest_url, dur, err
+            ));
+        })
+        .await?;
 
     if let Some(inherited_version) = &version.inherits_from {
         let url = mc_version_manifest
@@ -123,7 +141,15 @@ pub(crate) async fn launch(
             inherited_version
         ));
 
-        let parent_version = VersionProfile::load(url).await?;
+        let parent_version = (|| async { VersionProfile::load(url).await })
+            .retry(ExponentialBuilder::default())
+            .notify(|err, dur| {
+                launcher_data.log(&format!(
+                    "Failed to load inherited version profile: {}. Retrying in {:?}. Error: {}",
+                    inherited_version, dur, err
+                ));
+            })
+            .await?;
         version.merge(parent_version)?;
     }
 
@@ -204,8 +230,16 @@ pub async fn retrieve_and_copy_mods(
         }
 
         if let ModSource::Local { file_name } = &current_mod.source {
+            let path = mod_custom_path.join(file_name);
+
+            // Check if local mod exists
+            if !path.exists() {
+                error!("File of local mod {} does not exist", current_mod.name);
+                continue;
+            }
+
             // Copy the mod.
-            fs::copy(mod_custom_path.join(file_name), mods_path.join(file_name))
+            fs::copy(path, mods_path.join(file_name))
                 .await
                 .with_context(|| format!("Failed to copy custom mod {}", current_mod.name))?;
             launcher_data.progress_update(ProgressUpdate::set_label(format!(
