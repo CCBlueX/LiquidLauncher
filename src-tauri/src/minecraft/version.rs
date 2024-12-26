@@ -27,7 +27,7 @@ use void::Void;
 use std::collections::HashSet;
 use crate::{error::LauncherError, HTTP_CLIENT, utils::{download_file_untracked, Architecture}};
 use crate::utils::{get_maven_artifact_path, sha1sum};
-use crate::minecraft::launcher::LaunchingParameter;
+use crate::minecraft::launcher::StartParameter;
 use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
 
 // https://launchermeta.mojang.com/mc/game/version_manifest.json
@@ -149,7 +149,7 @@ pub enum ArgumentDeclaration {
 
 impl ArgumentDeclaration {
 
-    pub(crate) fn add_jvm_args_to_vec(&self, command_arguments: &mut Vec<String>, parameter: &LaunchingParameter, features: &HashSet<String>) -> Result<()> {
+    pub(crate) fn add_jvm_args_to_vec(&self, command_arguments: &mut Vec<String>, parameter: &StartParameter, features: &HashSet<String>) -> Result<()> {
         command_arguments.push(format!("-Xmx{}M", parameter.memory));
         command_arguments.push("-XX:+UnlockExperimentalVMOptions".to_string());
         command_arguments.push("-XX:+UseG1GC".to_string());

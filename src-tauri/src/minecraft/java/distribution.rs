@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::utils::{ARCHITECTURE, OS};
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Clone)]
 pub enum JavaDistribution {
     #[serde(rename = "temurin")]
     Temurin,

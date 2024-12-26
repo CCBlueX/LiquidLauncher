@@ -7,7 +7,7 @@ use tauri::Url;
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, net::TcpListener};
 use tracing::debug;
 
-use crate::app::api::{ApiEndpoints, UserInformation};
+use crate::app::client_api::{ApiEndpoints, UserInformation};
 
 const OAUTH_CLIENT_ID: &str = "J2hzqzCxch8hfOPRFNINOZV5Ma4X4BFdZpMjAVEW";
 const AUTH_URL: &str = "https://auth.liquidbounce.net/application/o/authorize/";
@@ -15,7 +15,7 @@ const TOKEN_URL: &str = "https://auth.liquidbounce.net/application/o/token/";
 
 static SUCCESS_HTML: &str = include_str!("../../static/success.html");
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct ClientAccount {
     #[serde(rename = "accessToken")]
     access_token: AccessToken,

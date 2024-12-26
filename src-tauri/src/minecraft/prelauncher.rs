@@ -25,13 +25,13 @@ use tokio::fs;
 use tokio::io::AsyncReadExt;
 use tracing::*;
 
-use crate::app::api::{ApiEndpoints, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
+use crate::app::client_api::{ApiEndpoints, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
 use crate::app::gui::ShareableWindow;
 use crate::app::webview::open_download_page;
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
 use crate::minecraft::launcher;
-use crate::minecraft::launcher::{LauncherData, LaunchingParameter};
+use crate::minecraft::launcher::{LauncherData, StartParameter};
 use crate::minecraft::progress::{
     get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps,
 };
@@ -44,7 +44,7 @@ use crate::LAUNCHER_DIRECTORY;
 ///
 pub(crate) async fn launch(
     launch_manifest: LaunchManifest,
-    launching_parameter: LaunchingParameter,
+    launching_parameter: StartParameter,
     additional_mods: Vec<LoaderMod>,
     launcher_data: LauncherData<ShareableWindow>,
 ) -> Result<()> {
@@ -246,7 +246,6 @@ pub async fn retrieve_and_copy_mods(
                             // https://dl.liquidbounce.net/skip/c7kMT2q00U -> c7kMT2q00U
                             let pid = url.split('/').last().context("Failed to get PID")?;
                             let skip_file_resolve = ApiEndpoints::resolve_skip_file(account, pid).await?;
-                            debug!("{:?}", skip_file_resolve);
                             
                             // If the skip file resolve has a direct URL, use it - if not it means that the account is not allowed for direct downloads
                             skip_file_resolve.direct_url.ok_or_else(|| anyhow!(

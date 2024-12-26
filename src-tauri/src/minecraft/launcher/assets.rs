@@ -10,12 +10,12 @@ use crate::{
     minecraft::{progress::{ProgressReceiver, ProgressUpdate, ProgressUpdateSteps}, version::{AssetIndexLocation, VersionProfile}},
 };
 
-use super::{LauncherData, LaunchingParameter};
+use super::{LauncherData, StartParameter};
 
 pub async fn setup_assets<'a, D: Send + Sync>(
     assets_folder: &'a Path,
     version_profile: &'a VersionProfile,
-    launching_parameter: &'a LaunchingParameter,
+    launching_parameter: &'a StartParameter,
     launcher_data: &'a LauncherData<D>,
 ) -> Result<&'a AssetIndexLocation> {
     let indexes_folder: PathBuf = join_and_mkdir!(assets_folder, "indexes");

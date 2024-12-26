@@ -3,19 +3,19 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 
 use crate::{
-    app::api::LaunchManifest,
+    app::client_api::LaunchManifest,
     minecraft::{
         java::{find_java_binary, jre_downloader},
         progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
     },
 };
 
-use super::{LauncherData, LaunchingParameter};
+use super::{LauncherData, StartParameter};
 
 pub async fn load_jre<D: Send + Sync>(
     runtimes_folder: &Path,
     manifest: &LaunchManifest,
-    launching_parameter: &LaunchingParameter,
+    launching_parameter: &StartParameter,
     launcher_data: &LauncherData<D>,
 ) -> Result<PathBuf> {
     if let Some(jre) = &launching_parameter.custom_java_path {

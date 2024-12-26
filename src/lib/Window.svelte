@@ -1,92 +1,145 @@
 <script>
-    import {invoke} from "@tauri-apps/api/core";
-    import LoginScreen from "./login/LoginScreen.svelte";
+    import { invoke } from "@tauri-apps/api/core";
+    import { check } from "@tauri-apps/plugin-updater";
+    import { relaunch } from "@tauri-apps/plugin-process";
+    import { ask } from "@tauri-apps/plugin-dialog";
+    import { writable, get } from 'svelte/store';
+    import {onMount} from "svelte";
     import MainScreen from "./main/MainScreen.svelte";
-    import {check} from "@tauri-apps/plugin-updater";
-    import {relaunch} from "@tauri-apps/plugin-process";
-    import {ask} from "@tauri-apps/plugin-dialog";
+    import LoginScreen from "./login/LoginScreen.svelte";
 
-    check()
-        .then(async (result) => {
+    const appState = writable({
+        loading: true,
+        error: null,
+        options: null
+    });
+
+    async function handleUpdate() {
+        try {
+            const result = await check();
             console.debug("Update Check Result", result);
-            if (result && result.available) {
-                if (!await ask("A Launcher update is available. Would you like to install it now?", "LiquidLauncher")) {
-                    return;
-                }
 
-                result
-                    .downloadAndInstall()
-                    .then(() => {
-                        relaunch().catch(console.error);
-                    })
-                    .catch((e) =>
-                        console.error("Download and Install Failed", e),
-                    );
-            }
-        })
-        .catch((e) => console.error("Update Check Failed", e));
-
-    // Load options from file
-    let options;
-
-    invoke("get_options")
-        .then((result) => {
-            options = result;
-
-            // Debug options - might be interesting to see what's in there
-            console.debug("Options", options);
-
-            // Easy way to store options
-            options.store = function () {
-                console.debug("Storing options...", options);
-                invoke("store_options", { options }).catch((e) =>
-                    console.error(e),
+            if (result?.available) {
+                const shouldUpdate = await ask(
+                    "A Launcher update is available. Would you like to install it now?",
+                    "LiquidLauncher"
                 );
-            };
-        })
-        .catch((e) => console.error(e));
 
-    // Logout from current account
-    function logout() {
-        // Revoke the actual session
-        invoke("logout", { accountData: options.currentAccount }).catch(console.error);
-
-        // Remove account data from options data
-        options.currentAccount = null;
-        options.store();
+                if (shouldUpdate) {
+                    await result.downloadAndInstall();
+                    await relaunch();
+                }
+            }
+        } catch (error) {
+            console.error("Update process failed:", error);
+        }
     }
 
-    // Check if the launcher is online and passes health checks
-    invoke("check_health")
-        .then(() => console.info("Health Check passed"))
-        .catch((e) => {
-            let message = e;
-            if (message.startsWith('"')) message = message.slice(1);
-            if (message.endsWith('"')) message = message.slice(0, -1);
+    async function setupOptions() {
+        try {
+            const options = await invoke("get_options");
+            console.debug("Options loaded:", options);
 
-            console.error(message);
+            options.store = async function() {
+                console.debug("Storing options...", options);
+                try {
+                    await invoke("store_options", { options: options });
+                } catch (error) {
+                    console.error("Failed to store options:", error);
+                    throw error;
+                }
+            };
+
+            appState.update(state => ({
+                ...state,
+                loading: false,
+                options
+            }));
+        } catch (error) {
+            console.error("Failed to load options:", error);
+            appState.update(state => ({
+                ...state,
+                loading: false,
+                error: "Failed to load launcher options"
+            }));
+        }
+    }
+
+    async function checkHealth() {
+        try {
+            await invoke("check_health");
+            console.info("Health Check passed");
+        } catch (error) {
+            const message = error.toString().replace(/^"/, '').replace(/"$/, '');
+            console.error("Health check failed:", message);
             alert(message.replace(/\\n/g, "\n"));
-            
-            // Open help page
-            open("https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher");
-        });
+            window.open("https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher", "_blank");
+        }
+    }
+
+    async function handleLogout() {
+        const { options } = get(appState);
+
+        try {
+            await invoke("logout", { accountData: options.start.account });
+            options.start.account = null;
+            await options.store();
+
+            appState.update(state => ({
+                ...state,
+                options: { ...options }
+            }));
+        } catch (error) {
+            console.error("Logout failed:", error);
+            alert("Failed to logout properly. Please try again.");
+        }
+    }
+
+    onMount(async () => {
+        try {
+            await Promise.all([handleUpdate(), checkHealth()]);
+            await setupOptions();
+        } catch (error) {
+            console.error("App initialization failed:", error);
+            appState.update(state => ({
+                ...state,
+                loading: false,
+                error: "Failed to initialize launcher"
+            }));
+        }
+    });
 </script>
 
 <div class="window">
     <div class="drag-area" data-tauri-drag-region></div>
 
-    {#if options}
-        {#if options.currentAccount}
-            <MainScreen bind:options on:logout={logout} />
-        {:else}
-            <LoginScreen bind:options />
-        {/if}
-    {:else}
+    {#if $appState.error}
+        <h1 class="error">Error: {$appState.error}</h1>
+    {:else if $appState.loading}
         <h1>The launcher is loading...</h1>
+    {:else if $appState.options}
+        {#if $appState.options.start.account}
+            <MainScreen
+                    bind:options={$appState.options}
+                    on:logout={handleLogout}
+            />
+        {:else}
+            <LoginScreen
+                    bind:options={$appState.options}
+            />
+        {/if}
     {/if}
 </div>
 
 <style>
+    .window {
+        background-color: rgba(0, 0, 0, 0.6);
+        width: 100vw;
+        height: 100vh;
+        padding: 32px;
+        overflow: hidden;
+    }
+
     .drag-area {
         position: fixed;
         top: 0;
@@ -96,22 +149,17 @@
         z-index: 100;
     }
 
-    .window {
-        background-color: rgba(0, 0, 0, 0.6);
-        width: 100vw;
-        height: 100vh;
-        padding: 32px;
-        overflow: hidden;
-        /* border-radius: 14px; */
+    h1 {
+        color: white;
+    }
+
+    .error {
+        color: #ff4444;
     }
 
     @media (prefers-color-scheme: light) {
         .window {
             background-color: rgba(0, 0, 0, 0.8);
         }
-    }
-
-    h1 {
-        color: white;
     }
 </style>

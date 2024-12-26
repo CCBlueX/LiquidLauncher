@@ -23,15 +23,13 @@
             return;
         }
 
-        const accountData = await invoke("login_offline", { username: offlineUsername });
-        options.currentAccount = accountData;
+        options.start.account = await invoke("login_offline", {username: offlineUsername});
         options.store();
     }
 
     async function handleMicrosoftLoginClick(e) {
         try {
-            const accountData = await invoke("login_microsoft");
-            options.currentAccount = accountData;
+            options.start.account = await invoke("login_microsoft");
             options.store();
         } catch (err) {
             alert(

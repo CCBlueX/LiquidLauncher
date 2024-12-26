@@ -10,13 +10,13 @@ use crate::{
     minecraft::{progress::{ProgressReceiver, ProgressUpdate, ProgressUpdateSteps}, rule_interpreter, version::{LibraryDownloadInfo, VersionProfile}}, utils::{zip_extract, OS},
 };
 
-use super::{LauncherData, LaunchingParameter};
+use super::{LauncherData, StartParameter};
 
 pub async fn setup_libraries<D: Send + Sync>(
     libraries_folder: &Path,
     natives_folder: &Path,
     version_profile: &VersionProfile,
-    launching_parameter: &LaunchingParameter,
+    launching_parameter: &StartParameter,
     launcher_data: &LauncherData<D>,
     features: &HashSet<String>,
     class_path: &mut String,

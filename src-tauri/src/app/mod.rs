@@ -19,6 +19,6 @@
  
 pub mod gui;
 
-pub mod api;
+pub mod client_api;
 pub mod webview;
-pub mod app_data;
+pub mod options;

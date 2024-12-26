@@ -99,14 +99,13 @@ impl ApiEndpoints {
         Self::request_from_endpoint("version/branches").await
     }
 
-    /// Request all builds (use rarely!)
-    pub async fn builds() -> Result<Vec<Build>> {
-        Self::request_from_endpoint("version/builds").await
-    }
-
     /// Request all builds of branch
-    pub async fn builds_by_branch(branch: &str) -> Result<Vec<Build>> {
-        Self::request_from_endpoint(&format!("version/builds/{}", branch)).await
+    pub async fn builds_by_branch(branch: &str, release: bool) -> Result<Vec<Build>> {
+        Self::request_from_endpoint(&if release {
+            format!("version/builds/{}/release", branch)
+        } else {
+            format!("version/builds/{}", branch)
+        }).await
     }
 
     /// Request launch manifest of specific build
@@ -171,7 +170,7 @@ pub struct Changelog {
 ///
 /// JSON struct of Build
 ///
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Build {
     #[serde(rename(serialize = "buildId"))]
     pub build_id: u32,
@@ -200,7 +199,7 @@ pub struct Build {
 /// This can be used for any subsystem, but for now it is only implemented for Fabric.
 /// It has to be turned into a Enum to be able to decide on it's own for specific data, but for now this is not required.
 ///
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct SubsystemSpecificData {
     // Additional data
     #[serde(rename(serialize = "fabricApiVersion"))]
@@ -217,7 +216,7 @@ pub struct SubsystemSpecificData {
 ///
 /// JSON struct of Launch Manifest
 ///
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 pub struct LaunchManifest {
     pub build: Build,
     pub subsystem: LoaderSubsystem,
@@ -228,7 +227,7 @@ pub struct LaunchManifest {
 ///
 /// JSON struct of mod
 ///
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LoaderMod {
     #[serde(default)]
     pub required: bool,
@@ -242,7 +241,7 @@ pub struct LoaderMod {
 ///
 /// JSON struct of ModSource (the method to be used for downloading the mod)
 ///
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(tag = "type")]
 pub enum ModSource {
     #[serde(rename = "skip")]
@@ -271,7 +270,7 @@ impl ModSource {
 ///
 /// JSON struct of subsystem
 ///
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 #[serde(tag = "name")]
 pub enum LoaderSubsystem {
     #[serde(rename = "fabric")]
@@ -280,7 +279,7 @@ pub enum LoaderSubsystem {
     Forge { manifest: String, mod_directory: String  },
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize)]
 pub struct SkipFileResolve {
     pub error: bool,
     pub msg: String,
@@ -289,7 +288,7 @@ pub struct SkipFileResolve {
     pub direct_url: Option<String>
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct UserInformation {
     #[serde(rename = "userId", alias = "user_id")]
     pub user_id: String,

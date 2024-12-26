@@ -27,7 +27,7 @@ use anyhow::{bail, Context, Result};
 use path_absolutize::Absolutize;
 use tracing::*;
 
-use crate::app::api::LaunchManifest;
+use crate::app::client_api::LaunchManifest;
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
 use crate::minecraft::java::JavaRuntime;
@@ -82,7 +82,7 @@ pub async fn launch<D: Send + Sync>(
     data: &Path,
     manifest: LaunchManifest,
     version_profile: VersionProfile,
-    launching_parameter: LaunchingParameter,
+    launching_parameter: StartParameter,
     launcher_data: LauncherData<D>,
 ) -> Result<()> {
     let features: HashSet<String> = HashSet::new();
@@ -247,8 +247,8 @@ pub async fn launch<D: Send + Sync>(
     Ok(())
 }
 
-pub struct LaunchingParameter {
-    pub memory: i64,
+pub struct StartParameter {
+    pub memory: u64,
     pub custom_data_path: Option<String>,
     pub custom_java_path: Option<String>,
     pub auth_player_name: String,
@@ -258,7 +258,7 @@ pub struct LaunchingParameter {
     pub clientid: String,
     pub user_type: String,
     pub keep_launcher_open: bool,
-    pub concurrent_downloads: i32,
+    pub concurrent_downloads: u32,
     pub client_account: Option<ClientAccount>,
     pub skip_advertisement: bool,
 }
