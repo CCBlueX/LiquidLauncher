@@ -143,18 +143,54 @@ impl VersionProfile {
         Ok(())
     }
 
-    fn merge_libraries(current_libraries: &mut Vec<Library>, parent_libraries: Vec<Library>) {
-        let mut library_map: HashMap<String, Library> = current_libraries
-            .iter()
-            .map(|lib| (lib.get_identifier(), lib.clone()))
-            .collect();
+fn merge_libraries(current_libraries: &mut Vec<Library>, parent_libraries: Vec<Library>) {
+    let mut library_map: HashMap<String, Library> = current_libraries
+        .iter()
+        .map(|lib| (lib.get_identifier(), lib.clone()))
+        .collect();
 
-        for parent_lib in parent_libraries {
-            library_map.insert(parent_lib.get_identifier(), parent_lib);
+    for parent_lib in parent_libraries {
+        if let Some(lib) = library_map.get_mut(&parent_lib.get_identifier()) {
+            lib.rules.extend(parent_lib.rules);
+
+            if let Some(parent_downloads) = parent_lib.downloads {
+                match lib.downloads.as_mut() {
+                    Some(downloads) => {
+                        if let Some(artifact) = parent_downloads.artifact {
+                            downloads.artifact = Some(artifact);
+                        }
+                        if let Some(classifiers) = parent_downloads.classifiers {
+                            match downloads.classifiers.as_mut() {
+                                Some(lib_classifiers) => lib_classifiers.extend(classifiers),
+                                None => downloads.classifiers = Some(classifiers),
+                            }
+                        }
+                    }
+                    None => lib.downloads = Some(parent_downloads),
+                }
+            }
+
+            if let Some(natives) = parent_lib.natives {
+                match lib.natives.as_mut() {
+                    Some(lib_natives) => lib_natives.extend(natives),
+                    None => lib.natives = Some(natives),
+                }
+            } else if lib.natives.is_none() {
+                lib.natives = parent_lib.natives;
+            }
+
+            if lib.url.is_none() {
+                lib.url = parent_lib.url;
+            }
+
+            continue;
         }
 
-        *current_libraries = library_map.into_values().collect();
+        library_map.insert(parent_lib.get_identifier(), parent_lib);
     }
+
+    *current_libraries = library_map.into_values().collect();
+}
 
     fn merge_options<T>(a: &mut Option<T>, b: Option<T>) {
         if !a.is_some() {
