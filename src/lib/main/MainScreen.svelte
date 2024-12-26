@@ -143,6 +143,8 @@
     async function runClient() {
         if (running) return;
 
+        log = [];
+
         try {
             running = true;
             progressState = { max: 0, value: 0, text: "Starting client..." };
