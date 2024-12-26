@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "type", content = "value")]
 pub enum DistributionSelection {
     #[serde(rename = "automatic")]
-    Automatic,
+    Automatic(String), // (String) is useless, but required for deserialization
     #[serde(rename = "custom")]
     Custom(String),
     #[serde(rename = "manual")]
@@ -15,7 +15,7 @@ pub enum DistributionSelection {
 
 impl Default for DistributionSelection {
     fn default() -> Self {
-        DistributionSelection::Automatic
+        DistributionSelection::Automatic(String::new())
     }
 }
 

@@ -3,16 +3,13 @@
     import { check } from "@tauri-apps/plugin-updater";
     import { relaunch } from "@tauri-apps/plugin-process";
     import { ask } from "@tauri-apps/plugin-dialog";
-    import { writable, get } from 'svelte/store';
     import {onMount} from "svelte";
     import MainScreen from "./main/MainScreen.svelte";
     import LoginScreen from "./login/LoginScreen.svelte";
 
-    const appState = writable({
-        loading: true,
-        error: null,
-        options: null
-    });
+    let loading = true;
+    let error = null;
+    let options = null;
 
     async function handleUpdate() {
         try {
@@ -37,31 +34,25 @@
 
     async function setupOptions() {
         try {
-            const options = await invoke("get_options");
+            options = {
+                store: async function () {
+                    console.debug("Storing options...", options);
+                    try {
+                        await invoke("store_options", {options});
+                    } catch (error) {
+                        console.error("Failed to store options:", error);
+                        throw error;
+                    }
+                },
+                ...await invoke("get_options")
+            };
             console.debug("Options loaded:", options);
 
-            options.store = async function() {
-                console.debug("Storing options...", options);
-                try {
-                    await invoke("store_options", { options: options });
-                } catch (error) {
-                    console.error("Failed to store options:", error);
-                    throw error;
-                }
-            };
-
-            appState.update(state => ({
-                ...state,
-                loading: false,
-                options
-            }));
+            loading = false;
         } catch (error) {
             console.error("Failed to load options:", error);
-            appState.update(state => ({
-                ...state,
-                loading: false,
-                error: "Failed to load launcher options"
-            }));
+            loading = false;
+            error = "Failed to load launcher options";
         }
     }
 
@@ -77,35 +68,14 @@
         }
     }
 
-    async function handleLogout() {
-        const { options } = get(appState);
-
-        try {
-            await invoke("logout", { accountData: options.start.account });
-            options.start.account = null;
-            await options.store();
-
-            appState.update(state => ({
-                ...state,
-                options: { ...options }
-            }));
-        } catch (error) {
-            console.error("Logout failed:", error);
-            alert("Failed to logout properly. Please try again.");
-        }
-    }
-
     onMount(async () => {
         try {
             await Promise.all([handleUpdate(), checkHealth()]);
             await setupOptions();
         } catch (error) {
             console.error("App initialization failed:", error);
-            appState.update(state => ({
-                ...state,
-                loading: false,
-                error: "Failed to initialize launcher"
-            }));
+            loading = false;
+            error = "Failed to initialize launcher";
         }
     });
 </script>
@@ -113,20 +83,15 @@
 <div class="window">
     <div class="drag-area" data-tauri-drag-region></div>
 
-    {#if $appState.error}
-        <h1 class="error">Error: {$appState.error}</h1>
-    {:else if $appState.loading}
+    {#if error}
+        <h1 class="error">Error: {error}</h1>
+    {:else if loading}
         <h1>The launcher is loading...</h1>
-    {:else if $appState.options}
-        {#if $appState.options.start.account}
-            <MainScreen
-                    bind:options={$appState.options}
-                    on:logout={handleLogout}
-            />
+    {:else if options}
+        {#if options.start.account}
+            <MainScreen bind:options />
         {:else}
-            <LoginScreen
-                    bind:options={$appState.options}
-            />
+            <LoginScreen bind:options />
         {/if}
     {/if}
 </div>

@@ -19,7 +19,7 @@ pub async fn load_jre<D: Send + Sync>(
     launcher_data: &LauncherData<D>,
 ) -> Result<PathBuf> {
     let distribution = match &launching_parameter.java_distribution {
-        DistributionSelection::Automatic => &manifest.build.jre_distribution,
+        DistributionSelection::Automatic(_) => &manifest.build.jre_distribution,
         DistributionSelection::Custom(path) => return Ok(PathBuf::from(path)),
         DistributionSelection::Manual(distribution) => distribution,
     };
