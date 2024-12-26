@@ -50,7 +50,7 @@ static LAUNCHER_DIRECTORY: Lazy<ProjectDirs> =
         },
     );
 
-static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
 /// HTTP Client with launcher agent
 static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {

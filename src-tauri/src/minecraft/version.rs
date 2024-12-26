@@ -100,7 +100,7 @@ pub struct VersionProfile {
 }
 
 impl VersionProfile {
-    pub(crate) fn merge(&mut self, mut parent: VersionProfile) -> Result<()> {
+    pub(crate) fn merge(&mut self, parent: VersionProfile) -> Result<()> {
         Self::merge_options(&mut self.asset_index_location, parent.asset_index_location);
         Self::merge_options(&mut self.assets, parent.assets);
 
@@ -111,7 +111,8 @@ impl VersionProfile {
         Self::merge_options(&mut self.downloads, parent.downloads);
         Self::merge_larger(&mut self.compliance_level, parent.compliance_level);
 
-        self.libraries.append(&mut parent.libraries);
+        Self::merge_libraries(&mut self.libraries, parent.libraries);
+
         Self::merge_options(&mut self.main_class, parent.main_class);
         Self::merge_options(&mut self.logging, parent.logging);
 
@@ -123,7 +124,7 @@ impl VersionProfile {
                     return Err(LauncherError::InvalidVersionProfile(
                         "version profile inherits from incompatible profile".to_string(),
                     )
-                    .into());
+                        .into());
                 }
             }
             ArgumentDeclaration::V21(v21_a) => {
@@ -134,12 +135,25 @@ impl VersionProfile {
                     return Err(LauncherError::InvalidVersionProfile(
                         "version profile inherits from incompatible profile".to_string(),
                     )
-                    .into());
+                        .into());
                 }
             }
         }
 
         Ok(())
+    }
+
+    fn merge_libraries(current_libraries: &mut Vec<Library>, parent_libraries: Vec<Library>) {
+        let mut library_map: HashMap<String, Library> = current_libraries
+            .iter()
+            .map(|lib| (lib.get_identifier(), lib.clone()))
+            .collect();
+
+        for parent_lib in parent_libraries {
+            library_map.insert(parent_lib.get_identifier(), parent_lib);
+        }
+
+        *current_libraries = library_map.into_values().collect();
     }
 
     fn merge_options<T>(a: &mut Option<T>, b: Option<T>) {
@@ -420,7 +434,7 @@ impl AssetObject {
 
         let asset_path = asset_folder.join(&self.hash);
 
-        return if !asset_path.exists() {
+        if !asset_path.exists() {
             progress.progress_update(ProgressUpdate::set_label(format!(
                 "Downloading asset object {}",
                 self.hash
@@ -441,7 +455,7 @@ impl AssetObject {
             Ok(true)
         } else {
             Ok(false)
-        };
+        }
     }
 
     pub async fn download_destructing(
@@ -488,6 +502,14 @@ pub struct Library {
 }
 
 impl Library {
+
+    fn get_identifier(&self) -> String {
+        self.name.split(':')
+            .take(2)
+            .collect::<Vec<&str>>()
+            .join(":")
+    }
+
     pub fn get_library_download(&self) -> Result<LibraryDownloadInfo> {
         if let Some(artifact) = self.downloads.as_ref().and_then(|x| x.artifact.as_ref()) {
             return Ok(artifact.into());
@@ -499,12 +521,12 @@ impl Library {
             .as_deref()
             .unwrap_or("https://libraries.minecraft.net/");
 
-        return Ok(LibraryDownloadInfo {
+        Ok(LibraryDownloadInfo {
             url: format!("{}{}", url, path),
             sha1: None,
             size: None,
             path,
-        });
+        })
     }
 }
 
