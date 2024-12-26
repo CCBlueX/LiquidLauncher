@@ -68,7 +68,7 @@ serde_json = "1.0"
 toml = "0.7.2"
 
 # Support for the old authentication file
-base64 = { version = "0.13" }
+base64 = { version = "0.21" }
 byteorder = { version = "1.4" }
 
 [features]
