@@ -73,7 +73,6 @@ pub fn main() -> Result<()> {
         .with(EnvFilter::from("liquidlauncher=debug"))
         .with(
             fmt::Layer::new()
-                .pretty()
                 .with_ansi(true)
                 .with_writer(io::stdout),
         )
