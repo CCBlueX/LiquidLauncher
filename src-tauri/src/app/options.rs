@@ -46,7 +46,7 @@ pub(crate) struct StartOptions {
     pub custom_java_path: String,
     #[serde(rename = "jvmArgs", default)]
     pub jvm_args: Option<Vec<String>>,
-    #[serde(rename = "memory", default)]
+    #[serde(rename = "memory", default = "default_memory")]
     pub memory: u64,
 }
 
@@ -187,6 +187,10 @@ impl Default for Options {
             premium_options: PremiumOptions::default()
         }
     }
+}
+
+fn default_memory() -> u64 {
+    4096
 }
 
 // Legacy format structure

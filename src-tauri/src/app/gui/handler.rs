@@ -31,8 +31,6 @@ use crate::{auth::{ClientAccount, ClientAccountAuthenticator}, minecraft::{auth:
 use crate::app::{client_api::{ApiEndpoints, Build, LoaderMod, ModSource}, options::Options};
 use crate::app::gui::{AppState, RunnerInstance, ShareableWindow};
 
-const ERROR_MSG: &str = "Try restarting the LiquidLauncher with administrator rights.\nIf this error persists, upload your log with the button below and report it to GitHub.";
-
 #[tauri::command]
 pub(crate) async fn get_launcher_version() -> Result<String, String> {
     Ok(LAUNCHER_VERSION.to_string())
@@ -351,7 +349,7 @@ pub(crate) async fn run_client(
                     }
 
                     let message = format!("An error occured:\n\n{:?}", e);
-                    shareable_window.lock().unwrap().emit("client-error", format!("{}\n\n{}", message, ERROR_MSG)).unwrap();
+                    shareable_window.lock().unwrap().emit("client-error", ()).unwrap();
                     handle_stderr(&shareable_window, message.as_bytes()).unwrap();
                 };
 
@@ -434,7 +432,8 @@ pub(crate) async fn clear_data(options: Options) -> Result<(), String> {
     Ok(())
 }
 
+// System Memory in MB
 #[tauri::command]
 pub(crate) fn sys_memory() -> u64 {
-    utils::sys_memory()
+    utils::sys_memory() / (1024 * 1024)
 }

@@ -41,34 +41,6 @@
     const WARNING_MEMORY = 4096;
     let systemMemory = 0;
 
-    async function initializeMemory() {
-        try {
-            const memoryBytes = await invoke("sys_memory");
-            systemMemory = Math.floor(memoryBytes / (1024 * 1024));
-            if (systemMemory < WARNING_MEMORY) {
-                alert("Warning: Your system has less than 4 GiB of RAM. Performance might be decreased.");
-            }
-        } catch (error) {
-            console.error("Failed to get system memory:", error);
-            alert("Failed to get system memory. Using default values.");
-        }
-    }
-
-    function bytesToMiB(bytes) {
-        return Math.floor(bytes / (1024 * 1024));
-    }
-
-    function miBToBytes(mib) {
-        return mib * 1024 * 1024;
-    }
-
-    function handleMemoryChange(event) {
-        options.start.memory = miBToBytes(event.detail);
-        options.store();
-    }
-
-    initializeMemory();
-
     const clientState = writable({
         running: false,
         logShown: false,
@@ -259,6 +231,16 @@
                 await authenticateClientAccount();
             }
             await refreshMinecraftSession();
+
+            // Check if the memory is below the warning threshold
+            if (options.start.memory < WARNING_MEMORY) {
+                const confirmed = await confirm(`You are about to launch the client with less than ${WARNING_MEMORY} MiB of memory. This may cause performance issues. Do you want to continue?`);
+                if (!confirmed) {
+                    clientState.update(state => ({ ...state, running: false }));
+                    return;
+                }
+            }
+
             await options.store();
 
             await invoke("run_client", {
@@ -376,15 +358,18 @@
 
     async function initialize() {
         try {
-            const [branches, version, defaultDataFolder] = await Promise.all([
+            const [branches, version, defaultDataFolder, sys_memory] = await Promise.all([
                 invoke("request_branches"),
                 invoke("get_launcher_version"),
-                invoke("default_data_folder_path")
+                invoke("default_data_folder_path"),
+                invoke("sys_memory")
             ]);
+
+            systemMemory = sys_memory;
 
             buildState.update(state => ({
                 ...state,
-                branches: branches.branches,
+                branches: branches.branches.sort((a, b) => (a === branches.defaultBranch ? -1 : b === branches.defaultBranch ? 1 : 0)),
                 launcherVersion: version,
                 defaultDataFolder
             }));
@@ -421,7 +406,7 @@
         clientState.update(state => ({ ...state, running: false }));
     });
 
-    listen("client-error", (event) => {
+    listen("client-error", () => {
         clientState.update(state => ({ ...state, logShown: true }));
     });
 
@@ -496,11 +481,10 @@
             <RangeSetting
                     title="Memory"
                     min={MIN_MEMORY}
-                    max={systemMemory ? systemMemory : MIN_MEMORY}
-                    value={bytesToMiB(options.start.memory)}
+                    max={systemMemory}
+                    bind:value={options.start.memory}
                     valueSuffix=" MiB"
                     step={128}
-                    on:change={handleMemoryChange}
             />
             <RangeSetting
                     title="Concurrent Downloads"
@@ -579,7 +563,11 @@
     >
         <SelectSetting
                 title="Branch"
-                items={$buildState.branches.map(e => ({ value: e, text: e }))}
+                items={$buildState.branches.map(e => ({
+                value: e,
+                text: `${e.charAt(0).toUpperCase()}${e.slice(1)} ${e === "legacy" ? "(unsupported)" : ""}`
+
+                }))}
                 bind:value={options.version.branchName}
         />
         <SelectSetting
