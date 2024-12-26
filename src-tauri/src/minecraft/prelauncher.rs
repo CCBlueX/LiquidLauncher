@@ -50,7 +50,9 @@ pub(crate) async fn launch(
     additional_mods: Vec<LoaderMod>,
     launcher_data: LauncherData<ShareableWindow>,
 ) -> Result<()> {
-    launcher_data.log("Loading minecraft version manifest...");
+    launcher_data.progress_update(ProgressUpdate::set_max());
+    launcher_data.progress_update(ProgressUpdate::SetProgress(0));
+    launcher_data.progress_update(ProgressUpdate::set_label("Loading version manifest..."));
 
     let mc_version_manifest = VersionManifest::fetch
         .retry(ExponentialBuilder::default())
@@ -64,9 +66,6 @@ pub(crate) async fn launch(
 
     let build = &launch_manifest.build;
     let subsystem = &launch_manifest.subsystem;
-
-    launcher_data.progress_update(ProgressUpdate::set_max());
-    launcher_data.progress_update(ProgressUpdate::SetProgress(0));
 
     let data_directory = launching_parameter
         .custom_data_path
@@ -99,7 +98,7 @@ pub(crate) async fn launch(
     )
     .await?;
 
-    launcher_data.log("Loading version profile...");
+    launcher_data.progress_update(ProgressUpdate::set_label("Loading version profile..."));
     let manifest_url = match subsystem {
         LoaderSubsystem::Fabric { manifest, .. } => manifest
             .replace("{MINECRAFT_VERSION}", &build.mc_version)
@@ -153,7 +152,10 @@ pub(crate) async fn launch(
         version.merge(parent_version)?;
     }
 
-    launcher_data.log(&format!("Launching {}...", launch_manifest.build.commit_id));
+    launcher_data.progress_update(ProgressUpdate::set_label(format!(
+        "Launching {}...",
+        launch_manifest.build.commit_id
+    )));
     launcher::launch(
         &data_directory,
         launch_manifest,
