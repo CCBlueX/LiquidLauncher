@@ -1,13 +1,18 @@
-use std::{collections::HashSet, path::Path};
-use std::fmt::Write;
 use anyhow::{Context, Result};
 use futures::{stream, StreamExt};
 use path_absolutize::Absolutize;
+use std::fmt::Write;
+use std::{collections::HashSet, path::Path};
 use tokio::fs::OpenOptions;
 
 use crate::{
     error::LauncherError,
-    minecraft::{progress::{ProgressReceiver, ProgressUpdate, ProgressUpdateSteps}, rule_interpreter, version::{LibraryDownloadInfo, VersionProfile}}, utils::{zip_extract, OS},
+    minecraft::{
+        progress::{ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
+        rule_interpreter,
+        version::{LibraryDownloadInfo, VersionProfile},
+    },
+    utils::{zip_extract, OS},
 };
 
 use super::{LauncherData, StartParameter};
@@ -61,16 +66,22 @@ pub async fn setup_libraries<D: Send + Sync>(
                                     .download(&library.name, folder_clone.clone(), launcher_data)
                                     .await
                                     .with_context(|| {
-                                        format!("Failed to download native library: {}", &library.name)
+                                        format!(
+                                            "Failed to download native library: {}",
+                                            &library.name
+                                        )
                                     })?;
 
-                                launcher_data.progress_update(ProgressUpdate::set_label("Extracting natives..."));
+                                launcher_data.progress_update(ProgressUpdate::set_label(
+                                    "Extracting natives...",
+                                ));
                                 let file = OpenOptions::new()
                                     .read(true)
                                     .open(path)
                                     .await
                                     .context("Failed to open native library")?;
-                                zip_extract(file, &native_clone).await
+                                zip_extract(file, &native_clone)
+                                    .await
                                     .context("Failed to extract native library")?;
                             }
                         } else {

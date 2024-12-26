@@ -19,8 +19,8 @@
 
 use std::sync::{Arc, Mutex};
 
-use tauri::Window;
 use handler::*;
+use tauri::Window;
 
 pub type ShareableWindow = Arc<Mutex<Window>>;
 
@@ -29,13 +29,13 @@ pub struct RunnerInstance {
 }
 
 pub struct AppState {
-    pub runner_instance: Arc<Mutex<Option<RunnerInstance>>>
+    pub runner_instance: Arc<Mutex<Option<RunnerInstance>>>,
 }
 
 impl AppState {
     pub fn new() -> Self {
         Self {
-            runner_instance: Arc::new(Mutex::new(None))
+            runner_instance: Arc::new(Mutex::new(None)),
         }
     }
 }

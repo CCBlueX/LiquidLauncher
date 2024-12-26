@@ -78,7 +78,6 @@ pub(crate) async fn launch(
         &launch_manifest.mods,
         retriever_account,
         &launcher_data,
-        
     )
     .await?;
     retrieve_and_copy_mods(
@@ -119,7 +118,10 @@ pub(crate) async fn launch(
             "Determined {}'s download url to be {}",
             inherited_version, url
         );
-        launcher_data.log(&format!("Downloading inherited version {}...", inherited_version));
+        launcher_data.log(&format!(
+            "Downloading inherited version {}...",
+            inherited_version
+        ));
 
         let parent_version = VersionProfile::load(url).await?;
         version.merge(parent_version)?;
@@ -131,7 +133,7 @@ pub(crate) async fn launch(
         launch_manifest,
         version,
         launching_parameter,
-        launcher_data
+        launcher_data,
     )
     .await?;
     Ok(())
@@ -245,18 +247,21 @@ pub async fn retrieve_and_copy_mods(
                             // PID is taken from the URL which is the last part of the URL
                             // https://dl.liquidbounce.net/skip/c7kMT2q00U -> c7kMT2q00U
                             let pid = url.split('/').last().context("Failed to get PID")?;
-                            let skip_file_resolve = ApiEndpoints::resolve_skip_file(account, pid).await?;
-                            
+                            let skip_file_resolve =
+                                ApiEndpoints::resolve_skip_file(account, pid).await?;
+
                             // If the skip file resolve has a direct URL, use it - if not it means that the account is not allowed for direct downloads
-                            skip_file_resolve.direct_url.ok_or_else(|| anyhow!(
-                                "Failed to get direct URL for mod {}",
-                                current_mod.name
-                            ))?
+                            skip_file_resolve.direct_url.ok_or_else(|| {
+                                anyhow!("Failed to get direct URL for mod {}", current_mod.name)
+                            })?
                         }
                         None => open_download_page(url, launcher_data).await?,
                     };
 
-                    launcher_data.log(&format!("Downloading mod {} from {}", current_mod.name, direct_url));
+                    launcher_data.log(&format!(
+                        "Downloading mod {} from {}",
+                        current_mod.name, direct_url
+                    ));
                     launcher_data.progress_update(ProgressUpdate::set_label(format!(
                         "Downloading mod {}",
                         current_mod.name

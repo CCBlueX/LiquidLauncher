@@ -16,14 +16,14 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
-use std::{path::Path, collections::HashMap};
 
+use std::{collections::HashMap, path::Path};
+
+use crate::minecraft::java::DistributionSelection;
+use crate::{auth::ClientAccount, minecraft::auth::MinecraftAccount};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
-use crate::{auth::ClientAccount, minecraft::auth::MinecraftAccount};
-use crate::minecraft::java::{DistributionSelection};
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Options {
@@ -88,7 +88,6 @@ pub(crate) struct BranchOptions {
 }
 
 impl Options {
-
     pub async fn load(app_data: &Path) -> Result<Self> {
         let file_content = fs::read(app_data.join("options.json")).await?;
 
@@ -109,12 +108,12 @@ impl Options {
                 custom_data_path: legacy.custom_data_path,
                 java_distribution: DistributionSelection::default(),
                 minecraft_account: legacy.current_account,
-                jvm_args: None,  // No equivalent in legacy format
-                memory: 4096,  // No equivalent in legacy format - default to 4GB
+                jvm_args: None, // No equivalent in legacy format
+                memory: 4096,   // No equivalent in legacy format - default to 4GB
             },
             version_options: VersionOptions {
                 branch_name: None, // Force recommended branch
-                build_id: -1, // Force newest
+                build_id: -1,      // Force newest
                 options: legacy.branch_options,
             },
             launcher_options: LauncherOptions {
@@ -134,8 +133,6 @@ impl Options {
         fs::write(app_data.join("options.json"), serde_json::to_string(&self)?).await?;
         Ok(())
     }
-
-
 }
 
 impl Default for StartOptions {
@@ -145,7 +142,7 @@ impl Default for StartOptions {
             java_distribution: DistributionSelection::default(),
             custom_data_path: String::new(),
             jvm_args: None,
-            memory: 4096
+            memory: 4096,
         }
     }
 }
@@ -155,7 +152,7 @@ impl Default for VersionOptions {
         Self {
             branch_name: None,
             build_id: -1,
-            options: HashMap::new()
+            options: HashMap::new(),
         }
     }
 }
@@ -165,7 +162,7 @@ impl Default for LauncherOptions {
         Self {
             show_nightly_builds: false,
             keep_launcher_open: false,
-            concurrent_downloads: 10
+            concurrent_downloads: 10,
         }
     }
 }
@@ -174,7 +171,7 @@ impl Default for PremiumOptions {
     fn default() -> Self {
         Self {
             account: None,
-            skip_advertisement: false
+            skip_advertisement: false,
         }
     }
 }
@@ -185,7 +182,7 @@ impl Default for Options {
             start_options: StartOptions::default(),
             version_options: VersionOptions::default(),
             launcher_options: LauncherOptions::default(),
-            premium_options: PremiumOptions::default()
+            premium_options: PremiumOptions::default(),
         }
     }
 }
@@ -221,5 +218,5 @@ pub(crate) struct LegacyOptions {
     #[serde(rename = "branchOptions", default)]
     pub branch_options: HashMap<String, BranchOptions>,
     #[serde(rename = "concurrentDownloads")]
-    pub concurrent_downloads: i32
+    pub concurrent_downloads: i32,
 }

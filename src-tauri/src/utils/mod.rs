@@ -16,23 +16,17 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
-mod sys;
-mod extract;
-mod download;
-mod maven;
+
 mod checksum;
-mod macros;
+mod download;
+mod extract;
 #[cfg(windows)]
 mod hosts;
+mod macros;
+mod maven;
+mod sys;
 
-pub use {
-    sys::*,
-    extract::*,
-    download::*,
-    maven::*,
-    checksum::*,
-};
+pub use {checksum::*, download::*, extract::*, maven::*, sys::*};
 
 #[cfg(windows)]
 pub use hosts::*;

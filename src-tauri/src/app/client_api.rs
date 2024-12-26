@@ -21,13 +21,13 @@ use std::collections::BTreeMap;
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
 use crate::auth::ClientAccount;
 use crate::minecraft::java::JavaDistribution;
-use crate::HTTP_CLIENT;
 use crate::utils::get_maven_artifact_path;
+use crate::HTTP_CLIENT;
 
 /// API endpoint url
 pub const LAUNCHER_API: &str = "https://api.liquidbounce.net";
@@ -46,7 +46,6 @@ pub struct ContentDelivery;
 /// https://cloud.liquidbounce.net/LiquidLauncher/
 /// /news.json
 impl ContentDelivery {
-
     /// Request news
     pub async fn news() -> Result<Vec<News>> {
         Self::request_from_content_delivery("news.json").await
@@ -54,14 +53,14 @@ impl ContentDelivery {
 
     /// Request JSON formatted data from content delivery
     pub async fn request_from_content_delivery<T: DeserializeOwned>(file: &str) -> Result<T> {
-        Ok(HTTP_CLIENT.get(format!("{}/{}/{}", CONTENT_DELIVERY, CONTENT_FOLDER, file))
-            .send().await?
+        Ok(HTTP_CLIENT
+            .get(format!("{}/{}/{}", CONTENT_DELIVERY, CONTENT_FOLDER, file))
+            .send()
+            .await?
             .error_for_status()?
             .json::<T>()
-            .await?
-        )
+            .await?)
     }
-
 }
 
 #[derive(Serialize, Deserialize)]
@@ -73,7 +72,7 @@ pub struct News {
     #[serde(rename = "bannerText")]
     pub banner_text: String,
     #[serde(rename = "bannerUrl")]
-    pub banner_url: String
+    pub banner_url: String,
 }
 
 /// Placeholder struct for API endpoints implementation
@@ -93,7 +92,6 @@ pub struct ApiEndpoints;
 ///     /jre/{os_name}/
 ///
 impl ApiEndpoints {
-
     /// Request all available branches
     pub async fn branches() -> Result<Branches> {
         Self::request_from_endpoint("version/branches").await
@@ -105,7 +103,8 @@ impl ApiEndpoints {
             format!("version/builds/{}/release", branch)
         } else {
             format!("version/builds/{}", branch)
-        }).await
+        })
+        .await
     }
 
     /// Request launch manifest of specific build
@@ -129,42 +128,51 @@ impl ApiEndpoints {
     }
 
     /// Resolve direct download link from skip file pid
-    pub async fn resolve_skip_file(client_account: &ClientAccount, pid: &str) -> Result<SkipFileResolve> {
+    pub async fn resolve_skip_file(
+        client_account: &ClientAccount,
+        pid: &str,
+    ) -> Result<SkipFileResolve> {
         Self::request_with_client_account(&format!("file/resolve/{}", pid), client_account).await
     }
 
     /// Request JSON formatted data from launcher API
     pub async fn request_from_endpoint<T: DeserializeOwned>(endpoint: &str) -> Result<T> {
-        Ok(HTTP_CLIENT.get(format!("{}/{}/{}", LAUNCHER_API, API_V1, endpoint))
-            .send().await?
+        Ok(HTTP_CLIENT
+            .get(format!("{}/{}/{}", LAUNCHER_API, API_V1, endpoint))
+            .send()
+            .await?
             .error_for_status()?
             .json::<T>()
-            .await?
-        )
+            .await?)
     }
 
-    pub async fn request_with_client_account<T: DeserializeOwned>(endpoint: &str, client_account: &ClientAccount) -> Result<T> {
-        Ok(client_account.authenticate_request(HTTP_CLIENT.get(format!("{}/{}/{}", LAUNCHER_API, API_V3, endpoint)))?
-            .send().await?
+    pub async fn request_with_client_account<T: DeserializeOwned>(
+        endpoint: &str,
+        client_account: &ClientAccount,
+    ) -> Result<T> {
+        Ok(client_account
+            .authenticate_request(
+                HTTP_CLIENT.get(format!("{}/{}/{}", LAUNCHER_API, API_V3, endpoint)),
+            )?
+            .send()
+            .await?
             .error_for_status()?
             .json::<T>()
-            .await?
-        )
+            .await?)
     }
-
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Branches {
     #[serde(rename = "defaultBranch")]
     pub default_branch: String,
-    pub branches: Vec<String>
+    pub branches: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Changelog {
     pub build: Build,
-    pub changelog: String
+    pub changelog: String,
 }
 
 ///
@@ -191,7 +199,7 @@ pub struct Build {
     #[serde(rename(serialize = "jreVersion"))]
     pub jre_version: u32,
     #[serde(flatten)]
-    pub subsystem_specific_data: SubsystemSpecificData
+    pub subsystem_specific_data: SubsystemSpecificData,
 }
 
 ///
@@ -209,9 +217,8 @@ pub struct SubsystemSpecificData {
     #[serde(rename(serialize = "kotlinVersion"))]
     pub kotlin_version: String,
     #[serde(rename(serialize = "kotlinModVersion"))]
-    pub kotlin_mod_version: String
+    pub kotlin_mod_version: String,
 }
-
 
 ///
 /// JSON struct of Launch Manifest
@@ -246,24 +253,33 @@ pub struct LoaderMod {
 pub enum ModSource {
     #[serde(rename = "skip")]
     #[serde(rename_all = "camelCase")]
-    SkipAd { artifact_name: String, url: String, #[serde(default)] extract: bool },
+    SkipAd {
+        artifact_name: String,
+        url: String,
+        #[serde(default)]
+        extract: bool,
+    },
     #[serde(rename = "repository")]
     #[serde(rename_all = "camelCase")]
-    Repository { repository: String, artifact: String },
+    Repository {
+        repository: String,
+        artifact: String,
+    },
     #[serde(rename = "local")]
     #[serde(rename_all = "camelCase")]
-    Local { file_name: String }
+    Local { file_name: String },
 }
 
 impl ModSource {
     pub fn get_path(&self) -> Result<String> {
-        Ok(
-            match self {
-                ModSource::SkipAd { artifact_name, .. } => format!("{}.jar", artifact_name),
-                ModSource::Repository { repository: _repository, artifact } => get_maven_artifact_path(artifact)?,
-                ModSource::Local { file_name } => file_name.clone(),
-            }
-        )
+        Ok(match self {
+            ModSource::SkipAd { artifact_name, .. } => format!("{}.jar", artifact_name),
+            ModSource::Repository {
+                repository: _repository,
+                artifact,
+            } => get_maven_artifact_path(artifact)?,
+            ModSource::Local { file_name } => file_name.clone(),
+        })
     }
 }
 
@@ -274,9 +290,15 @@ impl ModSource {
 #[serde(tag = "name")]
 pub enum LoaderSubsystem {
     #[serde(rename = "fabric")]
-    Fabric { manifest: String, mod_directory: String },
+    Fabric {
+        manifest: String,
+        mod_directory: String,
+    },
     #[serde(rename = "forge")]
-    Forge { manifest: String, mod_directory: String  },
+    Forge {
+        manifest: String,
+        mod_directory: String,
+    },
 }
 
 #[derive(Deserialize, Serialize)]
@@ -285,7 +307,7 @@ pub struct SkipFileResolve {
     pub msg: String,
     pub target_pid: Option<String>,
     pub download_url: Option<String>,
-    pub direct_url: Option<String>
+    pub direct_url: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

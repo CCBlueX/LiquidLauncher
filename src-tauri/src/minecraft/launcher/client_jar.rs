@@ -1,11 +1,16 @@
-use std::path::Path;
-use std::fmt::Write;
 use anyhow::{bail, Context, Result};
 use path_absolutize::Absolutize;
+use std::fmt::Write;
+use std::path::Path;
 use tokio::fs;
 
 use crate::{
-    error::LauncherError, minecraft::{progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps}, version::VersionProfile}, utils::{download_file, sha1sum, OS}
+    error::LauncherError,
+    minecraft::{
+        progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
+        version::VersionProfile,
+    },
+    utils::{download_file, sha1sum, OS},
 };
 
 use super::LauncherData;

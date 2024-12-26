@@ -16,32 +16,35 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
+
 use std::path::Path;
 
+use anyhow::Result;
 use tokio::fs;
 use tracing::debug;
-use anyhow::Result;
 
 use crate::HTTP_CLIENT;
 
 /// Download file using HTTP_CLIENT without any progress tracking
 pub async fn download_file_untracked(url: &str, path: impl AsRef<Path>) -> Result<()> {
     let path = path.as_ref().to_owned();
-    let response = HTTP_CLIENT.get(url)
-        .send().await?
-        .error_for_status()?;
-    
+    let response = HTTP_CLIENT.get(url).send().await?.error_for_status()?;
+
     let content = response.bytes().await?;
     fs::write(path, content).await?;
     Ok(())
 }
 
-pub async fn download_file<F>(url: &str, on_progress: F) -> Result<Vec<u8>> where F : Fn(u64, u64) {
+pub async fn download_file<F>(url: &str, on_progress: F) -> Result<Vec<u8>>
+where
+    F: Fn(u64, u64),
+{
     debug!("Downloading file {:?}", url);
 
-    let mut response = HTTP_CLIENT.get(url.trim())
-        .send().await?
+    let mut response = HTTP_CLIENT
+        .get(url.trim())
+        .send()
+        .await?
         .error_for_status()?;
 
     debug!("Response received from url");

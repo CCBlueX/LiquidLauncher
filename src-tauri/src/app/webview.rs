@@ -17,10 +17,19 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::minecraft::{launcher::LauncherData, progress::{ProgressReceiver, ProgressUpdate}};
+use crate::minecraft::{
+    launcher::LauncherData,
+    progress::{ProgressReceiver, ProgressUpdate},
+};
 use anyhow::{anyhow, bail, Context, Result};
 use serde::Deserialize;
-use std::{sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, time::Duration};
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+    time::Duration,
+};
 use tauri::{Listener, Manager, Url, WebviewWindowBuilder};
 use tokio::time::sleep;
 use tracing::{debug, info};
@@ -29,8 +38,12 @@ use super::gui::ShareableWindow;
 
 const MAX_DOWNLOAD_ATTEMPTS: u8 = 2;
 
-pub async fn open_download_page(url: &str, launcher_data: &LauncherData<ShareableWindow>) -> Result<String> {
-    let download_page: Url = format!("{}&liquidlauncher=1", url).parse()
+pub async fn open_download_page(
+    url: &str,
+    launcher_data: &LauncherData<ShareableWindow>,
+) -> Result<String> {
+    let download_page: Url = format!("{}&liquidlauncher=1", url)
+        .parse()
         .context("Failed to parse download page URL")?;
 
     let mut count = 0;
@@ -45,7 +58,10 @@ pub async fn open_download_page(url: &str, launcher_data: &LauncherData<Shareabl
             Or try our advice at https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher.", MAX_DOWNLOAD_ATTEMPTS);
         }
 
-        launcher_data.progress_update(ProgressUpdate::SetLabel(format!("Opening download page... (Attempt {}/{})", count, MAX_DOWNLOAD_ATTEMPTS)));
+        launcher_data.progress_update(ProgressUpdate::SetLabel(format!(
+            "Opening download page... (Attempt {}/{})",
+            count, MAX_DOWNLOAD_ATTEMPTS
+        )));
 
         match show_webview(download_page.clone(), &launcher_data.data).await {
             Ok(url) => break url,
@@ -62,20 +78,25 @@ pub async fn open_download_page(url: &str, launcher_data: &LauncherData<Shareabl
 async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<String> {
     // Find download_view window from the window manager
     let mut download_view = {
-        let window = window.lock()
+        let window = window
+            .lock()
             .map_err(|_| anyhow!("Failed to lock window"))?;
 
         match window.get_webview_window("download_view") {
             Some(window) => Ok(window),
             None => {
                 // todo: do not hardcode index
-                let config = window.config().app.windows.get(1)
+                let config = window
+                    .config()
+                    .app
+                    .windows
+                    .get(1)
                     .context("Unable to find window config")?;
 
                 WebviewWindowBuilder::from_config(window.app_handle(), config)
                     .map_err(|e| anyhow!("Failed to build window: {:?}", e))?
                     .build()
-            },
+            }
         }
     }?;
 
@@ -83,9 +104,11 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
     download_view.navigate(url)?;
 
     // Show and maximize the download view
-    download_view.show()
+    download_view
+        .show()
         .context("Failed to show the download view")?;
-    download_view.maximize()
+    download_view
+        .maximize()
         .context("Failed to maximize the download view")?;
 
     // Wait for the download to finish
@@ -107,7 +130,7 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
 
         #[derive(Deserialize)]
         struct DownloadPayload {
-            url: String
+            url: String,
         }
 
         let payload = serde_json::from_str::<DownloadPayload>(payload).unwrap();
@@ -129,11 +152,14 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
 
         if cloned_close_request.load(Ordering::SeqCst) {
             let _ = download_view.hide();
-            bail!("Download view was closed before the download link was received. \
-            Aborting download...");
+            bail!(
+                "Download view was closed before the download link was received. \
+            Aborting download..."
+            );
         }
 
-        download_view.is_visible()
+        download_view
+            .is_visible()
             .context("Download view was closed unexpected")?;
     };
 

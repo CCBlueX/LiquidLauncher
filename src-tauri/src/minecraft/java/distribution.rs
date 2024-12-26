@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::utils::{ARCHITECTURE, OS};
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type", content = "value")]
@@ -23,7 +23,7 @@ pub enum JavaDistribution {
     #[serde(rename = "temurin")]
     Temurin,
     #[serde(rename = "graalvm")]
-    GraalVM
+    GraalVM,
 }
 
 impl Default for JavaDistribution {
@@ -59,7 +59,7 @@ impl JavaDistribution {
     pub fn get_name(&self) -> &str {
         match self {
             JavaDistribution::Temurin => "temurin",
-            JavaDistribution::GraalVM => "graalvm"
+            JavaDistribution::GraalVM => "graalvm",
         }
     }
 

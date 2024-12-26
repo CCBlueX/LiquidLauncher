@@ -31,7 +31,6 @@
     import { listen } from "@tauri-apps/api/event";
     import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
     import { open as shellOpen } from "@tauri-apps/plugin-shell";
-    import { writable, get } from 'svelte/store';
 
     export let options;
 
@@ -41,22 +40,13 @@
     const WARNING_MEMORY = 4096;
     let systemMemory = 0;
 
-    const clientState = writable({
+    let dataState = {
         running: false,
         logShown: false,
         settingsShown: false,
         versionSelectShown: false,
         launchVersionWarningShown: false,
-        launchVersionWarningCountdown: 0
-    });
-
-    const progressState = writable({
-        max: 0,
-        value: 0,
-        text: ""
-    });
-
-    const buildState = writable({
+        launchVersionWarningCountdown: 0,
         branches: [],
         builds: [],
         currentBuild: null,
@@ -64,24 +54,28 @@
         customMods: [],
         launcherVersion: "",
         defaultDataFolder: ""
-    });
+    };
+
+    let progressState = {
+        max: 0,
+        value: 0,
+        text: ""
+    };
 
     let activeSettingsTab = "General";
     let log = [];
 
-    $: {
-        if ($clientState.launchVersionWarningShown && $clientState.launchVersionWarningCountdown > 0) {
-            const countdown = setInterval(() => {
-                clientState.update(state => ({
-                    ...state,
-                    launchVersionWarningCountdown: state.launchVersionWarningCountdown - 1
-                }));
+    $: if (dataState.launchVersionWarningShown && dataState.launchVersionWarningCountdown > 0) {
+        const countdown = setInterval(() => {
+            dataState = {
+                ...dataState,
+                launchVersionWarningCountdown: dataState.launchVersionWarningCountdown - 1
+            };
 
-                if ($clientState.launchVersionWarningCountdown <= 0) {
-                    clearInterval(countdown);
-                }
-            }, 1000);
-        }
+            if (dataState.launchVersionWarningCountdown <= 0) {
+                clearInterval(countdown);
+            }
+        }, 1000);
     }
 
     $: if (options.version.branchName) {
@@ -98,13 +92,12 @@
         }
 
         const branchOptions = options.version.options[branchName];
-        const $build = get(buildState);
 
-        $build.recommendedMods.forEach(mod => {
+        dataState.recommendedMods.forEach(mod => {
             branchOptions.modStates[mod.name] = mod.enabled;
         });
 
-        $build.customMods.forEach(mod => {
+        dataState.customMods.forEach(mod => {
             branchOptions.customModStates[mod.name] = mod.enabled;
         });
 
@@ -124,7 +117,7 @@
                 build.dateDay = date.toLocaleDateString();
             });
 
-            buildState.update(state => ({ ...state, builds }));
+            dataState = { ...dataState, builds };
 
             const buildId = options.version.buildId;
 
@@ -140,10 +133,10 @@
                 buildId: activeBuild.buildId
             });
 
-            buildState.update(state => ({
-                ...state,
+            dataState = {
+                ...dataState,
                 currentBuild: { ...activeBuild, changelog: changelog.changelog }
-            }));
+            };
 
             await updateMods();
         } catch (error) {
@@ -153,7 +146,7 @@
     }
 
     async function updateMods() {
-        const { currentBuild } = get(buildState);
+        const { currentBuild } = dataState;
         if (!currentBuild) return;
 
         try {
@@ -180,11 +173,11 @@
                 });
             }
 
-            buildState.update(state => ({
-                ...state,
+            dataState = {
+                ...dataState,
                 recommendedMods,
                 customMods
-            }));
+            };
         } catch (error) {
             console.error("Failed to request mods:", error);
         }
@@ -192,7 +185,7 @@
 
     async function authenticateClientAccount() {
         try {
-            progressState.update(state => ({ ...state, text: "Authenticating client account..." }));
+            progressState = { ...progressState, text: "Authenticating client account..." };
             const account = await invoke("client_account_update", {
                 account: options.premium.account
             });
@@ -204,7 +197,7 @@
 
     async function refreshMinecraftSession() {
         try {
-            progressState.update(state => ({ ...state, text: "Refreshing minecraft session..." }));
+            progressState = { ...progressState, text: "Refreshing minecraft session..." };
             const account = await invoke("refresh", {
                 accountData: options.start.account
             });
@@ -213,30 +206,31 @@
             console.error("Failed to refresh account:", e);
             alert("Failed to refresh account session: " + e + "\n\nYou have been logged out. Please try logging in again.");
             options.start.account = null;
-            clientState.update(state => ({ ...state, running: false }));
+            dataState = { ...dataState, running: false };
             throw e;
         }
     }
 
     async function runClient() {
-        if ($clientState.running) return;
+        if (dataState.running) return;
 
         log = [];
 
         try {
-            clientState.update(state => ({ ...state, running: true }));
-            progressState.set({ max: 0, value: 0, text: "Starting client..." });
+            dataState = { ...dataState, running: true };
+            progressState = { max: 0, value: 0, text: "Starting client..." };
 
             if (options.premium.account) {
                 await authenticateClientAccount();
             }
             await refreshMinecraftSession();
 
-            // Check if the memory is below the warning threshold
             if (options.start.memory < WARNING_MEMORY) {
-                const confirmed = await confirm(`You are about to launch the client with less than ${WARNING_MEMORY} MiB of memory. This may cause performance issues. Do you want to continue?`);
+                const confirmed = await confirm(
+                    `You are about to launch the client with less than ${WARNING_MEMORY} MiB of memory. This may cause performance issues. Do you want to continue?`
+                );
                 if (!confirmed) {
-                    clientState.update(state => ({ ...state, running: false }));
+                    dataState = { ...dataState, running: false };
                     return;
                 }
             }
@@ -244,14 +238,14 @@
             await options.store();
 
             await invoke("run_client", {
-                buildId: $buildState.currentBuild.buildId,
+                buildId: dataState.currentBuild.buildId,
                 options,
-                mods: [...$buildState.recommendedMods, ...$buildState.customMods]
+                mods: [...dataState.recommendedMods, ...dataState.customMods]
             });
         } catch (error) {
             console.error("Failed to start client:", error);
             log = [...log, `Failed to start client: ${error.message}`];
-            clientState.update(state => ({ ...state, logShown: true, running: false }));
+            dataState = { ...dataState, logShown: true, running: false };
         }
     }
 
@@ -260,18 +254,18 @@
             (options.version.branchName === "nextgen" && options.version.buildId !== -1);
 
         if (isWarning) {
-            clientState.update(state => ({
-                ...state,
+            dataState = {
+                ...dataState,
                 launchVersionWarningShown: true,
                 launchVersionWarningCountdown: 3
-            }));
+            };
         } else {
             await runClient();
         }
     }
 
     async function switchToNextgen() {
-        clientState.update(state => ({ ...state, launchVersionWarningShown: false }));
+        dataState = { ...dataState, launchVersionWarningShown: false };
         options.version.branchName = "nextgen";
         options.version.buildId = -1;
         await options.store();
@@ -280,7 +274,7 @@
     }
 
     async function runClientAnyway() {
-        clientState.update(state => ({ ...state, launchVersionWarningShown: false }));
+        dataState = { ...dataState, launchVersionWarningShown: false };
         await runClient();
     }
 
@@ -299,8 +293,7 @@
     }
 
     async function handleCustomModDelete(event) {
-        const $build = get(buildState);
-        const { currentBuild } = $build;
+        const { currentBuild } = dataState;
 
         try {
             await invoke("delete_custom_mod", {
@@ -317,8 +310,7 @@
     }
 
     async function handleInstallMod() {
-        const $build = get(buildState);
-        const { currentBuild } = $build;
+        const { currentBuild } = dataState;
 
         try {
             const selected = await dialogOpen({
@@ -367,12 +359,13 @@
 
             systemMemory = sys_memory;
 
-            buildState.update(state => ({
-                ...state,
-                branches: branches.branches.sort((a, b) => (a === branches.defaultBranch ? -1 : b === branches.defaultBranch ? 1 : 0)),
+            dataState = {
+                ...dataState,
+                branches: branches.branches.sort((a, b) =>
+                    (a === branches.defaultBranch ? -1 : b === branches.defaultBranch ? 1 : 0)),
                 launcherVersion: version,
                 defaultDataFolder
-            }));
+            };
 
             if (!options.version.branchName) {
                 options.version.branchName = branches.defaultBranch;
@@ -392,22 +385,25 @@
 
     listen("progress-update", (event) => {
         const { type, value } = event.payload;
-        progressState.update(state => {
-            switch (type) {
-                case "max": return { ...state, max: value };
-                case "progress": return { ...state, value };
-                case "label": return { ...state, text: value };
-                default: return state;
-            }
-        });
+        switch (type) {
+            case "max":
+                progressState = { ...progressState, max: value };
+                break;
+            case "progress":
+                progressState = { ...progressState, value };
+                break;
+            case "label":
+                progressState = { ...progressState, text: value };
+                break;
+        }
     });
 
     listen("client-exited", () => {
-        clientState.update(state => ({ ...state, running: false }));
+        dataState = { ...dataState, running: false };
     });
 
     listen("client-error", () => {
-        clientState.update(state => ({ ...state, logShown: true }));
+        dataState = { ...dataState, logShown: true };
     });
 
     listen("auth_url", async (event) => {
@@ -421,10 +417,10 @@
     initialize();
 </script>
 
-{#if $clientState.launchVersionWarningShown}
+{#if dataState.launchVersionWarningShown}
     <SettingsContainer
             title="You are about to launch an unsupported version!"
-            on:hideSettings={() => clientState.update(s => ({ ...s, launchVersionWarningShown: false }))}
+            on:hideSettings={() => dataState = { ...dataState, launchVersionWarningShown: false }}
     >
         <Description
                 description="The selected version of LiquidBounce is no longer officially supported. We recommend upgrading to the latest version of LiquidBounce Nextgen, which works with all Minecraft versions from 1.7 onward."
@@ -435,26 +431,26 @@
                 color="#4677FF"
         />
         <ButtonSetting
-                disabled={$clientState.launchVersionWarningCountdown > 0}
-                text="Launch anyway{$clientState.launchVersionWarningCountdown > 0 ? ` (${$clientState.launchVersionWarningCountdown})` : ''}"
+                disabled={dataState.launchVersionWarningCountdown > 0}
+                text="Launch anyway{dataState.launchVersionWarningCountdown > 0 ? ` (${dataState.launchVersionWarningCountdown})` : ''}"
                 on:click={runClientAnyway}
                 color="#B83529"
         />
     </SettingsContainer>
 {/if}
 
-{#if $clientState.logShown}
+{#if dataState.logShown}
     <ClientLog
             messages={log}
-            on:hideClientLog={() => clientState.update(s => ({ ...s, logShown: false }))}
+            on:hideClientLog={() => dataState = { ...dataState, logShown: false }}
     />
 {/if}
 
-{#if $clientState.settingsShown}
+{#if dataState.settingsShown}
     <SettingsContainer
             title="Settings"
             on:hideSettings={() => {
-            clientState.update(s => ({ ...s, settingsShown: false }));
+            dataState = { ...dataState, settingsShown: false };
             options.store();
         }}
     >
@@ -468,10 +464,10 @@
             <SelectSetting
                     title="JVM Distribution"
                     items={[
-                { value: "automatic", text: "Automatic" },
-                { value: "manual", text: "Manual" },
-                { value: "custom", text: "Custom" }
-            ]}
+                    { value: "automatic", text: "Automatic" },
+                    { value: "manual", text: "Manual" },
+                    { value: "custom", text: "Custom" }
+                ]}
                     bind:value={options.start.javaDistribution.type}
             />
 
@@ -479,9 +475,9 @@
                 <SelectSetting
                         title="Distribution"
                         items={[
-                            { value: "temurin", text: "Eclipse Temurin" },
-                            { value: "graalvm", text: "GraalVM" }
-                        ]}
+                        { value: "temurin", text: "Eclipse Temurin" },
+                        { value: "graalvm", text: "GraalVM" }
+                    ]}
                         bind:value={options.start.javaDistribution.value}
                 />
             {/if}
@@ -498,7 +494,7 @@
 
             <DirectorySelectorSetting
                     title="Data Location"
-                    placeholder={$buildState.defaultDataFolder}
+                    placeholder={dataState.defaultDataFolder}
                     bind:value={options.start.customDataPath}
                     windowTitle="Select custom data directory"
             />
@@ -515,7 +511,7 @@
                     min={1}
                     max={50}
                     bind:value={options.launcher.concurrentDownloads}
-                    valueSuffix="connections"
+                    valueSuffix=" connections"
                     step={1}
             />
             <ToggleSetting
@@ -533,7 +529,7 @@
                     on:click={clearData}
                     color="#B83529"
             />
-            <LauncherVersion version={$buildState.launcherVersion} />
+            <LauncherVersion version={dataState.launcherVersion} />
         {:else if activeSettingsTab === "Donator"}
             <ToggleSetting
                     title="Skip Advertisements"
@@ -577,33 +573,32 @@
     </SettingsContainer>
 {/if}
 
-{#if $clientState.versionSelectShown}
+{#if dataState.versionSelectShown}
     <SettingsContainer
             title="Select version"
             on:hideSettings={() => {
-            clientState.update(s => ({ ...s, versionSelectShown: false }));
+            dataState = { ...dataState, versionSelectShown: false };
             options.store();
         }}
     >
         <SelectSetting
                 title="Branch"
-                items={$buildState.branches.map(e => ({
+                items={dataState.branches.map(e => ({
                 value: e,
                 text: `${e.charAt(0).toUpperCase()}${e.slice(1)} ${e === "legacy" ? "(unsupported)" : ""}`
-
-                }))}
+            }))}
                 bind:value={options.version.branchName}
         />
         <SelectSetting
                 title="Build"
                 items={[
-                    { value: -1, text: "Latest" },
-                    ...$buildState.builds
-                        .map(e => ({
-                            value: e.buildId,
-                            text: `${e.lbVersion} git-${e.commitId.substring(0, 7)} - ${e.date}`
-                        }))
-                ]}
+                { value: -1, text: "Latest" },
+                ...dataState.builds
+                    .map(e => ({
+                        value: e.buildId,
+                        text: `${e.lbVersion} git-${e.commitId.substring(0, 7)} - ${e.date}`
+                    }))
+            ]}
                 bind:value={options.version.buildId}
         />
         <ToggleSetting
@@ -613,7 +608,7 @@
                 on:change={updateData}
         />
         <SettingWrapper title="Recommended mods">
-            {#each $buildState.recommendedMods as mod}
+            {#each dataState.recommendedMods as mod}
                 <ToggleSetting
                         title={mod.name}
                         bind:value={mod.enabled}
@@ -622,7 +617,7 @@
                 />
             {/each}
         </SettingWrapper>
-        <SettingWrapper title={`Additional mods for ${$buildState.currentBuild?.branch} ${$buildState.currentBuild?.mcVersion}`}>
+        <SettingWrapper title={`Additional mods for ${dataState.currentBuild?.branch} ${dataState.currentBuild?.mcVersion}`}>
             <div slot="title-element">
                 <IconButtonSetting
                         text="Install"
@@ -631,7 +626,7 @@
                 />
             </div>
 
-            {#each $buildState.customMods as mod}
+            {#each dataState.customMods as mod}
                 <CustomModSetting
                         title={mod.name}
                         bind:value={mod.enabled}
@@ -644,25 +639,25 @@
 {/if}
 
 <VerticalFlexWrapper
-        blur={$clientState.settingsShown || $clientState.versionSelectShown ||
-          $clientState.logShown || $clientState.launchVersionWarningShown}
+        blur={dataState.settingsShown || dataState.versionSelectShown ||
+          dataState.logShown || dataState.launchVersionWarningShown}
 >
     <TitleBar>
         <Logo />
         <StatusBar>
-            {#if !$clientState.running}
+            {#if !dataState.running}
                 <TextStatus
                         text="Welcome back, {options.start.account?.name}."
                 />
             {:else}
-                <ProgressStatus {...$progressState} />
+                <ProgressStatus {...progressState} />
             {/if}
         </StatusBar>
         <Account
                 username={options.start.account?.name}
                 uuid={options.start.account?.id}
                 accountType={options.start.account?.type}
-                on:showSettings={() => clientState.update(s => ({ ...s, settingsShown: true }))}
+                on:showSettings={() => dataState = { ...dataState, settingsShown: true }}
         />
         <ButtonClose />
     </TitleBar>
@@ -671,19 +666,19 @@
         <LaunchArea
                 versionInfo={{
                 bannerUrl: "img/banner.png",
-                title: $buildState.currentBuild ?
-                    `LiquidBounce ${$buildState.currentBuild.lbVersion} for Minecraft ${$buildState.currentBuild.mcVersion}` :
-                        "Loading...",
-                    date: $buildState.currentBuild?.dateDay || "Loading...",
-                    description: $buildState.currentBuild?.changelog || "Loading..."
-                }}
-                lbVersion={$buildState.currentBuild?.lbVersion}
-                mcVersion={$buildState.currentBuild?.mcVersion}
-                on:showVersionSelect={() => clientState.update(s => ({ ...s, versionSelectShown: true }))}
-                on:showClientLog={() => clientState.update(s => ({ ...s, logShown: true }))}
+                title: dataState.currentBuild ?
+                    `LiquidBounce ${dataState.currentBuild.lbVersion} for Minecraft ${dataState.currentBuild.mcVersion}` :
+                    "Loading...",
+                date: dataState.currentBuild?.dateDay || "Loading...",
+                description: dataState.currentBuild?.changelog || "Loading..."
+            }}
+                lbVersion={dataState.currentBuild?.lbVersion}
+                mcVersion={dataState.currentBuild?.mcVersion}
+                on:showVersionSelect={() => dataState = { ...dataState, versionSelectShown: true }}
+                on:showClientLog={() => dataState = { ...dataState, logShown: true }}
                 on:launch={runClientWithWarning}
                 on:terminate={terminateClient}
-                running={$clientState.running}
+                running={dataState.running}
         />
         <NewsArea />
     </ContentWrapper>

@@ -16,11 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
-use std::fmt::Display;
+
 use anyhow::{bail, Result};
 use once_cell::sync::Lazy;
 use serde::Deserialize;
+use std::fmt::Display;
 use sysinfo::{RefreshKind, System, SystemExt};
 
 /// Get the total memory of the system in
@@ -52,9 +52,7 @@ pub const ARCHITECTURE: Architecture = if cfg!(target_arch = "x86") {
     Architecture::UNKNOWN // Unsupported architecture
 };
 
-pub const OS_VERSION: Lazy<String> = Lazy::new(|| {
-    os_info::get().version().to_string()
-});
+pub const OS_VERSION: Lazy<String> = Lazy::new(|| os_info::get().version().to_string());
 
 #[derive(Deserialize, PartialEq, Eq, Hash, Debug)]
 pub enum OperatingSystem {
@@ -65,7 +63,7 @@ pub enum OperatingSystem {
     #[serde(rename = "osx")]
     OSX,
     #[serde(rename = "unknown")]
-    UNKNOWN
+    UNKNOWN,
 }
 
 #[derive(Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
@@ -79,7 +77,7 @@ pub enum Architecture {
     #[serde(rename = "aarch64")]
     AARCH64,
     #[serde(rename = "unknown")]
-    UNKNOWN
+    UNKNOWN,
 }
 
 impl OperatingSystem {
@@ -87,7 +85,7 @@ impl OperatingSystem {
         Ok(match self {
             OperatingSystem::WINDOWS => ";",
             OperatingSystem::LINUX | OperatingSystem::OSX => ":",
-            _ => bail!("Invalid OS")
+            _ => bail!("Invalid OS"),
         })
     }
 
@@ -96,7 +94,7 @@ impl OperatingSystem {
             OperatingSystem::WINDOWS => "windows",
             OperatingSystem::LINUX => "linux",
             OperatingSystem::OSX => "osx",
-            _ => bail!("Invalid OS")
+            _ => bail!("Invalid OS"),
         })
     }
 
@@ -105,7 +103,7 @@ impl OperatingSystem {
             OperatingSystem::WINDOWS => "windows",
             OperatingSystem::LINUX => "linux",
             OperatingSystem::OSX => "mac",
-            _ => bail!("Invalid OS")
+            _ => bail!("Invalid OS"),
         })
     }
 
@@ -114,7 +112,7 @@ impl OperatingSystem {
             OperatingSystem::WINDOWS => "windows",
             OperatingSystem::LINUX => "linux",
             OperatingSystem::OSX => "macos",
-            _ => bail!("Invalid OS")
+            _ => bail!("Invalid OS"),
         })
     }
 
@@ -122,10 +120,9 @@ impl OperatingSystem {
         Ok(match self {
             OperatingSystem::WINDOWS => "zip",
             OperatingSystem::LINUX | OperatingSystem::OSX => "tar.gz",
-            _ => bail!("Invalid OS")
+            _ => bail!("Invalid OS"),
         })
     }
-
 }
 
 impl Display for OperatingSystem {
@@ -141,7 +138,7 @@ impl Architecture {
             Architecture::X64 => "x64",
             Architecture::ARM => "arm",
             Architecture::AARCH64 => "aarch64",
-            _ => bail!("Invalid architecture")
+            _ => bail!("Invalid architecture"),
         })
     }
 }

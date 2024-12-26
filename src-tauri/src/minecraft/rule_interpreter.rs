@@ -16,14 +16,14 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
+
 use std::collections::HashSet;
 
 use anyhow::Result;
 use regex::Regex;
 
 use crate::minecraft::version::{Rule, RuleAction};
-use crate::utils::{OS, ARCHITECTURE, OS_VERSION};
+use crate::utils::{ARCHITECTURE, OS, OS_VERSION};
 
 pub fn check_condition(rules: &Vec<Rule>, features: &HashSet<String>) -> Result<bool> {
     if rules.is_empty() {

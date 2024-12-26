@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
+
 pub mod gui;
 
 pub mod client_api;
-pub mod webview;
 pub mod options;
+pub mod webview;

@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
+
 use serde::Serialize;
 
 #[derive(Debug)]
@@ -55,11 +55,11 @@ impl ProgressUpdateSteps {
 #[derive(Debug, Serialize, Clone)]
 #[serde(tag = "type", content = "value")]
 pub enum ProgressUpdate {
-    #[serde(rename = "max")] 
+    #[serde(rename = "max")]
     SetMax(u64),
-    #[serde(rename = "progress")] 
+    #[serde(rename = "progress")]
     SetProgress(u64),
-    #[serde(rename = "label")] 
+    #[serde(rename = "label")]
     SetLabel(String),
 }
 
@@ -86,4 +86,3 @@ pub trait ProgressReceiver {
     fn progress_update(&self, update: ProgressUpdate);
     fn log(&self, msg: &str);
 }
-

@@ -16,11 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
-pub mod launcher;
-pub mod version;
-mod rule_interpreter;
+
 pub mod auth;
+pub mod java;
+pub mod launcher;
 pub mod prelauncher;
 pub mod progress;
-pub mod java;
+mod rule_interpreter;
+pub mod version;

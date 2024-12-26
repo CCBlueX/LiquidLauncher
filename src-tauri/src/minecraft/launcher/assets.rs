@@ -1,4 +1,10 @@
-use std::{path::{Path, PathBuf}, sync::{atomic::{AtomicU64, Ordering}, Arc}};
+use std::{
+    path::{Path, PathBuf},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+};
 
 use anyhow::Result;
 use futures::{stream, StreamExt};
@@ -7,7 +13,10 @@ use tracing::error;
 use crate::{
     error::LauncherError,
     join_and_mkdir,
-    minecraft::{progress::{ProgressReceiver, ProgressUpdate, ProgressUpdateSteps}, version::{AssetIndexLocation, VersionProfile}},
+    minecraft::{
+        progress::{ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
+        version::{AssetIndexLocation, VersionProfile},
+    },
 };
 
 use super::{LauncherData, StartParameter};

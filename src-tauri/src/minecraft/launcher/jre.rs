@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
 
+use super::{LauncherData, StartParameter};
+use crate::minecraft::java::DistributionSelection;
 use crate::{
     app::client_api::LaunchManifest,
     minecraft::{
@@ -9,8 +11,6 @@ use crate::{
         progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
     },
 };
-use crate::minecraft::java::DistributionSelection;
-use super::{LauncherData, StartParameter};
 
 pub async fn load_jre<D: Send + Sync>(
     runtimes_folder: &Path,
@@ -21,21 +21,21 @@ pub async fn load_jre<D: Send + Sync>(
     let distribution = match &launching_parameter.java_distribution {
         DistributionSelection::Automatic => &manifest.build.jre_distribution,
         DistributionSelection::Custom(path) => return Ok(PathBuf::from(path)),
-        DistributionSelection::Manual(distribution) => distribution
+        DistributionSelection::Manual(distribution) => distribution,
     };
 
     // Check if distribution supports JRE version
     if !distribution.supports_version(manifest.build.jre_version) {
-        return Err(anyhow!("The selected JRE distribution does not support the required version of Java."));
+        return Err(anyhow!(
+            "The selected JRE distribution does not support the required version of Java."
+        ));
     }
 
     launcher_data.progress_update(ProgressUpdate::set_label("Checking for JRE..."));
 
-    if let Ok(path) = find_java_binary(
-        runtimes_folder,
-        distribution,
-        &manifest.build.jre_version,
-    ).await {
+    if let Ok(path) =
+        find_java_binary(runtimes_folder, distribution, &manifest.build.jre_version).await
+    {
         return Ok(path);
     }
 
@@ -53,5 +53,6 @@ pub async fn load_jre<D: Send + Sync>(
                 get_max(1),
             ));
         },
-    ).await
+    )
+    .await
 }

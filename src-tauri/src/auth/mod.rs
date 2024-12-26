@@ -1,10 +1,16 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Context, Result};
-use oauth2::{basic::BasicClient, AccessToken, AuthUrl, AuthorizationCode, ClientId, CsrfToken, PkceCodeChallenge, RedirectUrl, RefreshToken, TokenResponse, TokenUrl};
+use oauth2::{
+    basic::BasicClient, AccessToken, AuthUrl, AuthorizationCode, ClientId, CsrfToken,
+    PkceCodeChallenge, RedirectUrl, RefreshToken, TokenResponse, TokenUrl,
+};
 use serde::{Deserialize, Serialize};
 use tauri::Url;
-use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, net::TcpListener};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    net::TcpListener,
+};
 use tracing::debug;
 
 use crate::app::client_api::{ApiEndpoints, UserInformation};
@@ -24,19 +30,22 @@ pub struct ClientAccount {
     #[serde(rename = "refreshToken")]
     refresh_token: RefreshToken,
     #[serde(flatten, default)]
-    user_information: Option<UserInformation>
+    user_information: Option<UserInformation>,
 }
 
 impl ClientAccount {
-
     pub fn is_expired(&self) -> bool {
-        self.expires_at < SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
+        self.expires_at
+            < SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
     }
 
-    pub fn authenticate_request(&self, request: reqwest::RequestBuilder) -> Result<reqwest::RequestBuilder> {
+    pub fn authenticate_request(
+        &self,
+        request: reqwest::RequestBuilder,
+    ) -> Result<reqwest::RequestBuilder> {
         if self.is_expired() {
             bail!("Your client account session has expired! Re-login!");
         }
@@ -65,17 +74,15 @@ impl ClientAccount {
     pub fn get_user_information(&self) -> Option<UserInformation> {
         self.user_information.clone()
     }
-    
+
     pub async fn renew(self) -> Result<ClientAccount> {
         ClientAccountAuthenticator::renew(self.refresh_token).await
     }
-
 }
 
 pub struct ClientAccountAuthenticator;
 
 impl ClientAccountAuthenticator {
-
     pub async fn start_auth<F>(on_url: F) -> Result<ClientAccount>
     where
         F: Fn(&String),
@@ -86,7 +93,7 @@ impl ClientAccountAuthenticator {
         // Setup a local redirect server
         let (redirect_uri, listener) = Self::setup_local_redirect().await?;
         client = client.set_redirect_uri(redirect_uri);
-        
+
         let (pkce_code_challenge, pkce_code_verifier) = PkceCodeChallenge::new_random_sha256();
 
         // Generate the authorization URL
@@ -121,19 +128,22 @@ impl ClientAccountAuthenticator {
                 .duration_since(UNIX_EPOCH)
                 .context("Time went backwards")?
                 .as_secs(),
-            refresh_token: token.refresh_token().context("Missing refresh token")?.clone(),
+            refresh_token: token
+                .refresh_token()
+                .context("Missing refresh token")?
+                .clone(),
             user_information: None,
         })
     }
 
     pub async fn renew(refresh_token: RefreshToken) -> Result<ClientAccount> {
         let (client, http_client) = Self::initialize_oauth().await?;
-        
+
         let token = client
             .exchange_refresh_token(&refresh_token)
             .request_async(&http_client)
             .await?;
-        
+
         debug!("OAuth returned the following token:\n{token:?}\n");
         let expires_at = SystemTime::now() + token.expires_in().context("Missing expires_in")?;
 
@@ -143,25 +153,50 @@ impl ClientAccountAuthenticator {
                 .duration_since(UNIX_EPOCH)
                 .context("Time went backwards")?
                 .as_secs(),
-            refresh_token: token.refresh_token().context("Missing refresh token")?.clone(),
+            refresh_token: token
+                .refresh_token()
+                .context("Missing refresh token")?
+                .clone(),
             user_information: None,
         })
     }
 
-    async fn initialize_oauth() -> Result<(oauth2::Client<oauth2::StandardErrorResponse<oauth2::basic::BasicErrorResponseType>, oauth2::StandardTokenResponse<oauth2::EmptyExtraTokenFields, oauth2::basic::BasicTokenType>, oauth2::StandardTokenIntrospectionResponse<oauth2::EmptyExtraTokenFields, oauth2::basic::BasicTokenType>, oauth2::StandardRevocableToken, oauth2::StandardErrorResponse<oauth2::RevocationErrorResponseType>, oauth2::EndpointSet, oauth2::EndpointNotSet, oauth2::EndpointNotSet, oauth2::EndpointNotSet, oauth2::EndpointSet> , reqwest::Client)> {
+    async fn initialize_oauth() -> Result<(
+        oauth2::Client<
+            oauth2::StandardErrorResponse<oauth2::basic::BasicErrorResponseType>,
+            oauth2::StandardTokenResponse<
+                oauth2::EmptyExtraTokenFields,
+                oauth2::basic::BasicTokenType,
+            >,
+            oauth2::StandardTokenIntrospectionResponse<
+                oauth2::EmptyExtraTokenFields,
+                oauth2::basic::BasicTokenType,
+            >,
+            oauth2::StandardRevocableToken,
+            oauth2::StandardErrorResponse<oauth2::RevocationErrorResponseType>,
+            oauth2::EndpointSet,
+            oauth2::EndpointNotSet,
+            oauth2::EndpointNotSet,
+            oauth2::EndpointNotSet,
+            oauth2::EndpointSet,
+        >,
+        reqwest::Client,
+    )> {
         let client_id = ClientId::new(OAUTH_CLIENT_ID.to_string());
-        let auth_url = AuthUrl::new(AUTH_URL.to_string()).context("Invalid authorization endpoint URL")?;
-        let token_url = TokenUrl::new(TOKEN_URL.to_string()).context("Invalid token endpoint URL")?;
-        
+        let auth_url =
+            AuthUrl::new(AUTH_URL.to_string()).context("Invalid authorization endpoint URL")?;
+        let token_url =
+            TokenUrl::new(TOKEN_URL.to_string()).context("Invalid token endpoint URL")?;
+
         let client = BasicClient::new(client_id)
             .set_auth_uri(auth_url)
             .set_token_uri(token_url);
-        
+
         let http_client = reqwest::ClientBuilder::new()
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .context("Client should build")?;
-        
+
         Ok((client, http_client))
     }
 
@@ -169,10 +204,13 @@ impl ClientAccountAuthenticator {
         let listener = TcpListener::bind("127.0.0.1:0")
             .await
             .context("Failed to bind to a random port")?;
-        let local_addr = listener.local_addr().context("Failed to get the local address")?;
-        let redirect_uri = RedirectUrl::new(format!("http://{}:{}/", local_addr.ip(), local_addr.port()))
-            .context("Invalid redirect URL")?;
-        
+        let local_addr = listener
+            .local_addr()
+            .context("Failed to get the local address")?;
+        let redirect_uri =
+            RedirectUrl::new(format!("http://{}:{}/", local_addr.ip(), local_addr.port()))
+                .context("Invalid redirect URL")?;
+
         Ok((redirect_uri, listener))
     }
 

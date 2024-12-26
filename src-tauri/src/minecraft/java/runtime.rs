@@ -16,18 +16,17 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
- 
+
+use anyhow::{bail, Result};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use tokio::sync::oneshot::Receiver;
-use tokio::process::{Child, Command};
-use anyhow::{Result, bail};
 use tokio::io::AsyncReadExt;
+use tokio::process::{Child, Command};
+use tokio::sync::oneshot::Receiver;
 use tracing::debug;
 pub struct JavaRuntime(PathBuf);
 
 impl JavaRuntime {
-
     pub fn new(path: PathBuf) -> JavaRuntime {
         JavaRuntime(path)
     }
@@ -38,28 +37,33 @@ impl JavaRuntime {
         }
 
         debug!("Executing Java runtime: {}", self.0.display());
-        
+
         let mut command = Command::new(&self.0);
         command.current_dir(game_dir);
         command.args(arguments);
 
-        command
-            .stderr(Stdio::piped())
-            .stdout(Stdio::piped());
+        command.stderr(Stdio::piped()).stdout(Stdio::piped());
 
         let child = command.spawn()?;
         Ok(child)
     }
 
-    pub async fn handle_io<D: Send + Sync>(&self, running_task: &mut Child, on_stdout: fn(&D, &[u8]) -> Result<()>, on_stderr: fn(&D, &[u8]) -> Result<()>, terminator: Receiver<()>, data: &D) -> Result<()> {
+    pub async fn handle_io<D: Send + Sync>(
+        &self,
+        running_task: &mut Child,
+        on_stdout: fn(&D, &[u8]) -> Result<()>,
+        on_stderr: fn(&D, &[u8]) -> Result<()>,
+        terminator: Receiver<()>,
+        data: &D,
+    ) -> Result<()> {
         let mut stdout = running_task.stdout.take().unwrap();
         let mut stderr = running_task.stderr.take().unwrap();
-    
+
         let mut stdout_buf = vec![0; 1024];
         let mut stderr_buf = vec![0; 1024];
-    
+
         tokio::pin!(terminator);
-    
+
         loop {
             tokio::select! {
                 read_len = stdout.read(&mut stdout_buf) => {
@@ -85,5 +89,4 @@ impl JavaRuntime {
         }
         Ok(())
     }
-
 }

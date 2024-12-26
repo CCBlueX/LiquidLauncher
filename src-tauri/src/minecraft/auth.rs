@@ -20,7 +20,9 @@
 use anyhow::Result;
 
 use azalea_auth::{
-    cache::ExpiringValue, get_minecraft_token, get_ms_auth_token, get_ms_link_code, get_profile, refresh_ms_auth_token, AccessTokenResponse, AuthError, MinecraftAuthResponse, ProfileResponse, XboxLiveAuth
+    cache::ExpiringValue, get_minecraft_token, get_ms_auth_token, get_ms_link_code, get_profile,
+    refresh_ms_auth_token, AccessTokenResponse, AuthError, MinecraftAuthResponse, ProfileResponse,
+    XboxLiveAuth,
 };
 use serde::{Deserialize, Serialize};
 use tracing::{error, trace};
@@ -84,12 +86,12 @@ impl MinecraftAccount {
         F: Fn(&String, &String),
     {
         // Request new device code from Azure
-        let device_code = get_ms_link_code(&HTTP_CLIENT, Some(AZURE_CLIENT_ID), Some(AZURE_SCOPE))
-            .await?;
+        let device_code =
+            get_ms_link_code(&HTTP_CLIENT, Some(AZURE_CLIENT_ID), Some(AZURE_SCOPE)).await?;
         on_code(&device_code.verification_uri, &device_code.user_code);
 
-        let msa: ExpiringValue<AccessTokenResponse> = get_ms_auth_token(&HTTP_CLIENT, device_code, Some(AZURE_CLIENT_ID))
-            .await?;
+        let msa: ExpiringValue<AccessTokenResponse> =
+            get_ms_auth_token(&HTTP_CLIENT, device_code, Some(AZURE_CLIENT_ID)).await?;
 
         login_msa(msa).await
     }
@@ -97,7 +99,7 @@ impl MinecraftAccount {
     /// Authenticate using an offline account
     /// Generates UUID from following format: OfflinePlayer:<username>
     /// Java/Kotlin equivalent: UUID.nameUUIDFromBytes("OfflinePlayer:$name".toByteArray())
-    /// 
+    ///
     // Explanation: [nameUUIDFromBytes] uses MD5 to generate a UUID from the input bytes.
     // The input bytes are the UTF-8 bytes of the string "OfflinePlayer:$name".
     // The UUID generated is a version 3 UUID, which is based on the MD5 hash of the input bytes.
@@ -119,7 +121,7 @@ impl MinecraftAccount {
         // Return offline account
         MinecraftAccount::OfflineAccount {
             name: username,
-            id: uuid
+            id: uuid,
         }
     }
 
@@ -139,14 +141,21 @@ impl MinecraftAccount {
                         msa,
                         xbl,
                         mca,
-                        profile
+                        profile,
                     });
                 }
 
                 // Refresh Microsoft auth token if necessary
                 let msa = if msa.is_expired() {
                     trace!("refreshing Microsoft auth token");
-                    match refresh_ms_auth_token(&HTTP_CLIENT, &msa.data.refresh_token, Some(AZURE_CLIENT_ID), Some(AZURE_SCOPE)).await {
+                    match refresh_ms_auth_token(
+                        &HTTP_CLIENT,
+                        &msa.data.refresh_token,
+                        Some(AZURE_CLIENT_ID),
+                        Some(AZURE_SCOPE),
+                    )
+                    .await
+                    {
                         Ok(new_msa) => new_msa,
                         Err(e) => {
                             // can't refresh, re-authenticate required
@@ -161,16 +170,18 @@ impl MinecraftAccount {
                 return Ok(login_msa(msa).await?);
             }
             MinecraftAccount::LegacyMsaAccount { ms_auth, .. } => {
-                let msa = refresh_ms_auth_token(&HTTP_CLIENT, 
-                    &ms_auth.refresh_token, Some(AZURE_CLIENT_ID), Some(AZURE_SCOPE)).await?;
+                let msa = refresh_ms_auth_token(
+                    &HTTP_CLIENT,
+                    &ms_auth.refresh_token,
+                    Some(AZURE_CLIENT_ID),
+                    Some(AZURE_SCOPE),
+                )
+                .await?;
                 return Ok(login_msa(msa).await?);
             }
             MinecraftAccount::OfflineAccount { name, id, .. } => {
-                Ok(MinecraftAccount::OfflineAccount {
-                    name,
-                    id
-                })
-            },
+                Ok(MinecraftAccount::OfflineAccount { name, id })
+            }
         };
     }
 
@@ -186,7 +197,6 @@ impl MinecraftAccount {
             MinecraftAccount::OfflineAccount { name, .. } => name,
         }
     }
-
 }
 
 async fn login_msa(msa: ExpiringValue<AccessTokenResponse>) -> Result<MinecraftAccount, AuthError> {
@@ -201,6 +211,6 @@ async fn login_msa(msa: ExpiringValue<AccessTokenResponse>) -> Result<MinecraftA
         msa,
         xbl: minecraft.xbl,
         mca: minecraft.mca,
-        profile
+        profile,
     })
 }

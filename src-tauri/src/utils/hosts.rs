@@ -4,7 +4,12 @@ use anyhow::{bail, Context, Result};
 use tokio::fs;
 
 const HOSTS_PATH: &str = "Windows\\System32\\drivers\\etc\\hosts";
-const HOSTS: [&str; 4] = ["mojang.com", "minecraft.net", "liquidbounce.net", "ccbluex.net"];
+const HOSTS: [&str; 4] = [
+    "mojang.com",
+    "minecraft.net",
+    "liquidbounce.net",
+    "ccbluex.net",
+];
 
 /// We have noticed many user have modified the hosts file to block the Minecraft authentication server.
 /// This is likely by using a third-party program. Because LiquidLauncher requires access to the authentication server, we have to modify the hosts file to allow access.
@@ -23,10 +28,12 @@ pub async fn check_hosts_file() -> Result<()> {
     }
 
     // Check if the hosts file has been modified
-    let hosts_file = fs::read_to_string(&hosts_path).await
+    let hosts_file = fs::read_to_string(&hosts_path)
+        .await
         .context(format!("Failed to read hosts file at {}", hosts_path))?;
 
-    let flagged_entries = hosts_file.lines()
+    let flagged_entries = hosts_file
+        .lines()
         .filter(|line| {
             if line.starts_with('#') {
                 return false;
@@ -45,7 +52,7 @@ pub async fn check_hosts_file() -> Result<()> {
             HOSTS.iter().any(|&entry| domain.contains(entry))
         })
         .collect::<Vec<_>>();
-    
+
     if !flagged_entries.is_empty() {
         bail!(
             "The hosts file has been modified to block the Minecraft authentication server.\n\
@@ -53,8 +60,8 @@ pub async fn check_hosts_file() -> Result<()> {
             Please remove the following entries from the hosts file:\n\
             {}\n\n\
             The file is located at:\n\
-            {}", 
-            flagged_entries.join("\n"), 
+            {}",
+            flagged_entries.join("\n"),
             hosts_path
         );
     }
