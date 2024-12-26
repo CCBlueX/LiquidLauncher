@@ -1,3 +1,4 @@
+use anyhow::bail;
 use crate::utils::{ARCHITECTURE, OS};
 use serde::{Deserialize, Serialize};
 
@@ -48,10 +49,21 @@ impl JavaDistribution {
             }
             JavaDistribution::GraalVM => {
                 let os_name = OS.get_graal_name()?;
-                format!(
-                    "https://download.oracle.com/graalvm/{}/latest/graalvm-jdk-{}_{}-{}_bin.{}",
-                    jre_version, jre_version, os_name, os_arch, archive_type
-                )
+
+                if jre_version > &17 {
+                    format!(
+                        "https://download.oracle.com/graalvm/{}/latest/graalvm-jdk-{}_{}-{}_bin.{}",
+                        jre_version, jre_version, os_name, os_arch, archive_type
+                    )
+                } else if jre_version == &17 {
+                    // Use archive link for 17.0.12
+                    format!(
+                        "https://download.oracle.com/graalvm/17/archive/graalvm-jdk-17.0.12_{}-{}_bin.{}",
+                        os_name, os_arch, archive_type
+                    )
+                } else {
+                    bail!("GraalVM only supports Java 17+")
+                }
             }
         })
     }
