@@ -25,7 +25,7 @@
             await options.store();
         } catch (error) {
             console.error("Failed to authenticate client account:", error);
-            alert(`Failed to authenticate client account: ${error.message}`);
+            alert(`Failed to authenticate client account: ${error}`);
         }
     }
 

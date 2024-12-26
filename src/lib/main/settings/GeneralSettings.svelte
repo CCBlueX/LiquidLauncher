@@ -21,7 +21,7 @@
             alert("Data cleared.");
         } catch (error) {
             console.error("Failed to clear data:", error);
-            alert(`Failed to clear data: ${error.message}`);
+            alert(`Failed to clear data: ${error}`);
         }
     }
 
