@@ -465,13 +465,37 @@
         />
 
         {#if activeSettingsTab === "General"}
-            <FileSelectorSetting
-                    title="JVM Location"
-                    placeholder="Internal"
-                    bind:value={options.start.customJavaPath}
-                    filters={[{ name: "javaw", extensions: [] }]}
-                    windowTitle="Select custom Java wrapper"
+            <SelectSetting
+                    title="JVM Distribution"
+                    items={[
+                { value: "automatic", text: "Automatic" },
+                { value: "manual", text: "Manual" },
+                { value: "custom", text: "Custom" }
+            ]}
+                    bind:value={options.start.javaDistribution.type}
             />
+
+            {#if options.start.javaDistribution.type === "manual"}
+                <SelectSetting
+                        title="Distribution"
+                        items={[
+                            { value: "temurin", text: "Eclipse Temurin" },
+                            { value: "graalvm", text: "GraalVM" }
+                        ]}
+                        bind:value={options.start.javaDistribution.value}
+                />
+            {/if}
+
+            {#if options.start.javaDistribution.type === "custom"}
+                <FileSelectorSetting
+                        title="Custom JVM Path"
+                        placeholder="Select Java wrapper location"
+                        bind:value={options.start.javaDistribution.value}
+                        filters={[{ name: "javaw", extensions: [] }]}
+                        windowTitle="Select custom Java wrapper"
+                />
+            {/if}
+
             <DirectorySelectorSetting
                     title="Data Location"
                     placeholder={$buildState.defaultDataFolder}

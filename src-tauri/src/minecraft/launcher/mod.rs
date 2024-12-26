@@ -30,7 +30,7 @@ use tracing::*;
 use crate::app::client_api::LaunchManifest;
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
-use crate::minecraft::java::JavaRuntime;
+use crate::minecraft::java::{DistributionSelection, JavaRuntime};
 use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
 use crate::{join_and_mkdir, join_and_mkdir_vec};
 use crate::{
@@ -164,6 +164,9 @@ pub async fn launch<D: Send + Sync>(
         &features,
     )?;
 
+    // Custom Arguments
+    command_arguments.extend(launching_parameter.jvm_args.iter().cloned());
+
     // Main class
     command_arguments.push(
         version_profile
@@ -248,9 +251,10 @@ pub async fn launch<D: Send + Sync>(
 }
 
 pub struct StartParameter {
+    pub java_distribution: DistributionSelection,
+    pub jvm_args: Vec<String>,
     pub memory: u64,
     pub custom_data_path: Option<String>,
-    pub custom_java_path: Option<String>,
     pub auth_player_name: String,
     pub auth_uuid: String,
     pub auth_access_token: String,

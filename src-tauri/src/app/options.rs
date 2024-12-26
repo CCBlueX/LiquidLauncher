@@ -23,6 +23,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 use crate::{auth::ClientAccount, minecraft::auth::MinecraftAccount};
+use crate::minecraft::java::{DistributionSelection};
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Options {
@@ -42,8 +43,8 @@ pub(crate) struct StartOptions {
     pub minecraft_account: Option<MinecraftAccount>,
     #[serde(rename = "customDataPath", default)]
     pub custom_data_path: String,
-    #[serde(rename = "customJavaPath", default)]
-    pub custom_java_path: String,
+    #[serde(rename = "javaDistribution", default)]
+    pub java_distribution: DistributionSelection,
     #[serde(rename = "jvmArgs", default)]
     pub jvm_args: Option<Vec<String>>,
     #[serde(rename = "memory", default = "default_memory")]
@@ -106,7 +107,7 @@ impl Options {
         Self {
             start_options: StartOptions {
                 custom_data_path: legacy.custom_data_path,
-                custom_java_path: legacy.custom_java_path,
+                java_distribution: DistributionSelection::default(),
                 minecraft_account: legacy.current_account,
                 jvm_args: None,  // No equivalent in legacy format
                 memory: 4096,  // No equivalent in legacy format - default to 4GB
@@ -141,8 +142,8 @@ impl Default for StartOptions {
     fn default() -> Self {
         Self {
             minecraft_account: None,
+            java_distribution: DistributionSelection::default(),
             custom_data_path: String::new(),
-            custom_java_path: String::new(),
             jvm_args: None,
             memory: 4096
         }

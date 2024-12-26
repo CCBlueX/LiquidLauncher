@@ -287,9 +287,10 @@ pub(crate) async fn run_client(
     let xuid = Uuid::new_v4().to_string();
 
     let parameters = StartParameter {
+        java_distribution: options.start_options.java_distribution,
+        jvm_args: options.start_options.jvm_args.unwrap_or_else(|| vec![]),
         memory: options.start_options.memory,
         custom_data_path: if !options.start_options.custom_data_path.is_empty() { Some(options.start_options.custom_data_path) } else { None },
-        custom_java_path: if !options.start_options.custom_java_path.is_empty() { Some(options.start_options.custom_java_path) } else { None },
         auth_player_name: account_name,
         auth_uuid: uuid,
         auth_access_token: token,

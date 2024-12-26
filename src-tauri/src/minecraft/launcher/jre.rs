@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 use crate::{
     app::client_api::LaunchManifest,
@@ -9,7 +9,7 @@ use crate::{
         progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
     },
 };
-
+use crate::minecraft::java::DistributionSelection;
 use super::{LauncherData, StartParameter};
 
 pub async fn load_jre<D: Send + Sync>(
@@ -18,20 +18,25 @@ pub async fn load_jre<D: Send + Sync>(
     launching_parameter: &StartParameter,
     launcher_data: &LauncherData<D>,
 ) -> Result<PathBuf> {
-    if let Some(jre) = &launching_parameter.custom_java_path {
-        return Ok(PathBuf::from(jre));
+    let distribution = match &launching_parameter.java_distribution {
+        DistributionSelection::Automatic => &manifest.build.jre_distribution,
+        DistributionSelection::Custom(path) => return Ok(PathBuf::from(path)),
+        DistributionSelection::Manual(distribution) => distribution
+    };
+
+    // Check if distribution supports JRE version
+    if !distribution.supports_version(manifest.build.jre_version) {
+        return Err(anyhow!("The selected JRE distribution does not support the required version of Java."));
     }
 
     launcher_data.progress_update(ProgressUpdate::set_label("Checking for JRE..."));
 
-    if let Ok(jre) = find_java_binary(
+    if let Ok(path) = find_java_binary(
         runtimes_folder,
-        &manifest.build.jre_distribution,
+        distribution,
         &manifest.build.jre_version,
-    )
-    .await
-    {
-        return Ok(jre);
+    ).await {
+        return Ok(path);
     }
 
     launcher_data.log("Downloading JRE...");
@@ -39,7 +44,7 @@ pub async fn load_jre<D: Send + Sync>(
 
     jre_downloader::jre_download(
         &runtimes_folder,
-        &manifest.build.jre_distribution,
+        distribution,
         &manifest.build.jre_version,
         |a, b| {
             launcher_data.progress_update(ProgressUpdate::set_for_step(
@@ -48,6 +53,5 @@ pub async fn load_jre<D: Send + Sync>(
                 get_max(1),
             ));
         },
-    )
-    .await
+    ).await
 }
