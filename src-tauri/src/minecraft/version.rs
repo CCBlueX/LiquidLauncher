@@ -504,10 +504,21 @@ pub struct Library {
 impl Library {
 
     fn get_identifier(&self) -> String {
-        self.name.split(':')
-            .take(2)
-            .collect::<Vec<&str>>()
-            .join(":")
+        let parts: Vec<&str> = self.name.split(':').collect();
+        match parts.len() {
+            3 => {
+                // Standard format: group:name:version
+                format!("{}:{}", parts[0], parts[1])
+            }
+            4 => {
+                // Format with classifier: group:name:version:classifier
+                format!("{}:{}:{}", parts[0], parts[1], parts[3])
+            }
+            _ => {
+                // Fallback for unexpected formats - use the whole name
+                self.name.clone()
+            }
+        }
     }
 
     pub fn get_library_download(&self) -> Result<LibraryDownloadInfo> {
