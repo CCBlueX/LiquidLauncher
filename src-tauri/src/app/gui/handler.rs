@@ -284,7 +284,7 @@ fn handle_stdout(window: &ShareableWindow, data: &[u8]) -> anyhow::Result<()> {
         return Ok(()); // ignore empty lines
     }
 
-    info!("{}", data);
+    info!("{}", data.strip_suffix("\n").unwrap_or(&data));
     window
         .lock()
         .map_err(|_| anyhow!("Window lock is poisoned"))?
@@ -298,7 +298,7 @@ fn handle_stderr(window: &ShareableWindow, data: &[u8]) -> anyhow::Result<()> {
         return Ok(()); // ignore empty lines
     }
 
-    error!("{}", data);
+    error!("{}", data.strip_suffix("\n").unwrap_or(&data));
     window
         .lock()
         .map_err(|_| anyhow!("Window lock is poisoned"))?
