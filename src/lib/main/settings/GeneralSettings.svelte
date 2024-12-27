@@ -37,7 +37,6 @@
     }
 
     function resetJavaDistribution() {
-        console.log(options.start.javaDistribution.type);
         if (options.start.javaDistribution.type === "custom") {
             options.start.javaDistribution.value = "";
         } else if (options.start.javaDistribution.type === "manual") {
