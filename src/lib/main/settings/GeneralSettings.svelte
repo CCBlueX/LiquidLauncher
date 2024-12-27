@@ -36,6 +36,15 @@
         }
     }
 
+    function resetJavaDistribution() {
+        console.log(options.start.javaDistribution.type);
+        if (options.start.javaDistribution.type === "custom") {
+            options.start.javaDistribution.value = "";
+        } else if (options.start.javaDistribution.type === "manual") {
+            options.start.javaDistribution.value = "temurin";
+        }
+    }
+
     onMount(async () => {
         const [version, folder, memory] = await Promise.all([
             invoke("get_launcher_version"),
@@ -56,6 +65,7 @@
         { value: "manual", text: "Manual" },
         { value: "custom", text: "Custom" },
     ]}
+    on:change={resetJavaDistribution}
     bind:value={options.start.javaDistribution.type}
 />
 
