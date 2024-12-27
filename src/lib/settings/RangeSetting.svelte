@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from "svelte";
+    import { beforeUpdate, onMount } from "svelte";
     import noUiSlider from "nouislider";
     import "nouislider/dist/nouislider.min.css";
     import "./RangeSettingStyles.css";
@@ -23,6 +23,7 @@
     }
 
     let slider = null;
+
     onMount(() => {
         const start = value;
 
@@ -34,22 +35,39 @@
                 min: min,
                 max: max,
             },
-            step: step
+            step: step,
         });
 
-        slider.noUiSlider.on("update", values => {
+        slider.noUiSlider.on("update", (values) => {
             value = parseFloat(values[0]);
         });
     });
 
-    let v = 2000;
-</script>
+    beforeUpdate(() => {
+        if (!slider) return;
 
+        console.log("Ok");
+
+        slider.noUiSlider.updateOptions({
+            start: value,
+            range: {
+                min,
+                max,
+            },
+        });
+    });
+</script>
 
 <div class="range-setting">
     <div class="title">{title}</div>
     <div class="value">
-        <span class="input-value" contenteditable="true" bind:textContent={value} on:keypress={updateSliderKeypress} on:blur={updateSliderBlur}></span>
+        <span
+            class="input-value"
+            contenteditable="true"
+            bind:textContent={value}
+            on:keypress={updateSliderKeypress}
+            on:blur={updateSliderBlur}
+        ></span>
         <span class="value-suffix">{valueSuffix}</span>
     </div>
     <div bind:this={slider} class="slider" />
