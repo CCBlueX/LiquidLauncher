@@ -1,6 +1,6 @@
 <script>
     import {open as dialogOpen} from "@tauri-apps/plugin-dialog";
-    import {openPath} from "@tauri-apps/plugin-opener";
+    import {revealItemInDir} from "@tauri-apps/plugin-opener";
 
     export let title;
     export let windowTitle;
@@ -21,7 +21,7 @@
     }
 
     function handleDirectoryOpen(e) {
-        openPath(value || placeholder);
+        revealItemInDir(value || placeholder);
     }
 </script>
 
