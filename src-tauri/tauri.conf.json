@@ -1,5 +1,5 @@
 {
-  "productName": "liquidlauncher",
+  "productName": "LiquidLauncher",
   "version": "0.3.1",
   "identifier": "net.ccbluex.liquidlauncher",
   "build": {
@@ -61,7 +61,7 @@
     "licenseFile": "../LICENSE",
     "resources": [],
     "targets": "all",
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": "v1Compatible",
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
@@ -87,7 +87,8 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU1QkM5MTlDREQ4NkEzNjMKUldSam80YmRuSkc4NVNxS2MzYVZPN1I4a283RkdsS0lPTjVjRWlxQ1JhdzFZUkRtc0c1eEtqSzQK",
       "endpoints": [
-        "https://api.liquidbounce.net/api/v1/launcher/bin/{{target}}/{{arch}}"
+        "https://github.com/CCBlueX/LiquidLauncher/releases/latest/download/latest.json",
+        "https://api.liquidbounce.net/api/v1/launcher/releases/{{target}}/{{current_version}}"
       ]
     }
   }
