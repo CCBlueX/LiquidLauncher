@@ -46,8 +46,6 @@
     beforeUpdate(() => {
         if (!slider) return;
 
-        console.log("Ok");
-
         slider.noUiSlider.updateOptions({
             start: value,
             range: {
