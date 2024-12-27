@@ -162,10 +162,16 @@
 
     async function authenticate() {
         if (options.premium.account) {
-            progressState.text = "Authenticating client account...";
-            options.premium.account = await invoke("client_account_update", {
-                account: options.premium.account
-            });
+            try {
+                progressState.text = "Authenticating client account...";
+                options.premium.account = await invoke("client_account_update", {
+                    account: options.premium.account
+                });
+            } catch (e) {
+                console.error("Failed to authenticate client account:", e);
+                log = [...log, `Failed to authenticate client account: ${e}`];
+                options.premium.account = null;
+            }
         }
 
         progressState.text = "Refreshing minecraft session...";
@@ -175,7 +181,6 @@
             });
         } catch (e) {
             options.start.account = null;
-            running = false;
             throw e;
         }
     }
