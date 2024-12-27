@@ -16,8 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
-
-// #![feature(exit_status_error)] - wait for feature to be stable
+#![feature(duration_constructors)]
 #![cfg_attr(
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
@@ -65,9 +64,12 @@ static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
 pub fn main() -> Result<()> {
     use tracing_subscriber::{fmt, EnvFilter};
 
-    let log_folder = LAUNCHER_DIRECTORY.data_dir().join("logs");
+    let logs = LAUNCHER_DIRECTORY.data_dir().join("logs");
+    if let Err(e) = utils::clean_directory(&logs, 7) {
+        error!("Failed to clear log folder: {:?}", e);
+    }
 
-    let file_appender = tracing_appender::rolling::hourly(log_folder, "launcher.log");
+    let file_appender = tracing_appender::rolling::daily(logs, "launcher.log");
 
     let subscriber = tracing_subscriber::registry()
         .with(EnvFilter::from("liquidlauncher=debug"))

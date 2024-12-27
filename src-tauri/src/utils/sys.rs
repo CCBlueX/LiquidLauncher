@@ -23,6 +23,10 @@ use serde::Deserialize;
 use std::fmt::Display;
 use sysinfo::{RefreshKind, System, SystemExt};
 
+use std::fs;
+use std::path::Path;
+use std::time::{Duration, SystemTime};
+
 /// Get the total memory of the system in
 pub fn sys_memory() -> u64 {
     let sys = System::new_with_specifics(RefreshKind::new().with_memory());
@@ -147,4 +151,29 @@ impl Display for Architecture {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.get_simple_name().unwrap())
     }
+}
+
+pub fn clean_directory(
+    path: &Path,
+    max_age_days: u64,
+) -> Result<()> {
+    let now = SystemTime::now();
+    let max_age = Duration::from_days(max_age_days);
+
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let metadata = entry.metadata()?;
+
+        if !metadata.is_file() {
+            continue;
+        }
+
+        if let Ok(modified) = metadata.modified() {
+            if now.duration_since(modified)? > max_age {
+                let _ = fs::remove_file(entry.path());
+            }
+        }
+    }
+
+    Ok(())
 }
