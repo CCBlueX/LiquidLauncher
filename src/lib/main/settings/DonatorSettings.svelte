@@ -4,19 +4,10 @@
     import LiquidBounceAccount from "../../settings/LiquidBounceAccount.svelte";
     import Description from "../../settings/Description.svelte";
     import ButtonSetting from "../../settings/ButtonSetting.svelte";
-    import { open as shellOpen } from "@tauri-apps/plugin-shell";
     import {invoke} from "@tauri-apps/api/core";
-    import {listen} from "@tauri-apps/api/event";
+    import {openUrl} from "@tauri-apps/plugin-opener";
 
     export let options;
-
-    listen("auth_url", async (event) => {
-        try {
-            await shellOpen(event.payload);
-        } catch (error) {
-            console.error("Failed to open auth URL:", error);
-        }
-    });
 
     async function login() {
         try {
@@ -53,7 +44,7 @@
 
     <ButtonSetting
             text="Manage Account"
-            on:click={() => shellOpen("https://user.liquidbounce.net")}
+            on:click={() => openUrl("https://user.liquidbounce.net")}
             color="#4677FF"
     />
     <ButtonSetting

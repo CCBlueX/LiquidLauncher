@@ -55,7 +55,7 @@ base16ct = {version = "0.2.0", features = ["alloc"] }
 tauri = { version = "^2", features = [] }
 tauri-plugin-process = "^2"
 tauri-plugin-dialog = "^2"
-tauri-plugin-shell = "^2"
+tauri-plugin-opener = "^2"
 tauri-plugin-updater = "^2"
 
 # HTTP library

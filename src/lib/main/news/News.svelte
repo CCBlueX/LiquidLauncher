@@ -1,5 +1,5 @@
 <script>
-    import {open} from "@tauri-apps/plugin-shell";
+    import {openUrl} from "@tauri-apps/plugin-opener";
 
     export let bannerText;
     export let title;
@@ -9,7 +9,7 @@
     export let description;
 
     async function handleShowNews(e) {
-        await open(url);
+        await openUrl(url);
     }
 </script>
 

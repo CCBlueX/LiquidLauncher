@@ -1,10 +1,10 @@
 <script>
-    import {open} from "@tauri-apps/plugin-shell";
     import ModalButton from "./ModalButton.svelte";
     import ModalInput from "./ModalInput.svelte";
 
     import {invoke} from "@tauri-apps/api/core";
     import {listen} from "@tauri-apps/api/event";
+    import {openUrl} from "@tauri-apps/plugin-opener";
 
     export let options;
 
@@ -46,10 +46,6 @@
         microsoftCode = e.payload;
     });
 
-    async function linkMicrosoftOpen() {
-        await open("https://microsoft.com/link");
-    }
-
     function cancelMicrosoft() {
         microsoftCode = null;
     }
@@ -66,7 +62,7 @@
         <div class="title">Microsoft Login</div>
 
         <ModalInput placeholder="Microsoft Code" characterLimit={16} icon="lock" bind:value={microsoftCode} />
-        <ModalButton text="Link" primary={true} on:click={linkMicrosoftOpen} />
+        <ModalButton text="Link" primary={true} on:click={() => openUrl("https://microsoft.com/link")} />
         <ModalButton text="Cancel" primary={false} on:click={cancelMicrosoft} />
     {/if}
 </div>

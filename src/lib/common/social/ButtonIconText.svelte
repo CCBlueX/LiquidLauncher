@@ -1,12 +1,12 @@
 <script>
-    import {open} from "@tauri-apps/plugin-shell";
+    import {openUrl} from "@tauri-apps/plugin-opener";
 
     export let text;
     export let icon;
     export let url;
 
     async function handleClick(e) {
-        await open(url);
+        await openUrl(url);
     }
 </script>
 

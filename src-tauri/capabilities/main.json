@@ -18,7 +18,7 @@
         "dialog:allow-open",
         "dialog:allow-confirm",
         "dialog:allow-ask",
-        "shell:allow-open",
+        "opener:default",
         "process:allow-exit",
         "updater:default"
     ]
