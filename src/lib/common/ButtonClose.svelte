@@ -17,7 +17,9 @@
         width: 48px;
         background-color: transparent;
         border: solid 2px rgba(255, 255, 255, .5);
-        transition: ease background-color .2s;
+        transition: ease .2s;
+        filter: none;
+        transition-property: background-color, filter;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -26,5 +28,6 @@
     
     .button-close:hover {
         background-color: rgba(255, 255, 255, .1);
+        filter: drop-shadow(0px 0px 32px red) drop-shadow(0px 0px 16px black);
     }
 </style>

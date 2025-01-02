@@ -6,6 +6,8 @@
     import {onMount} from "svelte";
     import MainScreen from "./main/MainScreen.svelte";
     import LoginScreen from "./login/LoginScreen.svelte";
+    import { scale } from "svelte/transition";
+    import { expoInOut } from "svelte/easing";
 
     let loading = true;
     let error = null;
@@ -86,7 +88,14 @@
     {#if error}
         <h1 class="error">Error: {error}</h1>
     {:else if loading}
-        <h1>The launcher is loading...</h1>
+    <div class="loader-wrapper" in:scale={{ duration: 200, easing: expoInOut }} out:scale={{ duration: 200, easing: expoInOut }}>
+        <div class="lds-ring">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+    </div>
     {:else if options}
         {#if options.start.account}
             <MainScreen bind:options />
@@ -98,7 +107,9 @@
 
 <style>
     .window {
-        background-color: rgba(0, 0, 0, 0.6);
+        background: 
+    repeating-conic-gradient(rgba(24, 24, 24, 0.5) 0% 25%, rgba(20, 20, 20, 0.5) 0% 50%) 
+      50% / 50px 50px;
         width: 100vw;
         height: 100vh;
         padding: 32px;
@@ -125,6 +136,54 @@
     @media (prefers-color-scheme: light) {
         .window {
             background-color: rgba(0, 0, 0, 0.8);
+        }
+    }
+
+    .loader-wrapper {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translateY(-50%, -50%);
+        width: 32px;
+        height: 32px;
+    }
+    .lds-ring, .lds-ring div {
+        box-sizing: border-box;
+        position: relative;
+        color: white;
+    }
+    .lds-ring {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+    }
+    .lds-ring div {
+        box-sizing: border-box;
+        display: block;
+        position: absolute;
+        width: 25px;
+        height: 25px;
+        margin: 4px;
+        border: 4px solid currentColor;
+        border-radius: 50%;
+        animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+        border-color: currentColor transparent transparent transparent;
+    }
+    .lds-ring div:nth-child(1) {
+        animation-delay: -0.45s;
+    }
+    .lds-ring div:nth-child(2) {
+        animation-delay: -0.3s;
+    }
+    .lds-ring div:nth-child(3) {
+        animation-delay: -0.15s;
+    }
+    @keyframes lds-ring {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
         }
     }
 </style>
