@@ -38,7 +38,7 @@
 
     {#if !options.premium.account.premium}
         <Description
-                description="There appears to be no donation associated with this account. Please link it on the account management page."
+                description="There appears to be no premium associated with this account. Please link it on the account management page."
         />
     {/if}
 
@@ -54,7 +54,7 @@
     />
 {:else}
     <Description
-            description="By donating, you not only support the ongoing development of the client but also receive a donator cape and the ability to bypass ads on the launcher."
+            description="By going premium, you not only support the ongoing development of the client but also receive a cape and the ability to bypass ads on the launcher."
     />
 
     <ButtonSetting
