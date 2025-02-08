@@ -252,7 +252,7 @@
         versionState.branches = branchesData.branches.sort((a, b) =>
             (a === branchesData.defaultBranch ? -1 : b === branchesData.defaultBranch ? 1 : 0));
 
-        if (!options.version.branchName) {
+        if (!options.version.branchName || !versionState.branches.includes(options.version.branchName)) {
             options.version.branchName = branchesData.defaultBranch;
             await options.store();
         }
