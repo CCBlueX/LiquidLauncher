@@ -3,9 +3,15 @@
     import { check } from "@tauri-apps/plugin-updater";
     import { relaunch } from "@tauri-apps/plugin-process";
     import { ask } from "@tauri-apps/plugin-dialog";
-    import {onMount} from "svelte";
+    import Logo from "./common/Logo.svelte";
+    import { onMount } from "svelte";
+    import {Jumper} from "svelte-loading-spinners";
+    import VerticalFlexWrapper from "./common/VerticalFlexWrapper.svelte";
+    import ButtonClose from "./common/ButtonClose.svelte";
+    import TitleBar from "./common/TitleBar.svelte";
     import MainScreen from "./main/MainScreen.svelte";
     import LoginScreen from "./login/LoginScreen.svelte";
+    import LoadingScreen from "./main/LoadingScreen.svelte";
 
     let loading = true;
     let error = null;
@@ -86,7 +92,7 @@
     {#if error}
         <h1 class="error">Error: {error}</h1>
     {:else if loading}
-        <h1>The launcher is loading...</h1>
+        <LoadingScreen />
     {:else if options}
         {#if options.start.account}
             <MainScreen bind:options />
