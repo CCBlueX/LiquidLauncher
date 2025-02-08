@@ -77,7 +77,7 @@ pub async fn setup_assets<'a, D: Send + Sync>(
                         let curr = download_count.fetch_add(1, Ordering::Relaxed);
 
                         if downloaded {
-                            // the progress bar is only being updated when a asset has been downloaded to improve speeds
+                            // the progress bar is only being updated when an asset has been downloaded to improve speeds
                             launcher_data.progress_update(ProgressUpdate::set_for_step(
                                 ProgressUpdateSteps::DownloadAssets,
                                 curr,

@@ -90,7 +90,7 @@ impl ClientAccountAuthenticator {
         // Initialize OAuth client
         let (mut client, http_client) = Self::initialize_oauth().await?;
 
-        // Setup a local redirect server
+        // Set up a local redirect server
         let (redirect_uri, listener) = Self::setup_local_redirect().await?;
         client = client.set_redirect_uri(redirect_uri);
 
@@ -232,7 +232,7 @@ impl ClientAccountAuthenticator {
         reader.read_line(&mut request_line).await?;
 
         let redirect_url = request_line.split_whitespace().nth(1).unwrap();
-        let url = Url::parse(&("http://127.0.0.1".to_string() + redirect_url)).unwrap();
+        let url = Url::parse(&("http://127.0.0.1".to_string() + redirect_url))?;
 
         let code = url
             .query_pairs()

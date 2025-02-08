@@ -381,7 +381,7 @@ where
     #[derive(Deserialize)]
     struct Wrapper(#[serde(deserialize_with = "string_or_struct")] Argument);
 
-    let v = Vec::deserialize(deserializer).unwrap();
+    let v = Vec::deserialize(deserializer)?;
     Ok(v.into_iter().map(|Wrapper(a)| a).collect())
 }
 
@@ -404,7 +404,7 @@ where
 
         fn visit_str<E>(self, value: &str) -> Result<T, E>
         where
-            E: serde::de::Error,
+            E: de::Error,
         {
             Ok(FromStr::from_str(value).unwrap())
         }

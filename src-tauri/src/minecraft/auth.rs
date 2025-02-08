@@ -78,7 +78,7 @@ impl MinecraftAccount {
     /// Authenticate using a Microsoft account
     /// Calls `on_code` with the login code, which should be displayed to the user, and then waits for the user to login.
     ///
-    /// WARNING: This will block until the user logs in. If the user does not login, this might block forever.
+    /// WARNING: This will block until the user logs in. If the user does not log in, this might block forever.
     ///
     /// Returns a `MinecraftAccount::MsaAccount` if successful
     pub async fn auth_msa<F>(on_code: F) -> Result<Self, AuthError>
@@ -127,7 +127,7 @@ impl MinecraftAccount {
 
     /// Refresh access token if necessary
     pub async fn refresh(self) -> Result<MinecraftAccount> {
-        return match self {
+        match self {
             MinecraftAccount::MsaAccount {
                 msa,
                 xbl,
@@ -167,7 +167,7 @@ impl MinecraftAccount {
                     msa
                 };
 
-                return Ok(login_msa(msa).await?);
+                Ok(login_msa(msa).await?)
             }
             MinecraftAccount::LegacyMsaAccount { ms_auth, .. } => {
                 let msa = refresh_ms_auth_token(
@@ -177,12 +177,12 @@ impl MinecraftAccount {
                     Some(AZURE_SCOPE),
                 )
                 .await?;
-                return Ok(login_msa(msa).await?);
+                Ok(login_msa(msa).await?)
             }
             MinecraftAccount::OfflineAccount { name, id, .. } => {
                 Ok(MinecraftAccount::OfflineAccount { name, id })
             }
-        };
+        }
     }
 
     /// Logout the account

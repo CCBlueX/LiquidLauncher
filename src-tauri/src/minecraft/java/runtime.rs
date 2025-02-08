@@ -67,10 +67,10 @@ impl JavaRuntime {
         loop {
             tokio::select! {
                 read_len = stdout.read(&mut stdout_buf) => {
-                    let _ = (on_stdout)(&data, &stdout_buf[..read_len?]);
+                    let _ = on_stdout(&data, &stdout_buf[..read_len?]);
                 },
                 read_len = stderr.read(&mut stderr_buf) => {
-                    let _ = (on_stderr)(&data, &stderr_buf[..read_len?]);
+                    let _ = on_stderr(&data, &stderr_buf[..read_len?]);
                 },
                 _ = &mut terminator => {
                     running_task.kill().await?;

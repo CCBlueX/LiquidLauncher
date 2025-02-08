@@ -78,7 +78,7 @@ impl ProgressUpdate {
         Self::SetMax(max * PER_STEP)
     }
     pub fn set_label<S: AsRef<str>>(str: S) -> Self {
-        return Self::SetLabel(str.as_ref().to_owned());
+        Self::SetLabel(str.as_ref().to_owned())
     }
 }
 

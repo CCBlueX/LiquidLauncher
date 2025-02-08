@@ -172,7 +172,7 @@ pub(crate) async fn install_custom_mod(
         return Ok(());
     }
 
-    return Err("unable to copy custom mod: invalid path".to_string());
+    Err("unable to copy custom mod: invalid path".to_string())
 }
 
 #[tauri::command]

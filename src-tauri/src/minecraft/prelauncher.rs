@@ -305,7 +305,7 @@ pub async fn retrieve_and_copy_mods(
                     let retrieved_bytes = download_file(&direct_url, |a, b| {
                         launcher_data.progress_update(ProgressUpdate::set_for_step(
                             ProgressUpdateSteps::DownloadLiquidBounceMods,
-                            get_progress(mod_idx, a, b) as u64,
+                            get_progress(mod_idx, a, b),
                             max,
                         ))
                     })

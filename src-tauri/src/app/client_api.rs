@@ -205,7 +205,7 @@ pub struct Build {
 ///
 /// Subsystem specific data
 /// This can be used for any subsystem, but for now it is only implemented for Fabric.
-/// It has to be turned into a Enum to be able to decide on it's own for specific data, but for now this is not required.
+/// It has to be turned into an Enum to be able to decide on it's own for specific data, but for now this is not required.
 ///
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SubsystemSpecificData {
