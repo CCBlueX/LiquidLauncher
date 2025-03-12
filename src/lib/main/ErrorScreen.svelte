@@ -5,6 +5,7 @@
     import ButtonClose from "../common/ButtonClose.svelte";
     import { openUrl } from "@tauri-apps/plugin-opener";
     import ButtonCopyClipboard from "../common/ButtonCopyClipboard.svelte";
+    import ButtonSetting from "../settings/ButtonSetting.svelte";
     
     export let error = {
         message: "Unknown error",
@@ -35,18 +36,8 @@
         {/if}
 
         <div class="help-buttons">
-            <button 
-                class="help-button quick-help" 
-                on:click={async () => await openUrl('https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher')}
-            >
-                Quick Help
-            </button>
-            <button 
-                class="help-button contact" 
-                on:click={async () => await openUrl('https://ccbluex.net/contact')}
-            >
-                Contact Support
-            </button>
+            <ButtonSetting text="Quick Help" color="#4677ff" on:click={() => openUrl('https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher')}></ButtonSetting>
+            <ButtonSetting text="Contact Support" color="#45a049" on:click={() => openUrl('https://ccbluex.net/contact')}></ButtonSetting>
         </div>
     </div>
 </VerticalFlexWrapper>
@@ -61,6 +52,7 @@
         max-width: 800px;
         margin: 0 auto;
         color: white;
+        flex: 1;
     }
 
     h1 {
@@ -78,11 +70,15 @@
     .error-details {
         background-color: rgba(0, 0, 0, 0.3);
         padding: 1rem;
-        border-radius: 8px;
+        border-radius: 6px;
         width: 100%;
         margin-bottom: 2rem;
         max-height: 300px;
         overflow: auto;
+    }
+
+    .error-details pre {
+        user-select: all;
     }
 
     .error-header {
@@ -105,31 +101,5 @@
         display: flex;
         gap: 1rem;
         margin-top: 1rem;
-    }
-
-    .help-button {
-        padding: 0.8rem 1.5rem;
-        border-radius: 8px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-        border: none;
-        color: white;
-    }
-
-    .quick-help {
-        background-color: #4677ff;
-    }
-
-    .quick-help:hover {
-        background-color: #3a63d2;
-    }
-
-    .contact {
-        background-color: #45a049;
-    }
-
-    .contact:hover {
-        background-color: #388e3c;
     }
 </style>
