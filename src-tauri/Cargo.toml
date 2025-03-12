@@ -59,7 +59,7 @@ tauri-plugin-opener = "^2"
 tauri-plugin-updater = "^2"
 
 # HTTP library
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", default-features = false, features = ["http2", "rustls-tls", "charset", "gzip", "brotli", "zstd", "deflate", "json"] }
 
 # Framework for serializing and deserializing data
 serde = { version = "1.0", features = ["derive"] }

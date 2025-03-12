@@ -77,7 +77,7 @@ pub async fn open_download_page(
 
 async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<String> {
     // Find download_view window from the window manager
-    let mut download_view = {
+    let download_view = {
         let window = window
             .lock()
             .map_err(|_| anyhow!("Failed to lock window"))?;
