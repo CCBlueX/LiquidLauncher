@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
-
 use crate::{utils, HTTP_CLIENT, LAUNCHER_VERSION};
+use anyhow::Error;
 use backon::{ExponentialBuilder, Retryable};
 use tracing::{info, warn};
 
@@ -46,9 +46,10 @@ pub(crate) async fn check_health() -> Result<(), String> {
             warn!("Failed to check health. Retrying in {:?}. Error: {}", dur, err);
         })
         .await
-        .map_err(|e| format!("unable to connect to api.liquidbounce.net: {:}", e))?
+        .map_err(|e| format!("unable to connect to api.liquidbounce.net: {:?}", Into::<Error>::into(e)))?
         .error_for_status()
-        .map_err(|e| format!("api.liquidbounce.net returned an error: {:}", e))?;
+        .map_err(|e| format!("api.liquidbounce.net returned an error: {:?}", Into::<Error>::into(e)))?;
+
     info!("Online status check successful");
     Ok(())
 }
