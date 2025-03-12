@@ -70,6 +70,7 @@ azalea-auth = { git = "https://github.com/CCBlueX/azalea.git", branch = "custom_
 
 md5 = "0.7.0"
 oauth2 = "5.0.0-alpha.4"
+tauri-plugin-clipboard-manager = "2.2.2"
 
 [features]
 # by default Tauri runs in production mode

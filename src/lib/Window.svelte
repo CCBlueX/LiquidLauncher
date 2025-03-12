@@ -12,6 +12,7 @@
     import MainScreen from "./main/MainScreen.svelte";
     import LoginScreen from "./login/LoginScreen.svelte";
     import LoadingScreen from "./main/LoadingScreen.svelte";
+    import ErrorScreen from "./main/ErrorScreen.svelte";
 
     let loading = true;
     let error = null;
@@ -53,12 +54,13 @@
                 ...await invoke("get_options")
             };
             console.debug("Options loaded:", options);
+        } catch (e) {
+            console.error("Failed to load options:", e);
 
-            loading = false;
-        } catch (error) {
-            console.error("Failed to load options:", error);
-            loading = false;
-            error = "Failed to load launcher options";
+            error = {
+                message: "Failed to load launcher options",
+                error: e
+            };
         }
     }
 
@@ -66,23 +68,19 @@
         try {
             await invoke("check_health");
             console.info("Health Check passed");
-        } catch (error) {
-            const message = error.toString().replace(/^"/, '').replace(/"$/, '');
-            console.error("Health check failed:", message);
-            alert(message.replace(/\\n/g, "\n"));
-            window.open("https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher", "_blank");
+        } catch (e) {
+            console.error("Health check failed", e);
+            error = {
+                message: "Failed to establish connection with LiquidBounce API",
+                error: e
+            };
         }
     }
 
     onMount(async () => {
-        try {
-            await Promise.all([handleUpdate(), checkHealth()]);
-            await setupOptions();
-        } catch (error) {
-            console.error("App initialization failed:", error);
-            loading = false;
-            error = "Failed to initialize launcher";
-        }
+        await Promise.all([handleUpdate(), checkHealth()]);
+        await setupOptions();
+        loading = false;
     });
 </script>
 
@@ -90,7 +88,7 @@
     <div class="drag-area" data-tauri-drag-region></div>
 
     {#if error}
-        <h1 class="error">Error: {error}</h1>
+        <ErrorScreen {error} />
     {:else if loading}
         <LoadingScreen />
     {:else if options}
