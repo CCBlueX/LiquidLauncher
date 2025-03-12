@@ -18,7 +18,7 @@
         "dialog:allow-open",
         "dialog:allow-confirm",
         "dialog:allow-ask",
-        "clipboard-manager:allow-write-text",
+        "clipboard-manager:default",
         "opener:default",
         "process:allow-exit",
         "updater:default"
