@@ -122,10 +122,6 @@
         color: white;
     }
 
-    .error {
-        color: #ff4444;
-    }
-
     @media (prefers-color-scheme: light) {
         .window {
             background-color: rgba(0, 0, 0, 0.8);
