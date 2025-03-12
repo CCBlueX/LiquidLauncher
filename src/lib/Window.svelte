@@ -118,10 +118,6 @@
         z-index: 100;
     }
 
-    h1 {
-        color: white;
-    }
-
     @media (prefers-color-scheme: light) {
         .window {
             background-color: rgba(0, 0, 0, 0.8);
