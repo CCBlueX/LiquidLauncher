@@ -33,10 +33,10 @@ use tracing::{debug, debug_span, error, info, warn};
 pub const LAUNCHER_API: [&str; 3] = [
     "https://api.liquidbounce.net",
     "https://api.ccbluex.net",
-    // In case of the LiquidLauncher THIS is not a high security risk,
-    // as we do not send any sensitive data to the API.
-    // However, there is a RISK of MITM attacks, in this case, we want to ask for confirmation
-    // from the user to proceed with the non-SSL endpoint.
+
+    // Non-secure connection requires additional confirmation from the user,
+    // as they are vulnerable to MITM attacks and data leaks.
+    // A VPN or a proxy can be used to secure the connection.
     "http://nossl.api.liquidbounce.net",
 ];
 
