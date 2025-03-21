@@ -46,6 +46,8 @@ pub const API_V3: &str = "api/v3";
 #[derive(Serialize, Deserialize)]
 pub struct Client {
     url: String,
+    // In order to show a warning to the user when using a non-secure connection,
+    // we need to pass this information to the frontend.
     is_secure: bool,
 }
 
@@ -137,7 +139,7 @@ impl Client {
 
     /// Check if the API endpoint is secure
     pub fn is_secure(&self) -> bool {
-        self.url.starts_with("https://")
+        self.is_secure
     }
 
     /// Request all available branches
