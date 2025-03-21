@@ -7,11 +7,14 @@
     import {invoke} from "@tauri-apps/api/core";
     import {openUrl} from "@tauri-apps/plugin-opener";
 
+    export let client;
     export let options;
 
     async function login() {
         try {
-            const account = await invoke("client_account_authenticate");
+            const account = await invoke("client_account_authenticate", {
+                client: client
+            });
             options.premium.account = account;
             await options.store();
         } catch (error) {

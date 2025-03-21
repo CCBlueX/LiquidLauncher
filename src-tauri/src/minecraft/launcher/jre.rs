@@ -3,13 +3,11 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Result};
 
 use super::{LauncherData, StartParameter};
+use crate::app::network::client_api::LaunchManifest;
 use crate::minecraft::java::DistributionSelection;
-use crate::{
-    app::client_api::LaunchManifest,
-    minecraft::{
-        java::{find_java_binary, jre_downloader},
-        progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
-    },
+use crate::minecraft::{
+    java::{find_java_binary, jre_downloader},
+    progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
 };
 
 pub async fn load_jre<D: Send + Sync>(

@@ -1,10 +1,11 @@
 <script>
-    import { createEventDispatcher } from "svelte";
+    import {createEventDispatcher} from "svelte";
     import GeneralSettings from "./GeneralSettings.svelte";
     import PremiumSettings from "./PremiumSettings.svelte";
     import SettingsContainer from "../../settings/SettingsContainer.svelte";
     import Tabs from "../../settings/tab/Tabs.svelte";
 
+    export let client;
     export let options;
     let activeSettingsTab = "General";
 
@@ -27,6 +28,7 @@
         />
     {:else if activeSettingsTab === "Premium"}
         <PremiumSettings
+                {client}
                 bind:options
         />
     {/if}

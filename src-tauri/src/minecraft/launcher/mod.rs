@@ -27,7 +27,7 @@ use anyhow::{bail, Context, Result};
 use path_absolutize::Absolutize;
 use tracing::*;
 
-use crate::app::client_api::LaunchManifest;
+use crate::app::network::client_api::{Client, LaunchManifest};
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
 use crate::minecraft::java::{DistributionSelection, JavaRuntime};
@@ -262,6 +262,7 @@ pub struct StartParameter {
     pub user_type: String,
     pub keep_launcher_open: bool,
     pub concurrent_downloads: u32,
+    pub client: Client,
     pub client_account: Option<ClientAccount>,
     pub skip_advertisement: bool,
 }

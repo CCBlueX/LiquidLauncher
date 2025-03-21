@@ -25,8 +25,8 @@ use tokio::fs;
 use tokio::io::AsyncReadExt;
 use tracing::*;
 
-use crate::app::client_api::{ApiEndpoints, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
 use crate::app::gui::ShareableWindow;
+use crate::app::network::client_api::{Client, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
 use crate::app::webview::open_download_page;
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
@@ -64,6 +64,7 @@ pub(crate) async fn launch(
         })
         .await?;
 
+    let client = &launching_parameter.client;
     let build = &launch_manifest.build;
     let subsystem = &launch_manifest.subsystem;
 
@@ -85,6 +86,7 @@ pub(crate) async fn launch(
         &data_directory,
         &launch_manifest,
         &launch_manifest.mods,
+        client,
         retriever_account,
         &launcher_data,
     )
@@ -93,6 +95,7 @@ pub(crate) async fn launch(
         &data_directory,
         &launch_manifest,
         &additional_mods,
+        client,
         retriever_account,
         &launcher_data,
     )
@@ -191,6 +194,7 @@ pub async fn retrieve_and_copy_mods(
     data: &Path,
     manifest: &LaunchManifest,
     mods: &Vec<LoaderMod>,
+    client: &Client,
     client_account: &Option<ClientAccount>,
     launcher_data: &LauncherData<ShareableWindow>,
 ) -> Result<()> {
@@ -284,7 +288,7 @@ pub async fn retrieve_and_copy_mods(
                             // https://dl.liquidbounce.net/skip/c7kMT2q00U -> c7kMT2q00U
                             let pid = url.split('/').last().context("Failed to get PID")?;
                             let skip_file_resolve =
-                                ApiEndpoints::resolve_skip_file(account, pid).await?;
+                                client.resolve_skip_file(account, pid).await?;
 
                             // If the skip file resolve has a direct URL, use it - if not it means that the account is not allowed for direct downloads
                             skip_file_resolve.direct_url.ok_or_else(|| {

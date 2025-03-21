@@ -20,6 +20,7 @@
 use tauri::{Emitter, Window};
 use tracing::{debug, info};
 
+use crate::app::network::client_api::Client;
 use crate::{
     auth::{ClientAccount, ClientAccountAuthenticator},
     minecraft::auth::MinecraftAccount,
@@ -44,7 +45,7 @@ pub(crate) async fn login_microsoft(window: Window) -> Result<MinecraftAccount, 
 }
 
 #[tauri::command]
-pub(crate) async fn client_account_authenticate() -> Result<ClientAccount, String> {
+pub(crate) async fn client_account_authenticate(client: Client) -> Result<ClientAccount, String> {
     let mut account = ClientAccountAuthenticator::start_auth(|uri| {
         let _ = tauri_plugin_opener::open_url(uri, None::<&str>);
     })
@@ -52,7 +53,7 @@ pub(crate) async fn client_account_authenticate() -> Result<ClientAccount, Strin
         .map_err(|e| format!("{}", e))?;
 
     account
-        .update_info()
+        .update_info(&client)
         .await
         .map_err(|e| format!("unable to fetch user information: {:?}", e))?;
 
@@ -60,14 +61,14 @@ pub(crate) async fn client_account_authenticate() -> Result<ClientAccount, Strin
 }
 
 #[tauri::command]
-pub(crate) async fn client_account_update(account: ClientAccount) -> Result<ClientAccount, String> {
+pub(crate) async fn client_account_update(client: Client, account: ClientAccount) -> Result<ClientAccount, String> {
     let mut account = account
         .renew()
         .await
         .map_err(|e| format!("unable to update access token: {:?}", e))?;
 
     account
-        .update_info()
+        .update_info(&client)
         .await
         .map_err(|e| format!("unable to fetch user information: {:?}", e))?;
     Ok(account)
