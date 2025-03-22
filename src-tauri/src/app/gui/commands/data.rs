@@ -17,8 +17,6 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use tracing::info;
-
 use crate::{
     app::options::Options,
     LAUNCHER_DIRECTORY
@@ -26,10 +24,8 @@ use crate::{
 
 #[tauri::command]
 pub(crate) async fn get_options() -> Result<Options, String> {
-    info!("Loading options...");
     let config_dir = LAUNCHER_DIRECTORY.config_dir();
     let options = Options::load(config_dir).await.unwrap_or_default();
-    info!("Done!");
     Ok(options)
 }
 

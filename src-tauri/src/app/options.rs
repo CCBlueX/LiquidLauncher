@@ -24,6 +24,7 @@ use crate::{auth::ClientAccount, minecraft::auth::MinecraftAccount};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
+use tracing::info;
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Options {
@@ -92,10 +93,12 @@ impl Options {
         let file_content = fs::read(app_data.join("options.json")).await?;
 
         if let Ok(options) = serde_json::from_slice::<Self>(&file_content) {
+            info!("Successfully loaded options from file");
             return Ok(options);
         }
 
         if let Ok(legacy) = serde_json::from_slice::<LegacyOptions>(&file_content) {
+            info!("Successfully loaded legacy options from file");
             return Ok(Self::from_legacy(legacy));
         }
 
