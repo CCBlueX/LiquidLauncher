@@ -22,16 +22,16 @@
     windows_subsystem = "windows"
 )]
 
+use crate::app::gui::gui_main;
+use crate::utils::{OS, OS_VERSION};
 use anyhow::Result;
 use directories::ProjectDirs;
 use once_cell::sync::Lazy;
 use reqwest::Client;
 use std::io;
-use tracing::{debug, error, info};
+use tracing::{debug, debug_span, error, info};
 use tracing_subscriber::layer::SubscriberExt;
 use utils::ARCHITECTURE;
-
-use crate::utils::{OS, OS_VERSION};
 
 pub mod app;
 pub mod auth;
@@ -85,19 +85,25 @@ pub fn main() -> Result<()> {
         );
     tracing::subscriber::set_global_default(subscriber).expect("Unable to set a global subscriber");
 
-    info!("Starting LiquidLauncher v{}", LAUNCHER_VERSION);
-    info!("OS: {:} {:} {:}", OS, ARCHITECTURE, OS_VERSION.to_string());
+    {
+        let span = debug_span!("startup");
+        let _guard = span.enter();
 
-    // application directory
-    info!("Creating application directory");
-    debug!("Application directory: {:?}", LAUNCHER_DIRECTORY.data_dir());
-    debug!("Config directory: {:?}", LAUNCHER_DIRECTORY.config_dir());
-    mkdir!(LAUNCHER_DIRECTORY.data_dir());
-    mkdir!(LAUNCHER_DIRECTORY.config_dir());
+        info!(parent: &span, "Starting LiquidLauncher v{}", LAUNCHER_VERSION);
+        info!(parent: &span, "OS: {:} {:} {:}", OS, ARCHITECTURE, OS_VERSION.to_string());
 
-    // app
-    info!("The GUI is starting...");
-    app::gui::gui_main();
+        // application directory
+        info!(parent: &span, "Creating application directory");
+        debug!(parent: &span, "Application directory: {:?}", LAUNCHER_DIRECTORY.data_dir());
+        debug!(parent: &span, "Config directory: {:?}", LAUNCHER_DIRECTORY.config_dir());
+        mkdir!(LAUNCHER_DIRECTORY.data_dir());
+        mkdir!(LAUNCHER_DIRECTORY.config_dir());
+
+        info!(parent: &span, "Starting GUI using Tauri framework {}", tauri::VERSION);
+    }
+
+    // Start the GUI
+    gui_main();
 
     info!("Launcher exited");
     Ok(())

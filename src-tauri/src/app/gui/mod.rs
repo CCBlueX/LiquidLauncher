@@ -53,6 +53,7 @@ pub fn gui_main() {
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             setup_client,
+            check_system,
             sys_memory,
             get_options,
             store_options,

@@ -77,8 +77,18 @@
         }
     }
 
+    async function checkSystem() {
+        try {
+            await invoke("check_system");
+        } catch (e) {
+            // We want to continue allowing the user to use the launcher even 
+            // if the system check fails
+            alert("Looks like there is a configuration issue with your system.\n\n" + e);
+        }
+    }
+
     onMount(async () => {
-        await Promise.all([handleUpdate(), setupClient()]);
+        await Promise.all([handleUpdate(), setupClient(), checkSystem()]);
         await setupOptions();
         loading = false;
     });

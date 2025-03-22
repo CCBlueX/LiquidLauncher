@@ -18,6 +18,7 @@
  */
 use crate::app::network::client_api::Client;
 use crate::{utils, LAUNCHER_VERSION};
+use tracing::{debug, debug_span, info};
 
 #[tauri::command]
 pub(crate) async fn get_launcher_version() -> Result<String, String> {
@@ -26,15 +27,25 @@ pub(crate) async fn get_launcher_version() -> Result<String, String> {
 
 #[tauri::command]
 pub(crate) async fn setup_client() -> Result<Client, String> {
+    Client::lookup()
+        .await
+}
+
+#[tauri::command]
+pub(crate) async fn check_system() -> Result<(), String> {
+    let span = debug_span!("system_check");
+    let _guard = span.enter();
+
+    debug!(parent: &span, "Checking system...");
+
     #[cfg(windows)]
     {
         use crate::utils::check_hosts_file;
-        info!("Checking hosts file...");
         check_hosts_file().await.map_err(|e| format!("{}", e))?;
     }
-    
-    Client::lookup()
-        .await
+
+    info!(parent: &span, "Successfully checked system.");
+    Ok(())
 }
 
 #[tauri::command]
