@@ -52,7 +52,7 @@ pub fn gui_main() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
-            check_health,
+            setup_client,
             sys_memory,
             get_options,
             store_options,

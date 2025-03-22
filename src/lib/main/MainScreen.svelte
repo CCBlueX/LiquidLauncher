@@ -1,7 +1,7 @@
 <!-- lib/main/MainScreen.svelte -->
 <script>
-    import { invoke } from "@tauri-apps/api/core";
-    import { listen } from "@tauri-apps/api/event";
+    import {invoke} from "@tauri-apps/api/core";
+    import {listen} from "@tauri-apps/api/event";
     import VerticalFlexWrapper from "../common/VerticalFlexWrapper.svelte";
     import MainHeader from "./MainHeader.svelte";
     import ContentWrapper from "./ContentWrapper.svelte";
@@ -11,10 +11,9 @@
     import ClientLog from "./log/ClientLog.svelte";
     import Settings from "./settings/Settings.svelte";
     import VersionSelect from "./VersionSelect.svelte";
-    import {createEventDispatcher, onMount} from "svelte";
+    import {onMount} from "svelte";
 
-    const dispatch = createEventDispatcher();
-
+    export let client;
     export let options;
 
     let running = false;
@@ -68,6 +67,7 @@
 
     async function updateData() {
         const newBuilds = await invoke("request_builds", {
+            client,
             branch: options.version.branchName,
             release: !options.launcher.showNightlyBuilds
         });
@@ -90,6 +90,7 @@
         if (!activeBuild) return;
 
         const changelog = await invoke("fetch_changelog", {
+            client,
             buildId: activeBuild.buildId
         });
 
@@ -102,6 +103,7 @@
 
         const [newRecommendedMods, newCustomMods] = await Promise.all([
             invoke("request_mods", {
+                client,
                 mcVersion: versionState.currentBuild.mcVersion,
                 subsystem: versionState.currentBuild.subsystem
             }),
@@ -165,6 +167,7 @@
             try {
                 progressState.text = "Authenticating client account...";
                 options.premium.account = await invoke("client_account_update", {
+                    client,
                     account: options.premium.account
                 });
             } catch (e) {
@@ -177,6 +180,7 @@
         progressState.text = "Refreshing minecraft session...";
         try {
             options.start.account = await invoke("refresh", {
+                client,
                 accountData: options.start.account
             });
         } catch (e) {
@@ -201,6 +205,7 @@
     async function launchClient() {
         await options.store();
         await invoke("run_client", {
+            client,
             buildId: versionState.currentBuild.buildId,
             options,
             mods: [...versionState.recommendedMods, ...versionState.customMods]
@@ -248,7 +253,9 @@
     });
 
     onMount(async () => {
-        let branchesData = await invoke("request_branches");
+        let branchesData = await invoke("request_branches", {
+            client
+        });
         versionState.branches = branchesData.branches.sort((a, b) =>
             (a === branchesData.defaultBranch ? -1 : b === branchesData.defaultBranch ? 1 : 0));
 
@@ -279,6 +286,7 @@
 
 {#if settingsShown}
     <Settings
+            {client}
             bind:options
             on:hide={async () => {
                 settingsShown = false;

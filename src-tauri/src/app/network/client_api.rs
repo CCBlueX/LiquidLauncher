@@ -1,7 +1,7 @@
 /*
  * This file is part of LiquidLauncher (https://github.com/CCBlueX/LiquidLauncher)
  *
- * Copyright (c) 2015 - 2024 CCBlueX
+ * Copyright (c) 2015 - 2025 CCBlueX
  *
  * LiquidLauncher is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,87 +19,137 @@
 
 use std::collections::BTreeMap;
 
-use anyhow::Result;
-use chrono::{DateTime, Utc};
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-
 use crate::auth::ClientAccount;
 use crate::minecraft::java::JavaDistribution;
 use crate::utils::get_maven_artifact_path;
 use crate::HTTP_CLIENT;
+use anyhow::{Error, Result};
+use chrono::{DateTime, Utc};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use tracing::{debug, debug_span, error, info, warn};
 
 /// API endpoint url
-pub const LAUNCHER_API: &str = "https://api.liquidbounce.net";
+pub const LAUNCHER_API: [&str; 3] = [
+    "https://api.liquidbounce.net",
+    "https://api.ccbluex.net",
+
+    // Non-secure connection requires additional confirmation from the user,
+    // as they are vulnerable to MITM attacks and data leaks.
+    // A VPN or a proxy can be used to secure the connection.
+    "http://nossl.api.liquidbounce.net",
+];
+
 pub const API_V1: &str = "api/v1";
 pub const API_V3: &str = "api/v3";
 
-pub const CONTENT_DELIVERY: &str = "https://cloud.liquidbounce.net";
-pub const CONTENT_FOLDER: &str = "LiquidLauncher";
-
-/// Placeholder struct for content delivery implementation
-pub struct ContentDelivery;
-
-///
-/// Content Delivery for our LiquidBounce services
-///
-/// https://cloud.liquidbounce.net/LiquidLauncher/
-/// /news.json
-impl ContentDelivery {
-    /// Request news
-    pub async fn news() -> Result<Vec<News>> {
-        Self::request_from_content_delivery("news.json").await
-    }
-
-    /// Request JSON formatted data from content delivery
-    pub async fn request_from_content_delivery<T: DeserializeOwned>(file: &str) -> Result<T> {
-        Ok(HTTP_CLIENT
-            .get(format!("{}/{}/{}", CONTENT_DELIVERY, CONTENT_FOLDER, file))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<T>()
-            .await?)
-    }
-}
-
 #[derive(Serialize, Deserialize)]
-pub struct News {
-    pub title: String,
-    pub description: String,
-    pub date: String,
-    pub url: String,
-    #[serde(rename = "bannerText")]
-    pub banner_text: String,
-    #[serde(rename = "bannerUrl")]
-    pub banner_url: String,
+pub struct Client {
+    url: String,
+    // In order to show a warning to the user when using a non-secure connection,
+    // we need to pass this information to the frontend.
+    is_secure: bool,
 }
 
-/// Placeholder struct for API endpoints implementation
-pub struct ApiEndpoints;
+impl Client {
+    pub fn new(host: &str) -> Self {
+        Self {
+            url: host.to_string(),
+            is_secure: host.starts_with("https://"),
+        }
+    }
 
-///
-/// API Endpoints of LiquidBounce API v1
-/// https://api.liquidbounce.net/api/v1/
-///
-/// /version is being used for launcher related endpoints
-/// Supports
-///     /builds
-///     /builds/{branch}
-///     /branches
-///     /launch/{build_id}
-///     /mods/{mc_version}/{subsystem}
-///     /jre/{os_name}/
-///
-impl ApiEndpoints {
+    /// Finds the first available API endpoint
+    /// and returns a [Client] instance with the endpoint set.
+    ///
+    /// Returns [String] as error with technical information if no API endpoint is reachable.
+    pub async fn lookup() -> Result<Self, String> {
+        let span = debug_span!("api_lookup");
+        let _guard = span.enter();
+
+        // LiquidLauncher will show a technical information section in the error dialog,
+        // when the API endpoint is not reachable.
+        // This is to help the user to understand the issue.
+        let mut technical_information = String::new();
+
+        info!(parent: &span, "Looking up available API endpoints");
+        for endpoint in LAUNCHER_API.iter() {
+            if !technical_information.is_empty() {
+                // Add a separator between each API endpoint
+                technical_information.push('\n');
+            }
+
+            // Check if the endpoint is using SSL
+            let is_secure = endpoint.starts_with("https://");
+            if !is_secure {
+                warn!(parent: &span, "Falling back to Non-SSL '{}' endpoint.", endpoint);
+            }
+
+            // Check if the endpoint is reachable,
+            // this is as soon we get a SUCCESS response from the endpoint
+            // e.g. 200 OK: LiquidBounce API written in Rust using Tokio Axum - @CCBlueX (Izuna).
+            let is_success = HTTP_CLIENT
+                .get(*endpoint)
+                .send()
+                .await
+                .map_err(|err| {
+                    // Cast error into anyhow::Error - because it has a better representation
+                    // of the error
+                    let err = Into::<Error>::into(err);
+                    technical_information.push_str(&format!(
+                        "Failed to connect to API endpoint '{}': {:?}\n",
+                        endpoint, err
+                    ));
+                    error!(
+                        parent: &span,
+                        "Failed to connect to API endpoint '{}': {:?}",
+                        endpoint, err
+                    );
+                    err
+                })
+                .is_ok_and(|r| {
+                    let status = r.status();
+                    let is_success = status.is_success();
+                    if !is_success {
+                        technical_information.push_str(&format!(
+                            "API endpoint '{}' returned status code: {}\n",
+                            endpoint, status
+                        ));
+                        error!(
+                            parent: &span,
+                            "API endpoint '{}' returned status code: {}",
+                            endpoint, status
+                        );
+                    }
+
+                    is_success
+                });
+
+            if is_success {
+                debug!(parent: &span, "API endpoint '{}' is available", endpoint);
+                return Ok(Self::new(endpoint));
+            }
+        }
+
+        // If no API endpoint is reachable, we bail with the technical information
+        // as the error message, because we already have 'Unable to connect to LiquidBounce API'
+        // as header.
+        Err(technical_information)
+    }
+
+    /// Check if the API endpoint is secure
+    pub fn is_secure(&self) -> bool {
+        self.is_secure
+    }
+
     /// Request all available branches
-    pub async fn branches() -> Result<Branches> {
-        Self::request_from_endpoint("version/branches").await
+    pub async fn branches(&self) -> Result<Branches> {
+        self.request_from_endpoint("version/branches").await
     }
 
     /// Request all builds of branch
-    pub async fn builds_by_branch(branch: &str, release: bool) -> Result<Vec<Build>> {
-        Self::request_from_endpoint(&if release {
+    pub async fn builds_by_branch(&self, branch: &str, release: bool) -> Result<Vec<Build>> {
+        self.request_from_endpoint(&if release {
             format!("version/builds/{}/release", branch)
         } else {
             format!("version/builds/{}", branch)
@@ -108,37 +158,43 @@ impl ApiEndpoints {
     }
 
     /// Request launch manifest of specific build
-    pub async fn launch_manifest(build_id: u32) -> Result<LaunchManifest> {
-        Self::request_from_endpoint(&format!("version/launch/{}", build_id)).await
+    pub async fn fetch_launch_manifest(&self, build_id: u32) -> Result<LaunchManifest> {
+        self.request_from_endpoint(&format!("version/launch/{}", build_id))
+            .await
     }
 
     /// Request list of downloadable mods for mc_version and used subsystem
-    pub async fn mods(mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod>> {
-        Self::request_from_endpoint(&format!("version/mods/{}/{}", mc_version, subsystem)).await
+    pub async fn fetch_mods(&self, mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod>> {
+        self.request_from_endpoint(&format!("version/mods/{}/{}", mc_version, subsystem))
+            .await
     }
 
     /// Request changelog of specified build
-    pub async fn changelog(build_id: u32) -> Result<Changelog> {
-        Self::request_from_endpoint(&format!("version/changelog/{}", build_id)).await
+    pub async fn fetch_changelog(&self, build_id: u32) -> Result<Changelog> {
+        self.request_from_endpoint(&format!("version/changelog/{}", build_id))
+            .await
     }
 
     /// Resolve direct download link from skip file pid
-    pub async fn user(client_account: &ClientAccount) -> Result<UserInformation> {
-        Self::request_with_client_account("oauth/user", client_account).await
+    pub async fn fetch_user(&self, client_account: &ClientAccount) -> Result<UserInformation> {
+        self.request_with_client_account("oauth/user", client_account)
+            .await
     }
 
     /// Resolve direct download link from skip file pid
     pub async fn resolve_skip_file(
+        &self,
         client_account: &ClientAccount,
         pid: &str,
     ) -> Result<SkipFileResolve> {
-        Self::request_with_client_account(&format!("file/resolve/{}", pid), client_account).await
+        self.request_with_client_account(&format!("file/resolve/{}", pid), client_account)
+            .await
     }
 
     /// Request JSON formatted data from launcher API
-    pub async fn request_from_endpoint<T: DeserializeOwned>(endpoint: &str) -> Result<T> {
+    pub async fn request_from_endpoint<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
         Ok(HTTP_CLIENT
-            .get(format!("{}/{}/{}", LAUNCHER_API, API_V1, endpoint))
+            .get(format!("{}/{}/{}", self.url, API_V1, endpoint))
             .send()
             .await?
             .error_for_status()?
@@ -147,13 +203,12 @@ impl ApiEndpoints {
     }
 
     pub async fn request_with_client_account<T: DeserializeOwned>(
+        &self,
         endpoint: &str,
         client_account: &ClientAccount,
     ) -> Result<T> {
         Ok(client_account
-            .authenticate_request(
-                HTTP_CLIENT.get(format!("{}/{}/{}", LAUNCHER_API, API_V3, endpoint)),
-            )?
+            .authenticate_request(HTTP_CLIENT.get(format!("{}/{}/{}", self.url, API_V3, endpoint)))?
             .send()
             .await?
             .error_for_status()?

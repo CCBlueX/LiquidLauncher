@@ -13,7 +13,7 @@ use tokio::{
 };
 use tracing::debug;
 
-use crate::app::client_api::{ApiEndpoints, UserInformation};
+use crate::app::network::client_api::{Client, UserInformation};
 
 const OAUTH_CLIENT_ID: &str = "J2hzqzCxch8hfOPRFNINOZV5Ma4X4BFdZpMjAVEW";
 const AUTH_URL: &str = "https://auth.liquidbounce.net/application/o/authorize/";
@@ -65,8 +65,8 @@ impl ClientAccount {
         self.expires_at
     }
 
-    pub async fn update_info(&mut self) -> Result<()> {
-        let user_information = ApiEndpoints::user(self).await?;
+    pub async fn update_info(&mut self, client: &Client) -> Result<()> {
+        let user_information = client.fetch_user(self).await?;
         self.user_information = Some(user_information.clone());
         Ok(())
     }

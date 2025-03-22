@@ -1,7 +1,7 @@
 /*
  * This file is part of LiquidLauncher (https://github.com/CCBlueX/LiquidLauncher)
  *
- * Copyright (c) 2015 - 2024 CCBlueX
+ * Copyright (c) 2015 - 2025 CCBlueX
  *
  * LiquidLauncher is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,28 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
-use crate::app::network::client_api::Client;
-use crate::{utils, LAUNCHER_VERSION};
 
-#[tauri::command]
-pub(crate) async fn get_launcher_version() -> Result<String, String> {
-    Ok(LAUNCHER_VERSION.to_string())
-}
-
-#[tauri::command]
-pub(crate) async fn setup_client() -> Result<Client, String> {
-    #[cfg(windows)]
-    {
-        use crate::utils::check_hosts_file;
-        info!("Checking hosts file...");
-        check_hosts_file().await.map_err(|e| format!("{}", e))?;
-    }
-    
-    Client::lookup()
-        .await
-}
-
-#[tauri::command]
-pub(crate) fn sys_memory() -> u64 {
-    utils::sys_memory() / (1024 * 1024)
-}
+pub mod client_api;
+pub mod content;

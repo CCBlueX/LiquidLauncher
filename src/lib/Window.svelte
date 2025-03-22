@@ -1,22 +1,22 @@
 <script>
-    import { invoke } from "@tauri-apps/api/core";
-    import { check } from "@tauri-apps/plugin-updater";
-    import { relaunch } from "@tauri-apps/plugin-process";
-    import { ask } from "@tauri-apps/plugin-dialog";
-    import Logo from "./common/Logo.svelte";
-    import { onMount } from "svelte";
-    import {Jumper} from "svelte-loading-spinners";
-    import VerticalFlexWrapper from "./common/VerticalFlexWrapper.svelte";
-    import ButtonClose from "./common/ButtonClose.svelte";
-    import TitleBar from "./common/TitleBar.svelte";
+    import {invoke} from "@tauri-apps/api/core";
+    import {check} from "@tauri-apps/plugin-updater";
+    import {exit, relaunch} from "@tauri-apps/plugin-process";
+    import {ask} from "@tauri-apps/plugin-dialog";
+    import {onMount} from "svelte";
     import MainScreen from "./main/MainScreen.svelte";
     import LoginScreen from "./login/LoginScreen.svelte";
     import LoadingScreen from "./main/LoadingScreen.svelte";
     import ErrorScreen from "./main/ErrorScreen.svelte";
+    import NonSecureConnectionScreen from "./main/NonSecureConnectionScreen.svelte";
 
     let loading = true;
     let error = null;
     let options = null;
+    let client = null;
+
+    // Asks if the user allows non-secure connections
+    let allowNonSecure = false;
 
     async function handleUpdate() {
         try {
@@ -64,12 +64,12 @@
         }
     }
 
-    async function checkHealth() {
+    async function setupClient() {
         try {
-            await invoke("check_health");
-            console.info("Health Check passed");
+            client = await invoke("setup_client");
+            console.info("API Client has been set up", client);
         } catch (e) {
-            console.error("Health check failed", e);
+            console.error("Failed to set up API client:", e);
             error = {
                 message: "Failed to establish connection with LiquidBounce API",
                 error: e
@@ -78,7 +78,7 @@
     }
 
     onMount(async () => {
-        await Promise.all([handleUpdate(), checkHealth()]);
+        await Promise.all([handleUpdate(), setupClient()]);
         await setupOptions();
         loading = false;
     });
@@ -89,11 +89,20 @@
 
     {#if error}
         <ErrorScreen {error} />
-    {:else if loading}
+    {:else if loading || !client}
         <LoadingScreen />
+    {:else if client && !client.is_secure && !allowNonSecure}
+        <NonSecureConnectionScreen
+            on:allowNonSecure={() => {
+                allowNonSecure = true;
+            }}
+            on:cancel={async () => {
+                await exit(0);
+            }}
+        />
     {:else if options}
         {#if options.start.account}
-            <MainScreen bind:options />
+            <MainScreen {client} bind:options />
         {:else}
             <LoginScreen bind:options />
         {/if}

@@ -29,9 +29,11 @@ use tokio::fs;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
-use crate::app::client_api::{LoaderMod, ModSource};
+use crate::app::network::client_api::{Branches, Build, Changelog, Client};
+use crate::app::network::client_api::{LoaderMod, ModSource};
+use crate::app::network::content::{ContentDelivery, NewsArticle};
 use crate::app::options::Options;
-use crate::{app::client_api::{ApiEndpoints, Branches, Build, Changelog, ContentDelivery, News}, app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
+use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     auth::{self, MinecraftAccount},
     launcher::{LauncherData, StartParameter},
     prelauncher,
@@ -39,8 +41,8 @@ use crate::{app::client_api::{ApiEndpoints, Branches, Build, Changelog, ContentD
 }, LAUNCHER_DIRECTORY};
 
 #[tauri::command]
-pub(crate) async fn request_branches() -> Result<Branches, String> {
-    let branches = ApiEndpoints::branches
+pub(crate) async fn request_branches(client: Client) -> Result<Branches, String> {
+    let branches = (|| async { client.branches().await })
         .retry(ExponentialBuilder::default())
         .notify(|err, dur| {
             warn!("Failed to request branches. Retrying in {:?}. Error: {}", dur, err);
@@ -52,8 +54,8 @@ pub(crate) async fn request_branches() -> Result<Branches, String> {
 }
 
 #[tauri::command]
-pub(crate) async fn request_builds(branch: &str, release: bool) -> Result<Vec<Build>, String> {
-    let builds = (|| async { ApiEndpoints::builds_by_branch(branch, release).await })
+pub(crate) async fn request_builds(client: Client, branch: &str, release: bool) -> Result<Vec<Build>, String> {
+    let builds = (|| async { client.builds_by_branch(branch, release).await })
         .retry(ExponentialBuilder::default())
         .notify(|err, dur| {
             warn!("Failed to request builds. Retrying in {:?}. Error: {}", dur, err);
@@ -65,7 +67,7 @@ pub(crate) async fn request_builds(branch: &str, release: bool) -> Result<Vec<Bu
 }
 
 #[tauri::command]
-pub(crate) async fn fetch_news() -> Result<Vec<News>, String> {
+pub(crate) async fn fetch_news() -> Result<Vec<NewsArticle>, String> {
     ContentDelivery::news
         .retry(ExponentialBuilder::default())
         .notify(|err, dur| {
@@ -76,8 +78,8 @@ pub(crate) async fn fetch_news() -> Result<Vec<News>, String> {
 }
 
 #[tauri::command]
-pub(crate) async fn fetch_changelog(build_id: u32) -> Result<Changelog, String> {
-    (|| async { ApiEndpoints::changelog(build_id).await })
+pub(crate) async fn fetch_changelog(client: Client, build_id: u32) -> Result<Changelog, String> {
+    (|| async { client.fetch_changelog(build_id).await })
         .retry(ExponentialBuilder::default())
         .notify(|err, dur| {
             warn!("Failed to fetch changelog. Retrying in {:?}. Error: {}", dur, err);
@@ -88,10 +90,11 @@ pub(crate) async fn fetch_changelog(build_id: u32) -> Result<Changelog, String> 
 
 #[tauri::command]
 pub(crate) async fn request_mods(
+    client: Client,
     mc_version: &str,
     subsystem: &str,
 ) -> Result<Vec<LoaderMod>, String> {
-    let mods = (|| async { ApiEndpoints::mods(&mc_version, &subsystem).await })
+    let mods = (|| async { client.fetch_mods(&mc_version, &subsystem).await })
         .retry(ExponentialBuilder::default())
         .notify(|err, dur| {
             warn!("Failed to request mods. Retrying in {:?}. Error: {}", dur, err);
@@ -256,6 +259,7 @@ fn handle_log(window: &ShareableWindow, msg: &str) -> anyhow::Result<()> {
 
 #[tauri::command]
 pub(crate) async fn run_client(
+    client: Client,
     build_id: u32,
     options: Options,
     mods: Vec<LoaderMod>,
@@ -299,6 +303,34 @@ pub(crate) async fn run_client(
     // Random XUID
     let xuid = Uuid::new_v4().to_string();
 
+    let runner_instance = &app_state.runner_instance;
+
+    if runner_instance
+        .lock()
+        .map_err(|e| format!("unable to lock runner instance: {:?}", e))?
+        .is_some()
+    {
+        return Err("client is already running".to_string());
+    }
+
+    info!("Loading launch manifest...");
+    let launch_manifest = client.fetch_launch_manifest(build_id).await.map_err(|e| {
+        format!(
+            "failed to fetch launch manifest of build {}: {:?}",
+            build_id, e
+        )
+    })?;
+
+    let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
+
+    *runner_instance
+        .lock()
+        .map_err(|e| format!("unable to lock runner instance: {:?}", e))? = Some(RunnerInstance {
+        terminator: terminator_tx,
+    });
+
+    let copy_of_runner_instance = runner_instance.clone();
+
     let parameters = StartParameter {
         java_distribution: options.start_options.java_distribution,
         jvm_args: options.start_options.jvm_args.unwrap_or_else(|| vec![]),
@@ -316,37 +348,10 @@ pub(crate) async fn run_client(
         user_type,
         keep_launcher_open: options.launcher_options.keep_launcher_open,
         concurrent_downloads: options.launcher_options.concurrent_downloads,
+        client,
         client_account,
         skip_advertisement,
     };
-
-    let runner_instance = &app_state.runner_instance;
-
-    if runner_instance
-        .lock()
-        .map_err(|e| format!("unable to lock runner instance: {:?}", e))?
-        .is_some()
-    {
-        return Err("client is already running".to_string());
-    }
-
-    info!("Loading launch manifest...");
-    let launch_manifest = ApiEndpoints::launch_manifest(build_id).await.map_err(|e| {
-        format!(
-            "failed to fetch launch manifest of build {}: {:?}",
-            build_id, e
-        )
-    })?;
-
-    let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
-
-    *runner_instance
-        .lock()
-        .map_err(|e| format!("unable to lock runner instance: {:?}", e))? = Some(RunnerInstance {
-        terminator: terminator_tx,
-    });
-
-    let copy_of_runner_instance = runner_instance.clone();
 
     thread::spawn(move || {
         tokio::runtime::Builder::new_current_thread()
