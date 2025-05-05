@@ -20,7 +20,7 @@
 use tauri::{Emitter, Window};
 use tracing::{debug, info};
 
-use crate::app::network::client_api::Client;
+use crate::app::client_api::Client;
 use crate::{
     auth::{ClientAccount, ClientAccountAuthenticator},
     minecraft::auth::MinecraftAccount,

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Result};
 
 use super::{LauncherData, StartParameter};
-use crate::app::network::client_api::LaunchManifest;
+use crate::app::client_api::LaunchManifest;
 use crate::minecraft::java::DistributionSelection;
 use crate::minecraft::{
     java::{find_java_binary, jre_downloader},

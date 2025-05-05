@@ -1,22 +1,22 @@
 <script>
     import {openUrl} from "@tauri-apps/plugin-opener";
 
-    export let bannerText;
+    export let postUid;
     export let title;
     export let date;
-    export let bannerUrl;
-    export let url;
+    export let bannerText;
+    export let bannerImageUrl;
     export let description;
 
     async function handleShowNews(e) {
-        await openUrl(url);
+        await openUrl("https://liquidbounce.net/blog/article/" + postUid);
     }
 </script>
 
 <div class="news">
     <div class="banner">
         <div class="banner-text">{bannerText}</div>
-        <div class="background" style="background-image: linear-gradient(to bottom, transparent, #4677ffc5), url({bannerUrl});"></div>
+        <div class="background" style="background-image: linear-gradient(to bottom, transparent, #4677ffc5), url({bannerImageUrl});"></div>
     </div>
     <div class="content">
         <div class="title-date">

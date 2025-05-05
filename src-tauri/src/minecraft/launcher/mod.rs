@@ -27,7 +27,7 @@ use anyhow::{bail, Context, Result};
 use path_absolutize::Absolutize;
 use tracing::*;
 
-use crate::app::network::client_api::{Client, LaunchManifest};
+use crate::app::client_api::{Client, LaunchManifest};
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
 use crate::minecraft::java::{DistributionSelection, JavaRuntime};

@@ -337,6 +337,6 @@
                 on:launch={runClientWithWarning}
                 on:terminate={terminateClient}
         />
-        <NewsArea />
+        <NewsArea {client} />
     </ContentWrapper>
 </VerticalFlexWrapper>

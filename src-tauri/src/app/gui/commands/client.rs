@@ -29,9 +29,8 @@ use tokio::fs;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
-use crate::app::network::client_api::{Branches, Build, Changelog, Client};
-use crate::app::network::client_api::{LoaderMod, ModSource};
-use crate::app::network::content::{ContentDelivery, NewsArticle};
+use crate::app::client_api::{BlogPost, Branches, Build, Changelog, Client, PaginatedResponse};
+use crate::app::client_api::{LoaderMod, ModSource};
 use crate::app::options::Options;
 use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     auth::{self, MinecraftAccount},
@@ -67,14 +66,14 @@ pub(crate) async fn request_builds(client: Client, branch: &str, release: bool) 
 }
 
 #[tauri::command]
-pub(crate) async fn fetch_news() -> Result<Vec<NewsArticle>, String> {
-    ContentDelivery::news
+pub(crate) async fn fetch_blog_posts(client: Client, page: u32) -> Result<PaginatedResponse<BlogPost>, String> {
+    (|| async { client.blog_posts(page).await })
         .retry(ExponentialBuilder::default())
         .notify(|err, dur| {
-            warn!("Failed to fetch news. Retrying in {:?}. Error: {}", dur, err);
+            warn!("Failed to fetch blog posts. Retrying in {:?}. Error: {}", dur, err);
         })
         .await
-        .map_err(|e| format!("unable to fetch news: {:?}", e))
+        .map_err(|e| format!("unable to fetch blog posts: {:?}", e))
 }
 
 #[tauri::command]

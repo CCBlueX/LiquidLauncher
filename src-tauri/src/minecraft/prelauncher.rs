@@ -25,8 +25,8 @@ use tokio::fs;
 use tokio::io::AsyncReadExt;
 use tracing::*;
 
+use crate::app::client_api::{Client, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
 use crate::app::gui::ShareableWindow;
-use crate::app::network::client_api::{Client, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
 use crate::app::webview::open_download_page;
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;

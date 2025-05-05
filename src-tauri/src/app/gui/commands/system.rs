@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
-use crate::app::network::client_api::Client;
+use crate::app::client_api::Client;
 use crate::{utils, LAUNCHER_VERSION};
 use tracing::{debug, debug_span, info};
 

@@ -24,7 +24,7 @@ use crate::minecraft::java::JavaDistribution;
 use crate::utils::get_maven_artifact_path;
 use crate::HTTP_CLIENT;
 use anyhow::{Error, Result};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, debug_span, error, info, warn};
@@ -46,7 +46,7 @@ pub const API_V3: &str = "api/v3";
 #[derive(Serialize, Deserialize)]
 pub struct Client {
     url: String,
-    // In order to show a warning to the user when using a non-secure connection,
+    // To show a warning to the user when using a non-secure connection,
     // we need to pass this information to the frontend.
     is_secure: bool,
 }
@@ -142,14 +142,19 @@ impl Client {
         self.is_secure
     }
 
+    /// Request all blog posts
+    pub async fn blog_posts(&self, page: u32) -> Result<PaginatedResponse<BlogPost>> {
+        self.request_from_endpoint(API_V3, &format!("blog?page={}", page)).await
+    }
+
     /// Request all available branches
     pub async fn branches(&self) -> Result<Branches> {
-        self.request_from_endpoint("version/branches").await
+        self.request_from_endpoint(API_V1, "version/branches").await
     }
 
     /// Request all builds of branch
     pub async fn builds_by_branch(&self, branch: &str, release: bool) -> Result<Vec<Build>> {
-        self.request_from_endpoint(&if release {
+        self.request_from_endpoint(API_V1, &if release {
             format!("version/builds/{}/release", branch)
         } else {
             format!("version/builds/{}", branch)
@@ -159,19 +164,19 @@ impl Client {
 
     /// Request launch manifest of specific build
     pub async fn fetch_launch_manifest(&self, build_id: u32) -> Result<LaunchManifest> {
-        self.request_from_endpoint(&format!("version/launch/{}", build_id))
+        self.request_from_endpoint(API_V1, &format!("version/launch/{}", build_id))
             .await
     }
 
     /// Request list of downloadable mods for mc_version and used subsystem
     pub async fn fetch_mods(&self, mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod>> {
-        self.request_from_endpoint(&format!("version/mods/{}/{}", mc_version, subsystem))
+        self.request_from_endpoint(API_V1, &format!("version/mods/{}/{}", mc_version, subsystem))
             .await
     }
 
     /// Request changelog of specified build
     pub async fn fetch_changelog(&self, build_id: u32) -> Result<Changelog> {
-        self.request_from_endpoint(&format!("version/changelog/{}", build_id))
+        self.request_from_endpoint(API_V1, &format!("version/changelog/{}", build_id))
             .await
     }
 
@@ -192,9 +197,9 @@ impl Client {
     }
 
     /// Request JSON formatted data from launcher API
-    pub async fn request_from_endpoint<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
+    pub async fn request_from_endpoint<T: DeserializeOwned>(&self, api_version: &str, endpoint: &str) -> Result<T> {
         Ok(HTTP_CLIENT
-            .get(format!("{}/{}/{}", self.url, API_V1, endpoint))
+            .get(format!("{}/{}/{}", self.url, api_version, endpoint))
             .send()
             .await?
             .error_for_status()?
@@ -215,6 +220,35 @@ impl Client {
             .json::<T>()
             .await?)
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PaginatedResponse<T> {
+    pub items: Vec<T>,
+    pub pagination: Pagination,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Pagination {
+    pub current: u32,
+    pub pages: u32,
+    pub items: u32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct BlogPost {
+    #[serde(rename(serialize = "postId"))]
+    pub post_id: u32,
+    #[serde(rename(serialize = "postUid"))]
+    pub post_uid: String,
+    pub author: String,
+    pub title: String,
+    pub description: String,
+    pub date: NaiveDateTime,
+    #[serde(rename(serialize = "bannerText"))]
+    pub banner_text: String,
+    #[serde(rename(serialize = "bannerImageUrl"))]
+    pub banner_image_url: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -258,7 +292,7 @@ pub struct Build {
 }
 
 ///
-/// Subsystem specific data
+/// Subsystem-specific data
 /// This can be used for any subsystem, but for now it is only implemented for Fabric.
 /// It has to be turned into an Enum to be able to decide on it's own for specific data, but for now this is not required.
 ///

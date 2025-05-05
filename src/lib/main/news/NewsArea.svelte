@@ -3,13 +3,17 @@
     import News from "./News.svelte";
     import {invoke} from "@tauri-apps/api/core";
 
+    export let client;
+
     let news = [];
 
-    invoke("fetch_news")
-        .then((onlineNews) => {
-            news = onlineNews;
-        })
-        .catch((e) => console.error(e));
+    // TODO: Might support pagination in the future
+    invoke("fetch_blog_posts", {
+        client,
+        page: 1
+    }).then((onlineNews) => {
+        news = onlineNews.items;
+    }).catch((e) => console.error(e));
 </script>
 
 <div class="news-area">

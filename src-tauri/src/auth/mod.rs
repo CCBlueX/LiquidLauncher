@@ -13,7 +13,7 @@ use tokio::{
 };
 use tracing::debug;
 
-use crate::app::network::client_api::{Client, UserInformation};
+use crate::app::client_api::{Client, UserInformation};
 
 const OAUTH_CLIENT_ID: &str = "J2hzqzCxch8hfOPRFNINOZV5Ma4X4BFdZpMjAVEW";
 const AUTH_URL: &str = "https://auth.liquidbounce.net/application/o/authorize/";

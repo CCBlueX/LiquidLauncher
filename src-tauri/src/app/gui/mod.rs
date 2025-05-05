@@ -67,7 +67,7 @@ pub fn gui_main() {
             client_account_update,
             logout,
             refresh,
-            fetch_news,
+            fetch_blog_posts,
             fetch_changelog,
             clear_data,
             default_data_folder_path,

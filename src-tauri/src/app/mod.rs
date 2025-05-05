@@ -21,4 +21,4 @@ pub mod gui;
 
 pub mod options;
 pub mod webview;
-pub mod network;
+pub mod client_api;
