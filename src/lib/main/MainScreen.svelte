@@ -324,7 +324,7 @@
                 versionInfo={{
                     bannerUrl: "img/banner.png",
                     title: versionState.currentBuild ?
-                        `LiquidBounce ${versionState.currentBuild.lbVersion} for Minecraft ${versionState.currentBuild.mcVersion}` :
+                        `LiquidBounce v${versionState.currentBuild.lbVersion}` :
                         "Loading...",
                     date: versionState.currentBuild?.dateDay || "Loading...",
                     description: versionState.currentBuild?.changelog || "Loading..."
