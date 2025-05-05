@@ -20,12 +20,13 @@
 use std::path::Path;
 
 use anyhow::Result;
+use backon::{ExponentialBuilder, Retryable};
 use tokio::fs;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::HTTP_CLIENT;
 
-/// Download file using HTTP_CLIENT without any progress tracking
+/// Download a file using HTTP_CLIENT without any progress tracking
 pub async fn download_file_untracked(url: &str, path: impl AsRef<Path>) -> Result<()> {
     let path = path.as_ref().to_owned();
     let response = HTTP_CLIENT.get(url).send().await?.error_for_status()?;
@@ -41,11 +42,17 @@ where
 {
     debug!("Downloading file {:?}", url);
 
-    let mut response = HTTP_CLIENT
-        .get(url.trim())
-        .send()
-        .await?
-        .error_for_status()?;
+    let mut response = (|| async {
+        HTTP_CLIENT
+            .get(url.trim())
+            .send()
+            .await?
+            .error_for_status()
+    }).retry(ExponentialBuilder::default())
+        .notify(|err, dur| {
+            warn!("Failed to download file {}. Retrying in {:?}. Error: {}", url, dur, err);
+        })
+        .await?;
 
     debug!("Response received from url");
 
