@@ -19,12 +19,12 @@
 
 use std::path::Path;
 
+use crate::error::map_into_connection_error;
+use crate::HTTP_CLIENT;
 use anyhow::Result;
 use backon::{ExponentialBuilder, Retryable};
 use tokio::fs;
 use tracing::{debug, warn};
-
-use crate::HTTP_CLIENT;
 
 /// Download a file using HTTP_CLIENT without any progress tracking
 pub async fn download_file_untracked(url: &str, path: impl AsRef<Path>) -> Result<()> {
@@ -52,7 +52,8 @@ where
         .notify(|err, dur| {
             warn!("Failed to download file {}. Retrying in {:?}. Error: {}", url, dur, err);
         })
-        .await?;
+        .await
+        .map_err(|e| map_into_connection_error(e.into()))?;
 
     debug!("Response received from url");
 
@@ -63,7 +64,8 @@ where
     on_progress(0, max_len);
 
     debug!("Reading data from response chunk...");
-    while let Some(data) = response.chunk().await? {
+    while let Some(data) = response.chunk().await
+        .map_err(|e| map_into_connection_error(e.into()))? {
         output.extend_from_slice(&data);
         curr_len += data.len();
         on_progress(curr_len as u64, max_len);
@@ -72,3 +74,4 @@ where
     debug!("Downloaded file");
     Ok(output)
 }
+

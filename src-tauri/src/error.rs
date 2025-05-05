@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
-
+use anyhow::{anyhow, Error};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -25,4 +25,11 @@ pub enum LauncherError {
     InvalidVersionProfile(String),
     #[error("Unknown template parameter: {0}")]
     UnknownTemplateParameter(String),
+}
+
+pub fn map_into_connection_error(e: Error) -> Error {
+    anyhow!(
+        "Failed to download file. This might have been caused by connection issues. Please try using a VPN such as Cloudflare Warp.\n\nError: {}",
+        e
+    )
 }
