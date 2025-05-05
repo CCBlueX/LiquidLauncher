@@ -1,5 +1,5 @@
 <script>
-    import { createEventDispatcher } from "svelte";
+    import {createEventDispatcher} from "svelte";
     import SettingsContainer from "../settings/SettingsContainer.svelte";
     import SelectSetting from "../settings/SelectSetting.svelte";
     import ToggleSetting from "../settings/ToggleSetting.svelte";
@@ -7,7 +7,7 @@
     import CustomModSetting from "../settings/CustomModSetting.svelte";
     import IconButtonSetting from "../settings/IconButtonSetting.svelte";
     import {invoke} from "@tauri-apps/api/core";
-    import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
+    import {open as dialogOpen} from "@tauri-apps/plugin-dialog";
 
     export let options;
     export let versionState = {
@@ -102,7 +102,7 @@
             />
         {/each}
     </SettingWrapper>
-    <SettingWrapper title={`Additional mods for ${versionState.currentBuild?.branch} ${versionState.currentBuild?.mcVersion}`}>
+    <SettingWrapper title={`Additional mods - ${versionState.currentBuild?.subsystem ? `${versionState.currentBuild.subsystem.charAt(0).toUpperCase()}${versionState.currentBuild.subsystem.slice(1)}` : ''} ${versionState.currentBuild?.mcVersion}`}>
         <div slot="title-element">
             <IconButtonSetting
                     text="Install"
