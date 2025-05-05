@@ -1,9 +1,29 @@
 <script>
-    import { fly } from "svelte/transition";
+    import {fly} from "svelte/transition";
 
     const facts = [
         {
-            title: "5.000.000 Total Downloads",
+            title: "Blatant or Closet Cheating - You Decide!",
+            description: "LiquidBounce comes with many built-in blatant and closet cheats, making it the perfect all-in-one client.",
+        },
+        {
+            title: "Multi-Version Support",
+            description: "With the integrated version changer, you can easily switch between different Minecraft versions without restarting the game!",
+        },
+        {
+            title: "Multi-Server Support",
+            description: "LiquidBounce provides features and bypasses for many different servers."
+        },
+        {
+            title: "Auto Config System",
+            description: "LiquidBounce's Auto Config System will automatically apply the best settings for you when joining a well-known server.",
+        },
+        {
+            title: "Customizable",
+            description: "LiquidBounce's UI is fully customizable. You can change out the entire UI to your liking.",
+        },
+        {
+            title: "6.000.000 Total Downloads",
             description:
                 "LiquidBounce is one of the most popular hacked clients of all time.",
         },
@@ -12,9 +32,9 @@
             description: "LiquidBounce's source code is publicly available.",
         },
         {
-            title: "Extensible",
+            title: "ScriptAPI",
             description:
-                "LiquidBounce's JavaScript API allows users to write their own modules and commands.",
+                "LiquidBounce's Script API allows users to write their own modules and commands.",
         },
     ];
 
