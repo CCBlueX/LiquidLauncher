@@ -53,7 +53,8 @@
         height: 100%;
         width: 100%;
         background-size: cover;
-        filter: blur(3px);
+        background-position: center;
+        filter: blur(2px);
         z-index: -1;
     }
 
