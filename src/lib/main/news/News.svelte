@@ -61,6 +61,7 @@
         color: white;
         font-weight: 600;
         font-size: 20px;
+        text-align: center;
     }
 
     .content {
