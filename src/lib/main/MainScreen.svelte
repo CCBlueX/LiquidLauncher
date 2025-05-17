@@ -11,6 +11,7 @@
     import ClientLog from "./log/ClientLog.svelte";
     import Settings from "./settings/Settings.svelte";
     import VersionSelect from "./VersionSelect.svelte";
+    import FirstRunWarning from "./FirstRunWarning.svelte";
     import {onMount} from "svelte";
 
     export let client;
@@ -22,6 +23,7 @@
     let settingsShown = false;
     let versionSelectShown = false;
     let launchVersionWarningShown = false;
+    let firstRunWarningShown = false;
     let launchVersionWarningCountdown = 0;
     let log = [];
 
@@ -143,6 +145,11 @@
     const WARNING_MEMORY = 4096;
 
     async function runClient() {
+        if (options.launcher.firstRun) {
+            firstRunWarningShown = true;
+            return;
+        }
+
         if (running) return;
 
         log = [];
@@ -216,6 +223,19 @@
         await invoke("terminate");
     }
 
+    async function continueAfterFirstRun() {
+        await hideFirstRunWarning();
+        await runClient();
+    }
+
+    async function hideFirstRunWarning() {
+        firstRunWarningShown = false;
+        if (options.launcher.firstRun) {
+            options.launcher.firstRun = false;
+            await options.store();
+        }
+    }
+    
     async function switchToNextgen() {
         launchVersionWarningShown = false;
         options.version.branchName = "nextgen";
@@ -268,6 +288,13 @@
     });
 </script>
 
+{#if firstRunWarningShown}
+    <FirstRunWarning
+            on:hide={hideFirstRunWarning}
+            on:continue={continueAfterFirstRun}
+    />
+{/if}
+
 {#if launchVersionWarningShown}
     <VersionWarning
             {launchVersionWarningCountdown}
@@ -310,7 +337,7 @@
 {/if}
 
 <VerticalFlexWrapper
-        blur={settingsShown || versionSelectShown || logShown || launchVersionWarningShown}
+        blur={settingsShown || versionSelectShown || logShown || launchVersionWarningShown || firstRunWarningShown}
 >
     <MainHeader
             account={options.start.account}

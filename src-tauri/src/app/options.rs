@@ -64,6 +64,8 @@ pub(crate) struct VersionOptions {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct LauncherOptions {
+    #[serde(rename = "firstRun", default)]
+    pub first_run: bool,
     #[serde(rename = "showNightlyBuilds")]
     pub show_nightly_builds: bool,
     #[serde(rename = "concurrentDownloads")]
@@ -120,6 +122,7 @@ impl Options {
                 options: legacy.branch_options,
             },
             launcher_options: LauncherOptions {
+                first_run: false,
                 keep_launcher_open: legacy.keep_launcher_open,
                 show_nightly_builds: legacy.show_nightly_builds,
                 concurrent_downloads: legacy.concurrent_downloads as u32,
@@ -163,6 +166,7 @@ impl Default for VersionOptions {
 impl Default for LauncherOptions {
     fn default() -> Self {
         Self {
+            first_run: true,
             show_nightly_builds: false,
             keep_launcher_open: false,
             concurrent_downloads: 10,
