@@ -32,7 +32,7 @@ use std::{
 };
 use tauri::{Listener, Manager, Url, WebviewWindowBuilder};
 use tokio::time::sleep;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use super::gui::ShareableWindow;
 
@@ -64,7 +64,7 @@ pub async fn open_download_page(
         )));
 
         match show_webview(download_page.clone(), &launcher_data.data).await {
-            Ok(url) => break url,
+            Ok(pid) => break pid,
             Err(e) => {
                 launcher_data.log(&format!("Failed to open download page: {:?}", e));
                 sleep(Duration::from_millis(500)).await;
@@ -101,7 +101,14 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
     }?;
 
     // Redirect the download view to the download page
-    download_view.navigate(url)?;
+    if let Err(e) = download_view.navigate(url.clone()) {
+        error!("Failed to navigate to download page: {:?}", e);
+    }
+
+    // We do this in case the navigation fails, e.g., on macOS
+    if let Err(e) = download_view.eval(&format!("window.location.href = '{}'", url)) {
+        error!("Failed to navigate to download page using JS: {:?}", e);
+    }
 
     // Show and maximize the download view
     download_view
@@ -112,10 +119,10 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
         .context("Failed to maximize the download view")?;
 
     // Wait for the download to finish
-    let download_link_cell = Arc::new(Mutex::new(None));
+    let pid_cell = Arc::new(Mutex::new(None));
     let close_request = Arc::new(AtomicBool::new(false));
     let cloned_close_request = close_request.clone();
-    let cloned_cell = download_link_cell.clone();
+    let cloned_cell = pid_cell.clone();
 
     download_view.on_window_event(move |event| {
         if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -130,30 +137,30 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
 
         #[derive(Deserialize)]
         struct DownloadPayload {
-            url: String,
+            pid: String
         }
 
         let payload = serde_json::from_str::<DownloadPayload>(payload).unwrap();
 
-        info!("Received download link: {}", payload.url);
-        *cloned_cell.lock().unwrap() = Some(payload.url);
+        info!("Received PID: {}", payload.pid);
+        *cloned_cell.lock().unwrap() = Some(payload.pid);
     });
 
-    let url = loop {
+    let pid = loop {
         // sleep for 100ms
         sleep(Duration::from_millis(100)).await;
 
         // check if we got the download link
-        if let Ok(link) = download_link_cell.lock() {
-            if let Some(link) = link.clone() {
-                break link;
+        if let Ok(pid) = pid_cell.lock() {
+            if let Some(pid) = pid.clone() {
+                break pid;
             }
         }
 
         if cloned_close_request.load(Ordering::SeqCst) {
             let _ = download_view.hide();
             bail!(
-                "Download view was closed before the download link was received. \
+                "Download view was closed before the file PID was received. \
             Aborting download..."
             );
         }
@@ -165,5 +172,5 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
 
     let _ = download_view.hide();
 
-    Ok(url)
+    Ok(pid)
 }

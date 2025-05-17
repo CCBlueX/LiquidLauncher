@@ -196,6 +196,11 @@ impl Client {
             .await
     }
 
+    /// Uses [self.url] to create a direct download link for a file with the given pid.
+    pub fn get_direct_download_link(&self, pid: &str) -> String {
+        format!("{}/{}/file/{}", self.url, API_V3, pid)
+    }
+
     /// Request JSON formatted data from launcher API
     pub async fn request_from_endpoint<T: DeserializeOwned>(&self, api_version: &str, endpoint: &str) -> Result<T> {
         Ok(HTTP_CLIENT
@@ -394,9 +399,7 @@ pub enum LoaderSubsystem {
 pub struct SkipFileResolve {
     pub error: bool,
     pub msg: String,
-    pub target_pid: Option<String>,
-    pub download_url: Option<String>,
-    pub direct_url: Option<String>,
+    pub target_pid: Option<String>
 }
 
 #[derive(Deserialize, Serialize, Clone)]
