@@ -6,8 +6,8 @@
     import ToggleSetting from "../../settings/ToggleSetting.svelte";
     import ButtonSetting from "../../settings/ButtonSetting.svelte";
     import LauncherVersion from "../../settings/LauncherVersion.svelte";
-    import { onMount } from "svelte";
-    import { invoke } from "@tauri-apps/api/core";
+    import {onMount} from "svelte";
+    import {invoke} from "@tauri-apps/api/core";
 
     export let options;
 
@@ -84,7 +84,7 @@
         title="Custom JVM Path"
         placeholder="Select Java wrapper location"
         bind:value={options.start.javaDistribution.value}
-        filters={[{ name: "javaw", extensions: [] }]}
+        filters={[{ name: "java", extensions: [] }]}
         windowTitle="Select custom Java wrapper"
     />
 {/if}
