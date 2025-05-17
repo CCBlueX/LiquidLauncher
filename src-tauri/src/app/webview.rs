@@ -99,17 +99,7 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
             }
         }
     }?;
-
-    // Redirect the download view to the download page
-    if let Err(e) = download_view.navigate(url.clone()) {
-        error!("Failed to navigate to download page: {:?}", e);
-    }
-
-    // We do this in case the navigation fails, e.g., on macOS
-    if let Err(e) = download_view.eval(&format!("window.location.href = '{}'", url)) {
-        error!("Failed to navigate to download page using JS: {:?}", e);
-    }
-
+    
     // Show and maximize the download view
     download_view
         .show()
@@ -117,6 +107,13 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
     download_view
         .maximize()
         .context("Failed to maximize the download view")?;
+
+    // Redirect the download view to the download page
+    if let Err(e) = download_view.navigate(url.clone()) {
+        error!("Failed to navigate to download page: {:?}", e);
+    }
+
+    debug!("Download view URL: {}", download_view.url()?);
 
     // Wait for the download to finish
     let pid_cell = Arc::new(Mutex::new(None));
