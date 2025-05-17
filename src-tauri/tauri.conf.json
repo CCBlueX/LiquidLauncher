@@ -33,7 +33,7 @@
       {
         "title": "LiquidBounce Download",
         "label": "download_view",
-        "url": "https://liquidbounce.net/download?launcher=1",
+        "url": "https://liquidbounce.net/launcher?view=download_view",
         "visible": false,
         "maximized": true,
         "alwaysOnTop": true,
