@@ -90,7 +90,7 @@ pub fn main() -> Result<()> {
         let _guard = span.enter();
 
         info!(parent: &span, "Starting LiquidLauncher v{}", LAUNCHER_VERSION);
-        info!(parent: &span, "OS: {:} {:} {:}", OS, ARCHITECTURE, OS_VERSION.to_string());
+        info!(parent: &span, "OS: {:} {:} {:}", OS, *ARCHITECTURE, OS_VERSION.to_string());
 
         // application directory
         info!(parent: &span, "Creating application directory");

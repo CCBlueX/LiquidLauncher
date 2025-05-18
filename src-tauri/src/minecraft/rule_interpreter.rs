@@ -43,7 +43,7 @@ pub fn check_condition(rules: &Vec<Rule>, features: &HashSet<String>) -> Result<
                 rule_applies = false;
             }
             if let Some(arch) = &os_requirement.arch {
-                if *arch != ARCHITECTURE {
+                if *arch != *ARCHITECTURE {
                     rule_applies = false;
                 }
             }
