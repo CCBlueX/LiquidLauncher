@@ -53,9 +53,10 @@ pub async fn open_download_page(
 
         if count > MAX_DOWNLOAD_ATTEMPTS {
             bail!("Failed to open download page after {} attempts.\n\n\
+            Please do not close the download window. Instead proceed with the download by pressing on 'Continue' and then 'Download'.\n\n\
             If the download window does not appear, please try restarting LiquidLauncher with administrator privileges.\n\
-            If this does not help, please install LiquidBounce manually (https://liquidbounce.net/docs/Tutorials/Installation).\n\
-            Or try our advice at https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher.", MAX_DOWNLOAD_ATTEMPTS);
+            If this does not help, please install LiquidBounce manually (https://liquidbounce.net/docs/get-started/manual-installation).\n\
+            Or try our advice at https://liquidbounce.net/docs/tutorials/fixing-liquidlauncher.", MAX_DOWNLOAD_ATTEMPTS);
         }
 
         launcher_data.progress_update(ProgressUpdate::SetLabel(format!(
@@ -99,7 +100,7 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
             }
         }
     }?;
-    
+
     // Show and maximize the download view
     download_view
         .show()
