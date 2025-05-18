@@ -17,24 +17,20 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::app::gui::ShareableWindow;
 use crate::minecraft::{
     launcher::LauncherData,
     progress::{ProgressReceiver, ProgressUpdate},
 };
 use anyhow::{anyhow, bail, Context, Result};
 use serde::Deserialize;
-use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
-    time::Duration,
-};
+use std::{sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+}, time::Duration};
 use tauri::{Listener, Manager, Url, WebviewWindowBuilder};
 use tokio::time::sleep;
 use tracing::{debug, error, info};
-
-use super::gui::ShareableWindow;
 
 const MAX_DOWNLOAD_ATTEMPTS: u8 = 2;
 
@@ -101,6 +97,11 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
         }
     }?;
 
+    // Redirect the download view to the download page
+    if let Err(e) = download_view.navigate(url.clone()) {
+        error!("Failed to navigate to download page: {:?}", e);
+    }
+    
     // Show and maximize the download view
     download_view
         .show()
@@ -109,11 +110,19 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
         .maximize()
         .context("Failed to maximize the download view")?;
 
-    // Redirect the download view to the download page
-    if let Err(e) = download_view.navigate(url.clone()) {
-        error!("Failed to navigate to download page: {:?}", e);
-    }
+    // Try to navigate to the download page twice on macOS ARCH64
+    #[cfg(target_os = "macos")]
+    {
+        if *crate::utils::sys::ARCHITECTURE == Architecture::AARCH64 {
+            sleep(Duration::from_millis(500)).await;
 
+            // Redirect the download view to the download page
+            if let Err(e) = download_view.navigate(url.clone()) {
+                error!("Failed to navigate to download page: {:?}", e);
+            }
+        }
+    }
+    
     debug!("Download view URL: {}", download_view.url()?);
 
     // Wait for the download to finish
