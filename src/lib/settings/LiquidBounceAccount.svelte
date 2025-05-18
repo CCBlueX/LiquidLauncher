@@ -1,15 +1,11 @@
 <script>
-    import { jwtDecode } from "jwt-decode";
-
     export let account;
-
-    const decodedJwt = jwtDecode(account.accessToken);
 </script>
 
 <div class="liquidbounce-account">
     <div class="stat">
         <div class="stat-title">Username</div>
-        <div class="stat-value">{decodedJwt.nickname}</div>
+        <div class="stat-value">{account.nickname}</div>
     </div>
     <div class="stat">
         <div class="stat-title">Donator Perks</div>

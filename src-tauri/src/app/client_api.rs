@@ -404,6 +404,7 @@ pub struct SkipFileResolve {
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct UserInformation {
+    pub nickname: String,
     #[serde(rename = "userId", alias = "user_id")]
     pub user_id: String,
     pub premium: bool,
