@@ -16,10 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
-
 use anyhow::{bail, Result};
 use once_cell::sync::Lazy;
 use serde::Deserialize;
+use std::env::consts;
 use std::fmt::Display;
 use sysinfo::{RefreshKind, System, SystemExt};
 
@@ -44,17 +44,13 @@ pub const OS: OperatingSystem = if cfg!(target_os = "windows") {
     OperatingSystem::UNKNOWN
 };
 
-pub const ARCHITECTURE: Architecture = if cfg!(target_arch = "x86") {
-    Architecture::X86 // 32-bit
-} else if cfg!(target_arch = "x86_64") {
-    Architecture::X64 // 64-bit
-} else if cfg!(target_arch = "arm") {
-    Architecture::ARM // ARM
-} else if cfg!(target_arch = "aarch64") {
-    Architecture::AARCH64 // AARCH64
-} else {
-    Architecture::UNKNOWN // Unsupported architecture
-};
+pub static ARCHITECTURE: Lazy<Architecture> = Lazy::new(|| match consts::ARCH {
+    "x86" => Architecture::X86,        // 32-bit
+    "x86_64" => Architecture::X64,     // 64-bit
+    "arm" => Architecture::ARM,        // ARM
+    "aarch64" => Architecture::AARCH64, // AARCH64
+    _ => Architecture::UNKNOWN,        // Unsupported architecture
+});
 
 pub const OS_VERSION: Lazy<String> = Lazy::new(|| os_info::get().version().to_string());
 
