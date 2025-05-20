@@ -29,16 +29,6 @@
           ]
         },
         "shadow": true
-      },
-      {
-        "title": "LiquidBounce Download",
-        "label": "download_view",
-        "url": "https://liquidbounce.net/download",
-        "visible": false,
-        "maximized": true,
-        "alwaysOnTop": true,
-        "center": true,
-        "parent": "main"
       }
     ]
   },

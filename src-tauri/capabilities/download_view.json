@@ -4,7 +4,7 @@
     "remote": {
         "urls": ["https://dl.liquidbounce.net", "https://dl.ccbluex.net"]
     },
-    "windows": ["download_view"],
+    "windows": ["download_view-*"],
     "local": false,
     "permissions": [
         "core:event:default"

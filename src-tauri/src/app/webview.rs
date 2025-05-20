@@ -30,9 +30,9 @@ use std::{
     },
     time::Duration,
 };
-use tauri::{Listener, Manager, Url, WebviewWindowBuilder};
+use tauri::{Listener, Manager, Url, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use tokio::time::sleep;
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 use super::gui::ShareableWindow;
 
@@ -42,8 +42,7 @@ pub async fn open_download_page(
     url: &str,
     launcher_data: &LauncherData<ShareableWindow>,
 ) -> Result<String> {
-    let download_page: Url = format!("{}&liquidlauncher=1", url)
-        .parse()
+    let download_page: Url = url.parse()
         .context("Failed to parse download page URL")?;
 
     let mut count = 0;
@@ -77,47 +76,23 @@ pub async fn open_download_page(
 }
 
 async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<String> {
-    // Find download_view window from the window manager
-    let download_view = {
-        let window = window
-            .lock()
-            .map_err(|_| anyhow!("Failed to lock window"))?;
+    let window = window
+        .lock()
+        .map_err(|_| anyhow!("Failed to lock window"))?;
+    let app = window.app_handle();
+    let main_window = window.get_webview_window("main")
+        .ok_or_else(|| anyhow!("Failed to get window"))?;
+    let len = app.webview_windows().len();
 
-        match window.get_webview_window("download_view") {
-            Some(window) => Ok(window),
-            None => {
-                // todo: do not hardcode index
-                let config = window
-                    .config()
-                    .app
-                    .windows
-                    .get(1)
-                    .context("Unable to find window config")?;
-
-                WebviewWindowBuilder::from_config(window.app_handle(), config)
-                    .map_err(|e| anyhow!("Failed to build window: {:?}", e))?
-                    .build()
-            }
-        }
-    }?;
-
-    // Redirect the download view to the download page
-    if let Err(e) = download_view.navigate(url.clone()) {
-        error!("Failed to navigate to download page: {:?}", e);
-    }
-
-    // We do this in case the navigation fails, e.g., on macOS
-    if let Err(e) = download_view.eval(&format!("window.location.href = '{}'", url)) {
-        error!("Failed to navigate to download page using JS: {:?}", e);
-    }
-
-    // Show and maximize the download view
-    download_view
-        .show()
-        .context("Failed to show the download view")?;
-    download_view
-        .maximize()
-        .context("Failed to maximize the download view")?;
+    let download_view = WebviewWindowBuilder::new(app, format!("download_view-{}", len), WebviewUrl::External(url))
+        .title("Download of LiquidBounce JAR")
+        .visible(true)
+        .always_on_top(true)
+        .maximized(true)
+        .center()
+        .parent(&main_window)?
+        .build()?;
+    drop(window);
 
     // Wait for the download to finish
     let pid_cell = Arc::new(Mutex::new(None));
@@ -126,7 +101,7 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
     let cloned_cell = pid_cell.clone();
 
     download_view.on_window_event(move |event| {
-        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+        if let WindowEvent::CloseRequested { api, .. } = event {
             api.prevent_close();
             close_request.store(true, Ordering::SeqCst);
         }
@@ -171,7 +146,7 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
             .context("Download view was closed unexpected")?;
     };
 
-    let _ = download_view.hide();
+    let _ = download_view.destroy();
 
     Ok(pid)
 }
