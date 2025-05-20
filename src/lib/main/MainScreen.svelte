@@ -351,7 +351,7 @@
                 versionInfo={{
                     bannerUrl: "img/banner.png",
                     title: versionState.currentBuild ?
-                        `LiquidBounce v${versionState.currentBuild.lbVersion}` :
+                        `LiquidBounce ${versionState.currentBuild.lbVersion.startsWith("b") ? versionState.currentBuild.lbVersion : `v${versionState.currentBuild.lbVersion}`}` :
                         "Loading...",
                     date: versionState.currentBuild?.dateDay || "Loading...",
                     description: versionState.currentBuild?.changelog || "Loading..."
