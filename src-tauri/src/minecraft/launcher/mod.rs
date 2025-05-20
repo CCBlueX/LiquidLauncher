@@ -163,6 +163,17 @@ pub async fn launch<D: Send + Sync>(
         &features,
     )?;
 
+    // Launcher Args (-D<name>=<value>)
+    command_arguments.push(format!("-Dnet.ccbluex.liquidbounce.api.url={}", launching_parameter.client.url()));
+    command_arguments.push(format!("-Dnet.ccbluex.liquidbounce.api.secure={}", launching_parameter.client.is_secure()));
+    command_arguments.push(format!("-Dnet.ccbluex.liquidbounce.api.token={}", launching_parameter.client.session_token()));
+    
+    if let Some(client_account) = &launching_parameter.client_account {
+        command_arguments.push(format!("-Dnet.ccbluex.liquidbounce.account.access_token={}", client_account.get_access_token().secret()));
+        command_arguments.push(format!("-Dnet.ccbluex.liquidbounce.account.refresh_token={}", client_account.get_refresh_token().secret()));
+        command_arguments.push(format!("-Dnet.ccbluex.liquidbounce.account.expires_at={}", client_account.get_expires_at()));
+    }
+    
     // Custom Arguments
     command_arguments.extend(launching_parameter.jvm_args.iter().cloned());
 

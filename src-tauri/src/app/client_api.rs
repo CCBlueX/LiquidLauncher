@@ -144,6 +144,14 @@ impl Client {
         self.is_secure
     }
 
+    pub fn url(&self) -> &str {
+        &self.url
+    }
+    
+    pub fn session_token(&self) -> &str {
+        &self.session_token
+    }
+
     /// Request all blog posts
     pub async fn blog_posts(&self, page: u32) -> Result<PaginatedResponse<BlogPost>> {
         self.request_from_endpoint(API_V3, &format!("blog?page={}", page)).await
