@@ -52,12 +52,12 @@ pub struct VersionManifest {
 
 impl VersionManifest {
     pub async fn fetch() -> Result<Self> {
-        let response = HTTP_CLIENT.get("https://launchermeta.mojang.com/mc/game/version_manifest.json")
+        let response = HTTP_CLIENT.get("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json")
             .send()
             .await
-            .context("Connection to https://launchermeta.mojang.com/ failed. Check your internet connection.")?
+            .context("Connection to https://piston-meta.mojang.com/ failed. Check your internet connection.")?
             .error_for_status()
-            .context("https://launchermeta.mojang.com/ returned with an error code, try again later!")?;
+            .context("https://piston-meta.mojang.com/ returned with an error code, try again later!")?;
         let manifest = response.json::<VersionManifest>().await.context(
             "Failed to parse Version Manifest, Mojang Server responded with not valid format.",
         )?;
