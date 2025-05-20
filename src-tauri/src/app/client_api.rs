@@ -49,13 +49,15 @@ pub struct Client {
     // To show a warning to the user when using a non-secure connection,
     // we need to pass this information to the frontend.
     is_secure: bool,
+    session_token: String
 }
 
 impl Client {
-    pub fn new(host: &str) -> Self {
+    pub fn new(host: &str, session_token: String) -> Self {
         Self {
             url: host.to_string(),
             is_secure: host.starts_with("https://"),
+            session_token
         }
     }
 
@@ -63,7 +65,7 @@ impl Client {
     /// and returns a [Client] instance with the endpoint set.
     ///
     /// Returns [String] as error with technical information if no API endpoint is reachable.
-    pub async fn lookup() -> Result<Self, String> {
+    pub async fn lookup(session_token: String) -> Result<Self, String> {
         let span = debug_span!("api_lookup");
         let _guard = span.enter();
 
@@ -127,7 +129,7 @@ impl Client {
 
             if is_success {
                 debug!(parent: &span, "API endpoint '{}' is available", endpoint);
-                return Ok(Self::new(endpoint));
+                return Ok(Self::new(endpoint, session_token));
             }
         }
 
@@ -205,6 +207,7 @@ impl Client {
     pub async fn request_from_endpoint<T: DeserializeOwned>(&self, api_version: &str, endpoint: &str) -> Result<T> {
         Ok(HTTP_CLIENT
             .get(format!("{}/{}/{}", self.url, api_version, endpoint))
+            .header("X-Session-Token", &self.session_token)
             .send()
             .await?
             .error_for_status()?
@@ -219,6 +222,7 @@ impl Client {
     ) -> Result<T> {
         Ok(client_account
             .authenticate_request(HTTP_CLIENT.get(format!("{}/{}/{}", self.url, API_V3, endpoint)))?
+            .header("X-Session-Token", &self.session_token)
             .send()
             .await?
             .error_for_status()?

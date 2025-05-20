@@ -2432,6 +2432,7 @@ dependencies = [
  "once_cell",
  "os_info",
  "path-absolutize",
+ "rand 0.9.1",
  "regex",
  "reqwest",
  "sanitize-filename",

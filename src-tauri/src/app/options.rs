@@ -22,6 +22,7 @@ use std::{collections::HashMap, path::Path};
 use crate::minecraft::java::DistributionSelection;
 use crate::{auth::ClientAccount, minecraft::auth::MinecraftAccount};
 use anyhow::Result;
+use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 use tracing::info;
@@ -72,6 +73,8 @@ pub(crate) struct LauncherOptions {
     pub concurrent_downloads: u32,
     #[serde(rename = "keepLauncherOpen")]
     pub keep_launcher_open: bool,
+    #[serde(rename = "sessionToken", default = "random_token")]
+    pub session_token: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -126,6 +129,7 @@ impl Options {
                 keep_launcher_open: legacy.keep_launcher_open,
                 show_nightly_builds: legacy.show_nightly_builds,
                 concurrent_downloads: legacy.concurrent_downloads as u32,
+                session_token: random_token()
             },
             premium_options: PremiumOptions {
                 account: legacy.client_account,
@@ -170,6 +174,7 @@ impl Default for LauncherOptions {
             show_nightly_builds: false,
             keep_launcher_open: false,
             concurrent_downloads: 10,
+            session_token: random_token()
         }
     }
 }
@@ -196,6 +201,10 @@ impl Default for Options {
 
 fn default_memory() -> u64 {
     4096
+}
+
+fn random_token() -> String {
+    Alphanumeric.sample_string(&mut rand::rng(), 16)
 }
 
 // Legacy format structure

@@ -47,6 +47,7 @@ sysinfo = "0.29"
 regex = "1.7.0"
 uuid = { version = "1.2", features = ["serde", "v4"] }
 chrono = { version = "0.4", features = ["serde"] }
+rand = "0.9"
 
 sha1 = "0.10"
 base16ct = {version = "0.2.0", features = ["alloc"] }

@@ -66,7 +66,9 @@
 
     async function setupClient() {
         try {
-            client = await invoke("setup_client");
+            client = await invoke("setup_client", {
+                sessionToken: options.launcher.sessionToken
+            });
             console.info("API Client has been set up", client);
         } catch (e) {
             console.error("Failed to set up API client:", e);
@@ -88,8 +90,8 @@
     }
 
     onMount(async () => {
-        await Promise.all([handleUpdate(), setupClient(), checkSystem()]);
         await setupOptions();
+        await Promise.all([handleUpdate(), setupClient(), checkSystem()]);
         loading = false;
     });
 </script>
