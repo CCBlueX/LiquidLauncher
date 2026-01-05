@@ -75,7 +75,8 @@ pub fn gui_main() {
             get_launcher_version,
             get_custom_mods,
             install_custom_mod,
-            delete_custom_mod
+            delete_custom_mod,
+            get_vanilla_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -51,6 +51,20 @@ pub(crate) struct StartOptions {
     pub jvm_args: Option<Vec<String>>,
     #[serde(rename = "memory", default = "default_memory")]
     pub memory: u64,
+    #[serde(rename = "vanillaIntegration", default)]
+    pub vanilla_integration: VanillaIntegration,
+}
+
+#[derive(Clone, Serialize, Deserialize, Default)]
+pub struct VanillaIntegration {
+    #[serde(rename = "customPath", default)]
+    pub custom_path: String,
+    #[serde(rename = "useVanillaSaves", default)]
+    pub use_vanilla_saves: bool,
+    #[serde(rename = "useVanillaResourcePacks", default)]
+    pub use_vanilla_resource_packs: bool,
+    #[serde(rename = "useVanillaShaderPacks", default)]
+    pub use_vanilla_shader_packs: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -116,8 +130,9 @@ impl Options {
                 custom_data_path: legacy.custom_data_path,
                 java_distribution: DistributionSelection::default(),
                 minecraft_account: legacy.current_account,
-                jvm_args: None, // No equivalent in legacy format
-                memory: 4096,   // No equivalent in legacy format - default to 4GB
+                jvm_args: None,
+                memory: 4096,
+                vanilla_integration: VanillaIntegration::default(),
             },
             version_options: VersionOptions {
                 branch_name: None, // Force recommended branch
@@ -153,6 +168,7 @@ impl Default for StartOptions {
             custom_data_path: String::new(),
             jvm_args: None,
             memory: 4096,
+            vanilla_integration: VanillaIntegration::default(),
         }
     }
 }
