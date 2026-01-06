@@ -62,6 +62,9 @@
         <span
             class="input-value"
             contenteditable="true"
+            role="textbox"
+            tabindex="0"
+            aria-label={`${title} value`}
             bind:textContent={value}
             on:keypress={updateSliderKeypress}
             on:blur={updateSliderBlur}
