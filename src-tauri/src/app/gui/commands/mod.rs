@@ -24,6 +24,7 @@ pub(crate) mod marketplace;
 pub(crate) mod system;
 pub(crate) mod minecraft_installation;
 pub(crate) mod updater;
+pub(crate) mod modrinth;
 
 pub(crate) use auth::*;
 pub(crate) use client::*;
@@ -32,3 +33,4 @@ pub(crate) use marketplace::*;
 pub(crate) use system::*;
 pub(crate) use minecraft_installation::*;
 pub(crate) use updater::*;
+pub(crate) use modrinth::*;

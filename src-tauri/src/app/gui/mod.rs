@@ -87,7 +87,13 @@ pub fn gui_main() {
             browse_marketplace,
             get_marketplace_item,
             install_marketplace_item,
-            remove_marketplace_item
+            remove_marketplace_item,
+            modrinth_search,
+            modrinth_get_version,
+            modrinth_install,
+            modrinth_update_mod,
+            modrinth_check_updates,
+            modrinth_get_installed
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
