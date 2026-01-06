@@ -17,6 +17,16 @@
         if (!mcVersion || !branch) return;
         checking = true;
         try {
+            // First sync any existing mods not yet tracked
+            const synced = await invoke("modrinth_sync_existing", {
+                branch,
+                mcVersion
+            });
+            if (synced > 0) {
+                console.log(`Synced ${synced} existing mods with Modrinth`);
+                dispatch("synced");
+            }
+
             mods = await invoke("modrinth_check_updates", {
                 branch,
                 mcVersion,

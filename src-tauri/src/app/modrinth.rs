@@ -100,15 +100,53 @@ pub async fn get_compatible_version(project_id: &str, mc_version: &str, loader: 
     Ok(versions.into_iter().next())
 }
 
+/// Downloads a mod file with atomic write to prevent corruption on network failure.
+/// Uses a temporary file and only moves to final destination after successful download.
 pub async fn download_mod(file: &ModrinthFile, dest_path: &std::path::Path) -> Result<()> {
+    use anyhow::Context;
+    
+    let temp_path = dest_path.with_extension("tmp");
+    
     let response = HTTP_CLIENT
         .get(&file.url)
         .header("User-Agent", "LiquidLauncher/0.5.0")
+        .timeout(std::time::Duration::from_secs(300))
         .send()
-        .await?;
+        .await
+        .context("Network request failed - check your internet connection")?;
 
-    let bytes = response.bytes().await?;
-    tokio::fs::write(dest_path, bytes).await?;
+    if !response.status().is_success() {
+        anyhow::bail!("Download failed with status: {}", response.status());
+    }
+
+    let bytes = response.bytes()
+        .await
+        .context("Download interrupted - connection lost")?;
+
+    // Verify we got the expected size
+    if bytes.len() as u64 != file.size {
+        anyhow::bail!(
+            "Download incomplete: got {} bytes, expected {}",
+            bytes.len(),
+            file.size
+        );
+    }
+
+    // Write to temp file first
+    tokio::fs::write(&temp_path, &bytes)
+        .await
+        .context("Failed to write temporary file")?;
+
+    // Remove destination if exists (required for Windows)
+    if dest_path.exists() {
+        let _ = tokio::fs::remove_file(dest_path).await;
+    }
+
+    // Move to final destination
+    if let Err(e) = tokio::fs::rename(&temp_path, dest_path).await {
+        let _ = tokio::fs::remove_file(&temp_path).await;
+        return Err(e).context("Failed to save mod file");
+    }
 
     Ok(())
 }
@@ -129,4 +167,47 @@ pub async fn get_project_from_hash(hash: &str) -> Result<Option<String>> {
         }
         _ => Ok(None)
     }
+}
+
+/// Get full version info from file hash (SHA-512)
+pub async fn get_version_from_hash(hash: &str) -> Result<Option<ModrinthVersion>> {
+    let url = format!("{}/version_file/{}", MODRINTH_API, hash);
+    
+    let response = HTTP_CLIENT
+        .get(&url)
+        .header("User-Agent", "LiquidLauncher/0.5.0")
+        .send()
+        .await;
+
+    match response {
+        Ok(resp) if resp.status().is_success() => {
+            Ok(Some(resp.json().await?))
+        }
+        _ => Ok(None)
+    }
+}
+
+/// Get project details by ID
+pub async fn get_project(project_id: &str) -> Result<Option<ModrinthProjectDetails>> {
+    let url = format!("{}/project/{}", MODRINTH_API, project_id);
+    
+    let response = HTTP_CLIENT
+        .get(&url)
+        .header("User-Agent", "LiquidLauncher/0.5.0")
+        .send()
+        .await;
+
+    match response {
+        Ok(resp) if resp.status().is_success() => {
+            Ok(Some(resp.json().await?))
+        }
+        _ => Ok(None)
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ModrinthProjectDetails {
+    pub id: String,
+    pub slug: String,
+    pub title: String,
 }
