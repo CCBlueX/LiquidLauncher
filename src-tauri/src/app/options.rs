@@ -130,8 +130,8 @@ impl Options {
                 custom_data_path: legacy.custom_data_path,
                 java_distribution: DistributionSelection::default(),
                 minecraft_account: legacy.current_account,
-                jvm_args: None,
-                memory: 4096,
+                jvm_args: None, // No equivalent in legacy format
+                memory: 4096,   // No equivalent in legacy format - default to 4GB
                 vanilla_integration: VanillaIntegration::default(),
             },
             version_options: VersionOptions {
