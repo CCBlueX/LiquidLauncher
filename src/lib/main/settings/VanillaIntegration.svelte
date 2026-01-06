@@ -25,8 +25,6 @@
     }
 </script>
 
-<div class="section-title">Vanilla Integration</div>
-
 <DirectorySelectorSetting
     title="Minecraft Directory"
     placeholder={vanillaStatus?.path || "Auto-detect"}
@@ -36,9 +34,7 @@
 
 {#if vanillaStatus?.found}
     <div class="vanilla-info">
-        <span class="stats">
-            {vanillaStatus.saves_count} worlds • {vanillaStatus.resource_packs_count} resource packs • {vanillaStatus.shader_packs_count} shader packs
-        </span>
+        {vanillaStatus.saves_count} worlds • {vanillaStatus.resource_packs_count} resource packs • {vanillaStatus.shader_packs_count} shader packs
     </div>
 
     <ToggleSetting
@@ -65,23 +61,10 @@
 {/if}
 
 <style>
-    .section-title {
-        color: #4677ff;
-        font-size: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
     .vanilla-info {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .stats {
         color: #666;
         font-size: 11px;
+        margin-bottom: 8px;
     }
 
     .vanilla-not-found {

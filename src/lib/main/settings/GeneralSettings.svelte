@@ -6,7 +6,6 @@
     import ToggleSetting from "../../settings/ToggleSetting.svelte";
     import ButtonSetting from "../../settings/ButtonSetting.svelte";
     import LauncherVersion from "../../settings/LauncherVersion.svelte";
-    import VanillaIntegration from "./VanillaIntegration.svelte";
     import {onMount} from "svelte";
     import {invoke} from "@tauri-apps/api/core";
 
@@ -120,8 +119,6 @@
     disabled={false}
     bind:value={options.launcher.keepLauncherOpen}
 />
-
-<VanillaIntegration {options} />
 
 <ButtonSetting
     text="Sign out of Minecraft Account"
