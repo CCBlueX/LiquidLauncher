@@ -81,7 +81,8 @@ pub fn gui_main() {
             modrinth_install,
             modrinth_update_mod,
             modrinth_check_updates,
-            modrinth_get_installed
+            modrinth_get_installed,
+            modrinth_sync_existing
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

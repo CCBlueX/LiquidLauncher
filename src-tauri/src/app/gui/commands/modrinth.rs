@@ -19,10 +19,12 @@
 
 use crate::app::modrinth::{self, ModrinthProject, ModrinthVersion};
 use crate::LAUNCHER_DIRECTORY;
+use sha2::{Sha512, Digest};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio::fs;
 use serde::{Serialize, Deserialize};
+use tracing::info;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct InstalledModInfo {
@@ -178,7 +180,8 @@ pub(crate) async fn modrinth_update_mod(
     branch: String,
 ) -> Result<String, String> {
     let mut metadata = load_metadata(&branch, &mc_version).await;
-    let old_info = metadata.get(&project_id).cloned();
+    let old_info = metadata.get(&project_id).cloned()
+        .ok_or("Mod not found in metadata")?;
 
     let version = modrinth::get_compatible_version(&project_id, &mc_version, &loader)
         .await
@@ -195,30 +198,105 @@ pub(crate) async fn modrinth_update_mod(
         .join("custom_mods")
         .join(format!("{}-{}", branch, mc_version));
 
-    // Delete old file
-    if let Some(old) = &old_info {
-        let old_path = mod_path.join(&old.filename);
-        if old_path.exists() {
-            fs::remove_file(&old_path).await.ok();
-        }
-    }
-
-    // Download new file
     let dest = mod_path.join(&file.filename);
+
+    // Download new file FIRST (uses temp file internally for safety)
     modrinth::download_mod(file, &dest)
         .await
         .map_err(|e| format!("Download failed: {:?}", e))?;
 
+    // Only delete old file AFTER successful download
+    if old_info.filename != file.filename {
+        let old_path = mod_path.join(&old_info.filename);
+        if old_path.exists() {
+            if let Err(e) = fs::remove_file(&old_path).await {
+                tracing::warn!("Failed to remove old mod file: {:?}", e);
+            }
+        }
+    }
+
     // Update metadata
-    if let Some(old) = old_info {
-        metadata.insert(project_id.clone(), InstalledModInfo {
-            project_id,
-            version_id: version.id,
-            filename: file.filename.clone(),
-            title: old.title,
-        });
+    metadata.insert(project_id.clone(), InstalledModInfo {
+        project_id,
+        version_id: version.id,
+        filename: file.filename.clone(),
+        title: old_info.title,
+    });
+    save_metadata(&branch, &mc_version, &metadata).await;
+
+    Ok(file.filename.clone())
+}
+
+
+/// Scans existing mods and identifies which ones are from Modrinth.
+/// Adds them to metadata for update tracking.
+#[tauri::command]
+pub(crate) async fn modrinth_sync_existing(
+    branch: String,
+    mc_version: String,
+) -> Result<u32, String> {
+    let data = LAUNCHER_DIRECTORY.data_dir();
+    let mod_path = data
+        .join("custom_mods")
+        .join(format!("{}-{}", branch, mc_version));
+
+    if !mod_path.exists() {
+        return Ok(0);
+    }
+
+    let mut metadata = load_metadata(&branch, &mc_version).await;
+    let mut synced = 0u32;
+
+    let mut entries = fs::read_dir(&mod_path).await
+        .map_err(|e| format!("Failed to read mods directory: {:?}", e))?;
+
+    while let Some(entry) = entries.next_entry().await
+        .map_err(|e| format!("Failed to read entry: {:?}", e))? 
+    {
+        let path = entry.path();
+        
+        // Skip non-jar files and metadata
+        if path.extension().map(|e| e != "jar").unwrap_or(true) {
+            continue;
+        }
+
+        let filename = path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or_default()
+            .to_string();
+
+        // Skip if already tracked
+        if metadata.values().any(|m| m.filename == filename) {
+            continue;
+        }
+
+        // Calculate SHA-512 hash
+        let bytes = match fs::read(&path).await {
+            Ok(b) => b,
+            Err(_) => continue,
+        };
+        
+        let hash = format!("{:x}", Sha512::digest(&bytes));
+
+        // Look up on Modrinth
+        if let Ok(Some(version)) = modrinth::get_version_from_hash(&hash).await {
+            if let Ok(Some(project)) = modrinth::get_project(&version.project_id).await {
+                info!("Synced existing mod: {} -> {}", filename, project.title);
+                
+                metadata.insert(version.project_id.clone(), InstalledModInfo {
+                    project_id: version.project_id,
+                    version_id: version.id,
+                    filename,
+                    title: project.title,
+                });
+                synced += 1;
+            }
+        }
+    }
+
+    if synced > 0 {
         save_metadata(&branch, &mc_version, &metadata).await;
     }
 
-    Ok(file.filename.clone())
+    Ok(synced)
 }
