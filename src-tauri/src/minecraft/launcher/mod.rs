@@ -18,7 +18,8 @@
  */
 
 use std::collections::HashSet;
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use std::process::exit;
 
@@ -338,7 +339,7 @@ fn setup_vanilla_integration<D: Send + Sync>(
     launcher_data: &LauncherData<D>,
 ) -> Result<()> {
     let vanilla_dir = if !integration.custom_path.is_empty() {
-        let custom = std::path::PathBuf::from(&integration.custom_path);
+        let custom = PathBuf::from(&integration.custom_path);
         if custom.exists() { Some(custom) } else { None }
     } else {
         get_vanilla_minecraft_dir().filter(|p| p.exists())
@@ -375,8 +376,8 @@ fn setup_vanilla_integration<D: Send + Sync>(
 
             launcher_data.log(&format!("Linked vanilla {} folder", folder));
         } else if !enabled && target.is_symlink() {
-            std::fs::remove_file(&target).ok();
-            std::fs::create_dir_all(&target)?;
+            fs::remove_file(&target).ok();
+            fs::create_dir_all(&target)?;
             launcher_data.log(&format!("Unlinked vanilla {} folder", folder));
         }
     }
@@ -384,7 +385,7 @@ fn setup_vanilla_integration<D: Send + Sync>(
     Ok(())
 }
 
-fn get_vanilla_minecraft_dir() -> Option<std::path::PathBuf> {
+fn get_vanilla_minecraft_dir() -> Option<PathBuf> {
     #[cfg(target_os = "windows")]
     {
         dirs::data_dir().map(|p| p.join(".minecraft"))
