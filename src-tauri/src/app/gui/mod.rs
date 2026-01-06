@@ -75,7 +75,13 @@ pub fn gui_main() {
             get_launcher_version,
             get_custom_mods,
             install_custom_mod,
-            delete_custom_mod
+            delete_custom_mod,
+            modrinth_search,
+            modrinth_get_version,
+            modrinth_install,
+            modrinth_update_mod,
+            modrinth_check_updates,
+            modrinth_get_installed
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
