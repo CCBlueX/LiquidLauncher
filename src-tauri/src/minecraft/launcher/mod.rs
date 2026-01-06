@@ -18,7 +18,8 @@
  */
 
 use std::collections::HashSet;
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use std::process::exit;
 
@@ -102,6 +103,9 @@ pub async fn launch<D: Send + Sync>(
     let libraries_folder = join_and_mkdir!(data, "libraries");
     let assets_folder = join_and_mkdir!(data, "assets");
     let game_dir = join_and_mkdir_vec!(data, vec!["gameDir", &*manifest.build.branch]);
+
+    // Setup vanilla integration symlinks
+    setup_vanilla_integration(&game_dir, &launching_parameter.vanilla_integration, &launcher_data)?;
 
     let java_bin = load_jre(
         &runtimes_folder,
@@ -276,7 +280,10 @@ pub struct StartParameter {
     pub client: Client,
     pub client_account: Option<ClientAccount>,
     pub skip_advertisement: bool,
+    pub vanilla_integration: VanillaIntegration,
 }
+
+use crate::app::options::VanillaIntegration;
 
 fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(
     input: &String,
@@ -324,4 +331,71 @@ fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(
     }
 
     Ok(output)
+}
+
+fn setup_vanilla_integration<D: Send + Sync>(
+    game_dir: &Path,
+    integration: &VanillaIntegration,
+    launcher_data: &LauncherData<D>,
+) -> Result<()> {
+    let vanilla_dir = if !integration.custom_path.is_empty() {
+        let custom = PathBuf::from(&integration.custom_path);
+        if custom.exists() { Some(custom) } else { None }
+    } else {
+        get_vanilla_minecraft_dir().filter(|p| p.exists())
+    };
+
+    let vanilla_dir = match vanilla_dir {
+        Some(p) => p,
+        None => return Ok(()),
+    };
+
+    let links = [
+        ("saves", integration.use_vanilla_saves),
+        ("resourcepacks", integration.use_vanilla_resource_packs),
+        ("shaderpacks", integration.use_vanilla_shader_packs),
+    ];
+
+    for (folder, enabled) in links {
+        let target = game_dir.join(folder);
+        let source = vanilla_dir.join(folder);
+
+        if enabled && source.exists() {
+            if target.exists() {
+                if target.is_symlink() {
+                    continue;
+                }
+                std::fs::remove_dir_all(&target).ok();
+            }
+            
+            #[cfg(unix)]
+            std::os::unix::fs::symlink(&source, &target)?;
+            
+            #[cfg(windows)]
+            std::os::windows::fs::symlink_dir(&source, &target)?;
+
+            launcher_data.log(&format!("Linked vanilla {} folder", folder));
+        } else if !enabled && target.is_symlink() {
+            fs::remove_file(&target).ok();
+            fs::create_dir_all(&target)?;
+            launcher_data.log(&format!("Unlinked vanilla {} folder", folder));
+        }
+    }
+
+    Ok(())
+}
+
+fn get_vanilla_minecraft_dir() -> Option<PathBuf> {
+    #[cfg(target_os = "windows")]
+    {
+        dirs::data_dir().map(|p| p.join(".minecraft"))
+    }
+    #[cfg(target_os = "macos")]
+    {
+        dirs::home_dir().map(|p| p.join("Library/Application Support/minecraft"))
+    }
+    #[cfg(target_os = "linux")]
+    {
+        dirs::home_dir().map(|p| p.join(".minecraft"))
+    }
 }
