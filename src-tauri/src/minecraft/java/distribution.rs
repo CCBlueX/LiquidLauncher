@@ -1,5 +1,6 @@
-use anyhow::bail;
+use anyhow::{anyhow, bail, Result};
 use crate::utils::{ARCHITECTURE, OS};
+use crate::HTTP_CLIENT;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -25,6 +26,8 @@ pub enum JavaDistribution {
     Temurin,
     #[serde(rename = "graalvm")]
     GraalVM,
+    #[serde(rename = "zulu")]
+    Zulu,
 }
 
 impl Default for JavaDistribution {
@@ -35,7 +38,7 @@ impl Default for JavaDistribution {
 }
 
 impl JavaDistribution {
-    pub fn get_url(&self, jre_version: &u32) -> anyhow::Result<String> {
+    pub async fn get_url(&self, jre_version: &u32) -> Result<String> {
         let os_arch = ARCHITECTURE.get_simple_name()?;
         let archive_type = OS.get_archive_type()?;
 
@@ -65,6 +68,9 @@ impl JavaDistribution {
                     bail!("GraalVM only supports Java 17+")
                 }
             }
+            JavaDistribution::Zulu => {
+                fetch_zulu_download_url(*jre_version).await?
+            }
         })
     }
 
@@ -72,6 +78,7 @@ impl JavaDistribution {
         match self {
             JavaDistribution::Temurin => "temurin",
             JavaDistribution::GraalVM => "graalvm",
+            JavaDistribution::Zulu => "zulu",
         }
     }
 
@@ -79,6 +86,53 @@ impl JavaDistribution {
         match self {
             JavaDistribution::Temurin => true, // Supports 8, 11, 17, 21
             JavaDistribution::GraalVM => version >= 17, // Only supports 17+
+            JavaDistribution::Zulu => true,             // Community builds available for all LTS versions
         }
     }
+}
+
+#[derive(Deserialize)]
+struct AzulPackage {
+    download_url: String,
+    latest: Option<bool>,
+}
+
+async fn fetch_zulu_download_url(jre_version: u32) -> Result<String> {
+    let os_param = match OS {
+        crate::utils::OperatingSystem::WINDOWS => "windows",
+        crate::utils::OperatingSystem::LINUX => "linux",
+        crate::utils::OperatingSystem::OSX => "macos",
+        _ => bail!("Unsupported operating system for Zulu runtime"),
+    };
+
+    let arch_param = match *ARCHITECTURE {
+        crate::utils::Architecture::X86 => "x86",
+        crate::utils::Architecture::X64 => "x86_64",
+        crate::utils::Architecture::ARM => "arm",
+        crate::utils::Architecture::AARCH64 => "aarch64",
+        _ => bail!("Unsupported architecture for Zulu runtime"),
+    };
+
+    let request_url = format!(
+        "https://api.azul.com/metadata/v1/zulu/packages/?java_version={}&os={}&arch={}&java_package_type=jre&availability_types=CA&release_status=ga&javafx_bundled=false&latest=true&page_size=1",
+        jre_version, os_param, arch_param
+    );
+
+    let response = HTTP_CLIENT
+        .get(&request_url)
+        .header("accept", "application/json")
+        .send()
+        .await?
+        .error_for_status()?;
+
+    let packages: Vec<AzulPackage> = response.json().await?;
+    if packages.is_empty() {
+        bail!("No Zulu runtime available for Java {} on {}-{}", jre_version, os_param, arch_param);
+    }
+
+    packages
+        .into_iter()
+        .find(|pkg| pkg.latest.unwrap_or(true))
+        .map(|pkg| pkg.download_url)
+        .ok_or_else(|| anyhow!("Failed to determine latest Zulu runtime download URL"))
 }
