@@ -91,13 +91,13 @@ impl JavaDistribution {
     }
 }
 
-#[derive(Deserialize)]
-struct AzulPackage {
-    download_url: String,
-    latest: Option<bool>,
-}
-
 async fn fetch_zulu_download_url(jre_version: u32) -> Result<String> {
+    #[derive(Deserialize)]
+    struct AzulPackage {
+        download_url: String,
+        latest: Option<bool>,
+    }
+
     let os_param = OS.get_zulu_name()?;
     let arch_param = ARCHITECTURE.get_zulu_name()?;
     let request_url = format!(
