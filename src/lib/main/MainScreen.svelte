@@ -16,6 +16,7 @@
 
     export let client;
     export let options;
+    export let error;
 
     let running = false;
 
@@ -68,11 +69,21 @@
     }
 
     async function updateData() {
-        const newBuilds = await invoke("request_builds", {
-            client,
-            branch: options.version.branchName,
-            release: !options.launcher.showNightlyBuilds
-        });
+        let newBuilds;
+        try {
+            newBuilds = await invoke("request_builds", {
+                client,
+                branch: options.version.branchName,
+                release: !options.launcher.showNightlyBuilds
+            });
+        } catch (e) {
+            console.error("Failed to request builds:", e);
+            error = {
+                message: "Failed to establish connection with LiquidBounce API",
+                error: e
+            };
+            return;
+        }
 
         newBuilds.forEach(build => {
             const date = new Date(build.date);
@@ -131,6 +142,7 @@
     }
 
     async function runClientWithWarning() {
+        if (!versionState.currentBuild) return;
         const isWarning = options.version.branchName === "legacy" ||
             (options.version.branchName === "nextgen" && options.version.buildId !== -1);
 
@@ -273,9 +285,19 @@
     });
 
     onMount(async () => {
-        let branchesData = await invoke("request_branches", {
-            client
-        });
+        let branchesData;
+        try {
+            branchesData = await invoke("request_branches", {
+                client
+            });
+        } catch (e) {
+            console.error("Failed to request branches:", e);
+            error = {
+                message: "Failed to establish connection with LiquidBounce API",
+                error: e
+            };
+            return;
+        }
         versionState.branches = branchesData.branches.sort((a, b) =>
             (a === branchesData.defaultBranch ? -1 : b === branchesData.defaultBranch ? 1 : 0));
 
@@ -358,6 +380,7 @@
                 }}
                 mcVersion={versionState.currentBuild?.mcVersion || "Loading..."}
                 lbVersion={versionState.currentBuild?.lbVersion || "Loading..."}
+                canLaunch={!!versionState.currentBuild}
                 {running}
                 on:showVersionSelect={() => versionSelectShown = true}
                 on:showClientLog={() => logShown = true}

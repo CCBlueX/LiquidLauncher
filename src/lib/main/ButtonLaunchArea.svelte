@@ -4,11 +4,20 @@
 
     export let text;
     export let active;
+    export let disabled = false;
 
     const dispatch = createEventDispatcher();
 </script>
 
-<button class="button" class:active type="button" on:click={e => dispatch("click", e)}>{text}</button>
+<button
+        class="button"
+        class:active
+        type="button"
+        disabled={disabled}
+        on:click={e => dispatch("click", e)}
+>
+    {text}
+</button>
 
 <style>
     .button {
@@ -37,5 +46,10 @@
 
     .button.active:hover {
         background-color: #9B2D23;
+    }
+
+    .button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 </style>
