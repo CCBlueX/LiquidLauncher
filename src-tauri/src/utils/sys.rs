@@ -116,6 +116,15 @@ impl OperatingSystem {
         })
     }
 
+    pub fn get_zulu_name(&self) -> Result<&'static str> {
+        Ok(match self {
+            OperatingSystem::WINDOWS => "windows",
+            OperatingSystem::LINUX => "linux",
+            OperatingSystem::OSX => "macos",
+            _ => bail!("Unsupported operating system for Zulu runtime"),
+        })
+    }
+
     pub fn get_archive_type(&self) -> Result<&'static str> {
         Ok(match self {
             OperatingSystem::WINDOWS => "zip",
@@ -139,6 +148,15 @@ impl Architecture {
             Architecture::ARM => "arm",
             Architecture::AARCH64 => "aarch64",
             _ => bail!("Invalid architecture"),
+        })
+    }
+    pub fn get_zulu_name(&self) -> Result<&'static str> {
+        Ok(match self {
+            Architecture::X86 => "x86",
+            Architecture::X64 => "x86_64",
+            Architecture::ARM => "arm",
+            Architecture::AARCH64 => "aarch64",
+            _ => bail!("Unsupported architecture for Zulu runtime"),
         })
     }
 }

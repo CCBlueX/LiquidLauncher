@@ -56,11 +56,11 @@ Do the above and share your source code with everyone; just like we do.
 We use [Clarity Line Icons](https://www.svgrepo.com/collection/clarity-line-icons/) for this project.
 
 ## Compile it yourself!
-LiquidLauncher is using Tauri and is written in the programming language Rust, so make sure that it is installed properly. Instructions can be found on [Rust's website](https://www.rust-lang.org/learn/get-started). It also requires NodeJS and yarn.
+LiquidLauncher is using Tauri and is written in the programming language Rust, so make sure that it is installed properly. Instructions can be found on [Rust's website](https://www.rust-lang.org/learn/get-started). It also requires NodeJS and bun.
 1. Clone the repository using `git clone --recurse-submodules https://github.com/CCBlueX/LiquidLauncher`. 
 2. Navigate into your local repository folder.
-3. Execute the command `yarn && yarn build`
-4. Now you can start the launcher using `npm run tauri dev` or build it by using `npm run tauri build`
+3. Execute the command `bun install && bun run build`
+4. Now you can start the launcher using `bun run tauri dev` or build it by using `bun run tauri build`
 
 ## Contributing
 

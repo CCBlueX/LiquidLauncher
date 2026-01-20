@@ -2,7 +2,7 @@
     "identifier": "download-capability",
     "description": "Capability for the download view",
     "remote": {
-        "urls": ["https://dl.liquidbounce.net", "https://dl.ccbluex.net"]
+        "urls": ["https://liquidbounce.net", "https://dl.liquidbounce.net", "https://dl.ccbluex.net"]
     },
     "windows": ["download_view-*"],
     "local": false,
