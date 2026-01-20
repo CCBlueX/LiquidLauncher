@@ -121,6 +121,12 @@
     bind:value={options.launcher.keepLauncherOpen}
 />
 
+<ToggleSetting
+    title="Auto-update Modrinth mods"
+    disabled={false}
+    bind:value={options.launcher.autoUpdateMods}
+/>
+
 <ButtonSetting
     text="Sign out of Minecraft Account"
     on:click={logout}

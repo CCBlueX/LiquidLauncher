@@ -172,12 +172,44 @@
 
             await authenticate();
             await checkMemory();
+            await autoUpdateMods();
             await launchClient();
         } catch (error) {
             console.error("Failed to start client:", error);
             log = [...log, `Failed to start client: ${error}`];
             running = false;
             logShown = true;
+        }
+    }
+
+    async function autoUpdateMods() {
+        if (!options.launcher.autoUpdateMods) return;
+        
+        progressState.text = "Checking for mod updates...";
+        try {
+            const updates = await invoke("modrinth_check_updates", {
+                branch: versionState.currentBuild.branch,
+                mcVersion: versionState.currentBuild.mcVersion,
+                loader: "fabric"
+            });
+
+            const modsToUpdate = updates.filter(m => m.has_update);
+            if (modsToUpdate.length === 0) return;
+
+            for (const mod of modsToUpdate) {
+                progressState.text = `Updating ${mod.info.title}...`;
+                await invoke("modrinth_update_mod", {
+                    projectId: mod.info.project_id,
+                    mcVersion: versionState.currentBuild.mcVersion,
+                    loader: "fabric",
+                    branch: versionState.currentBuild.branch
+                });
+            }
+            
+            await updateMods();
+        } catch (e) {
+            console.error("Auto-update failed:", e);
+            log = [...log, `Auto-update warning: ${e}`];
         }
     }
 

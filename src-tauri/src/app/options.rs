@@ -75,6 +75,8 @@ pub(crate) struct LauncherOptions {
     pub keep_launcher_open: bool,
     #[serde(rename = "sessionToken", default = "random_token")]
     pub session_token: String,
+    #[serde(rename = "autoUpdateMods", default)]
+    pub auto_update_mods: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -129,7 +131,8 @@ impl Options {
                 keep_launcher_open: legacy.keep_launcher_open,
                 show_nightly_builds: legacy.show_nightly_builds,
                 concurrent_downloads: legacy.concurrent_downloads as u32,
-                session_token: random_token()
+                session_token: random_token(),
+                auto_update_mods: false,
             },
             premium_options: PremiumOptions {
                 account: legacy.client_account,
@@ -174,7 +177,8 @@ impl Default for LauncherOptions {
             show_nightly_builds: false,
             keep_launcher_open: false,
             concurrent_downloads: 10,
-            session_token: random_token()
+            session_token: random_token(),
+            auto_update_mods: false,
         }
     }
 }
