@@ -65,10 +65,10 @@
     async function uninstallMod(mod) {
         removing = { ...removing, [mod.info.project_id]: true };
         try {
-            await invoke("delete_custom_mod", {
+            await invoke("modrinth_uninstall", {
+                projectId: mod.info.project_id,
                 branch,
-                mcVersion,
-                modName: mod.info.filename
+                mcVersion
             });
             await checkUpdates();
             dispatch("removed");
@@ -119,15 +119,12 @@
                 {/if}
                 <button
                     class="refresh-btn"
+                    class:checking={checking}
                     on:click={checkUpdates}
                     disabled={checking}
                     aria-label="Refresh updates"
                 >
-                    {#if checking}
-                        <span class="spinner"></span>
-                    {:else}
-                        <img class="icon" src="img/icon/icon-refresh.svg" alt="" />
-                    {/if}
+                    <img class="icon" src="img/icon/icon-refresh.svg" alt="" />
                 </button>
             </div>
         </div>
@@ -233,8 +230,9 @@
     }
 
     .refresh-btn {
-        background: transparent;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: #3f6dff;
+        border: 1px solid rgba(70, 119, 255, 0.85);
+        box-shadow: 0 0 0 2px rgba(70, 119, 255, 0.85), 0 0 18px rgba(70, 119, 255, 0.9);
         border-radius: 4px;
         width: 28px;
         height: 28px;
@@ -246,7 +244,9 @@
     }
 
     .refresh-btn:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(70, 119, 255, 0.18);
+        box-shadow: 0 0 0 2px rgba(70, 119, 255, 0.45), 0 0 14px rgba(70, 119, 255, 0.55);
+        transform: scale(1.08);
     }
 
     .refresh-btn:disabled {
@@ -256,7 +256,16 @@
     .refresh-btn .icon {
         width: 14px;
         height: 14px;
-        color: #888;
+        color: #c9d7ff;
+        transition: transform 0.2s ease;
+    }
+    
+    .refresh-btn:hover:not(:disabled) .icon {
+        transform: rotate(140deg);
+    }
+
+    .refresh-btn.checking .icon {
+        animation: refresh-spin 0.8s linear infinite;
     }
 
     .mods-list {
@@ -372,6 +381,10 @@
     }
 
     @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes refresh-spin {
         to { transform: rotate(360deg); }
     }
 </style>
