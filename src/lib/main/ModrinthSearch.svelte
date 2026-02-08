@@ -90,15 +90,6 @@
         if (e.key === "Enter") search();
     }
 
-    /**
-     * Get the current state of a mod for UI rendering
-     * Priority: installing > installed > idle
-     * Uses reactive isInstalledMap for automatic updates
-     */
-    function getState(projectId) {
-        if (installing[projectId]) return 'installing';
-        return isInstalledMap[projectId] ? 'installed' : 'idle';
-    }
 </script>
 
 <div class="modrinth-search">

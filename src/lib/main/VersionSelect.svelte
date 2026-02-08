@@ -22,6 +22,7 @@
     };
 
     let activeTab = "Version";
+    let modrinthUpdatesRef;
     const dispatch = createEventDispatcher();
 
     // Sync store with versionState.customMods whenever it changes
@@ -68,6 +69,13 @@
             alert(`Failed to install mod: ${error}`);
         }
     }
+
+    function handleModrinthInstalled() {
+        dispatch('updateMods');
+        if (modrinthUpdatesRef?.checkUpdates) {
+            modrinthUpdatesRef.checkUpdates();
+        }
+    }
 </script>
 
 <SettingsContainer
@@ -109,7 +117,8 @@
                 />
             {/each}
         </SettingWrapper>
-        <SettingWrapper title={`Additional mods - ${versionState.currentBuild?.subsystem ? `${versionState.currentBuild.subsystem.charAt(0).toUpperCase()}${versionState.currentBuild.subsystem.slice(1)}` : ''} ${versionState.currentBuild?.mcVersion}`}>
+    {:else if activeTab === "Mods"}
+        <SettingWrapper title={`Custom mods - ${versionState.currentBuild?.subsystem ? `${versionState.currentBuild.subsystem.charAt(0).toUpperCase()}${versionState.currentBuild.subsystem.slice(1)}` : ''} ${versionState.currentBuild?.mcVersion}`}>
             <div slot="title-element">
                 <IconButtonSetting
                         text="Install"
@@ -126,18 +135,19 @@
                 />
             {/each}
         </SettingWrapper>
-    {:else if activeTab === "Mods"}
         <ModrinthSearch
             mcVersion={versionState.currentBuild?.mcVersion || ""}
             loader={versionState.currentBuild?.subsystem || "fabric"}
             branch={versionState.currentBuild?.branch || ""}
-            on:installed={() => dispatch('updateMods')}
+            on:installed={handleModrinthInstalled}
         />
         <ModrinthUpdates
+            bind:this={modrinthUpdatesRef}
             mcVersion={versionState.currentBuild?.mcVersion || ""}
             loader={versionState.currentBuild?.subsystem || "fabric"}
             branch={versionState.currentBuild?.branch || ""}
             on:updated={() => dispatch('updateMods')}
+            on:removed={() => dispatch('updateMods')}
         />
     {/if}
 </SettingsContainer>

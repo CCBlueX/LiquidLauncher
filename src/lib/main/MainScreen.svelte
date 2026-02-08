@@ -190,7 +190,7 @@
             const updates = await invoke("modrinth_check_updates", {
                 branch: versionState.currentBuild.branch,
                 mcVersion: versionState.currentBuild.mcVersion,
-                loader: "fabric"
+                loader: versionState.currentBuild.subsystem || "fabric"
             });
 
             const modsToUpdate = updates.filter(m => m.has_update);
@@ -201,7 +201,7 @@
                 await invoke("modrinth_update_mod", {
                     projectId: mod.info.project_id,
                     mcVersion: versionState.currentBuild.mcVersion,
-                    loader: "fabric",
+                    loader: versionState.currentBuild.subsystem || "fabric",
                     branch: versionState.currentBuild.branch
                 });
             }

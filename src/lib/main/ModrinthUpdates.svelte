@@ -1,5 +1,5 @@
 <script>
-    import { createEventDispatcher, onMount } from "svelte";
+    import { createEventDispatcher } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
     import { scale, fade } from "svelte/transition";
 
@@ -10,6 +10,8 @@
     let mods = [];
     let checking = false;
     let updating = {};
+    let removing = {};
+    let lastKey = "";
 
     const dispatch = createEventDispatcher();
 
@@ -40,8 +42,7 @@
     }
 
     async function updateMod(mod) {
-        updating[mod.info.project_id] = true;
-        updating = updating;
+        updating = { ...updating, [mod.info.project_id]: true };
         
         try {
             await invoke("modrinth_update_mod", {
@@ -58,8 +59,23 @@
             console.error("Update failed:", e);
         }
         
-        updating[mod.info.project_id] = false;
-        updating = updating;
+        updating = { ...updating, [mod.info.project_id]: false };
+    }
+
+    async function uninstallMod(mod) {
+        removing = { ...removing, [mod.info.project_id]: true };
+        try {
+            await invoke("delete_custom_mod", {
+                branch,
+                mcVersion,
+                modName: mod.info.filename
+            });
+            await checkUpdates();
+            dispatch("removed");
+        } catch (e) {
+            console.error("Uninstall failed:", e);
+        }
+        removing = { ...removing, [mod.info.project_id]: false };
     }
 
     async function updateAll() {
@@ -72,7 +88,13 @@
     $: hasUpdates = mods.some(m => m.has_update);
     $: updateCount = mods.filter(m => m.has_update).length;
 
-    onMount(checkUpdates);
+    $: if (mcVersion && branch && loader) {
+        const nextKey = `${branch}:${mcVersion}:${loader}`;
+        if (nextKey !== lastKey) {
+            lastKey = nextKey;
+            checkUpdates();
+        }
+    }
 </script>
 
 {#if mods.length > 0}
@@ -95,19 +117,16 @@
                     Update All
                 </button>
                 {/if}
-                <button 
-                    class="refresh-btn" 
-                    on:click={checkUpdates} 
+                <button
+                    class="refresh-btn"
+                    on:click={checkUpdates}
                     disabled={checking}
                     aria-label="Refresh updates"
                 >
                     {#if checking}
                         <span class="spinner"></span>
                     {:else}
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 4v6h6M23 20v-6h-6"/>
-                            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-                        </svg>
+                        <img class="icon" src="img/icon/icon-refresh.svg" alt="" />
                     {/if}
                 </button>
             </div>
@@ -117,29 +136,39 @@
             {#each mods as mod (mod.info.project_id)}
                 <div class="mod-row" class:has-update={mod.has_update}>
                     <span class="mod-name">{mod.info.title}</span>
-                    {#if mod.has_update}
-                        <span class="new-version" in:fade={{ duration: 150 }}>
-                            → {mod.new_version}
-                        </span>
-                        <button 
-                            class="update-btn"
-                            on:click={() => updateMod(mod)}
-                            disabled={updating[mod.info.project_id]}
-                            aria-label={`Update ${mod.info.title} to version ${mod.new_version}`}
+                    <div class="mod-actions">
+                        {#if mod.has_update}
+                            <span class="new-version" in:fade={{ duration: 150 }}>
+                                → {mod.new_version}
+                            </span>
+                            <button
+                                class="icon-btn update-btn"
+                                on:click={() => updateMod(mod)}
+                                disabled={updating[mod.info.project_id]}
+                                aria-label={`Update ${mod.info.title} to version ${mod.new_version}`}
+                            >
+                                {#if updating[mod.info.project_id]}
+                                    <span class="spinner small"></span>
+                                {:else}
+                                    <img class="icon" src="img/icon/icon-download.svg" alt="" />
+                                {/if}
+                            </button>
+                        {:else}
+                            <span class="up-to-date">✓</span>
+                        {/if}
+                        <button
+                            class="icon-btn delete-btn"
+                            on:click={() => uninstallMod(mod)}
+                            disabled={removing[mod.info.project_id]}
+                            aria-label={`Uninstall ${mod.info.title}`}
                         >
-                            {#if updating[mod.info.project_id]}
+                            {#if removing[mod.info.project_id]}
                                 <span class="spinner small"></span>
                             {:else}
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                    <polyline points="7 10 12 15 17 10"/>
-                                    <line x1="12" y1="15" x2="12" y2="3"/>
-                                </svg>
+                                <img class="icon" src="img/icon/icon-trash.svg" alt="" />
                             {/if}
                         </button>
-                    {:else}
-                        <span class="up-to-date">✓</span>
-                    {/if}
+                    </div>
                 </div>
             {/each}
         </div>
@@ -224,7 +253,7 @@
         opacity: 0.5;
     }
 
-    .refresh-btn svg {
+    .refresh-btn .icon {
         width: 14px;
         height: 14px;
         color: #888;
@@ -261,6 +290,12 @@
         text-overflow: ellipsis;
     }
 
+    .mod-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
     .new-version {
         color: #4677ff;
         font-size: 11px;
@@ -272,8 +307,7 @@
         font-size: 12px;
     }
 
-    .update-btn {
-        background: #4677ff;
+    .icon-btn {
         border: none;
         border-radius: 4px;
         width: 28px;
@@ -285,19 +319,42 @@
         transition: all 0.2s;
     }
 
+    .update-btn {
+        background: #4677ff;
+    }
+
     .update-btn:hover:not(:disabled) {
         background: #5a88ff;
         transform: scale(1.05);
     }
 
-    .update-btn:disabled {
+    .delete-btn {
+        background: #3f6dff;
+        box-shadow: 0 0 0 2px rgba(70, 119, 255, 0.85), 0 0 18px rgba(70, 119, 255, 0.9);
+    }
+
+    .delete-btn:hover:not(:disabled) {
+        background: #e55252;
+        transform: scale(1.14);
+        box-shadow: 0 0 0 2px rgba(229, 82, 82, 0.35), 0 6px 14px rgba(229, 82, 82, 0.35);
+        animation: trash-wiggle 0.22s ease-in-out 1;
+    }
+
+    .icon-btn:disabled {
         opacity: 0.7;
     }
 
-    .update-btn svg {
+    .icon-btn .icon {
         width: 14px;
         height: 14px;
         color: white;
+    }
+
+    @keyframes trash-wiggle {
+        0% { transform: scale(1.06) rotate(0deg); }
+        35% { transform: scale(1.06) rotate(-6deg); }
+        70% { transform: scale(1.06) rotate(6deg); }
+        100% { transform: scale(1.06) rotate(0deg); }
     }
 
     .spinner {
