@@ -13,6 +13,8 @@
     let results = [];
     let searching = false;
     let installing = {}; // Tracks which mods are currently being installed
+    let localInstalled = new Set();
+    let lastKey = "";
     let refreshKey = 0; // Force recalculation when store updates
 
     const dispatch = createEventDispatcher();
@@ -26,6 +28,14 @@
         refreshKey++;
     }
 
+    $: if (mcVersion && branch && loader) {
+        const nextKey = `${branch}:${mcVersion}:${loader}`;
+        if (nextKey !== lastKey) {
+            lastKey = nextKey;
+            localInstalled = new Set();
+        }
+    }
+
     /**
      * Check if a mod is already installed by comparing slugs and titles
      * with the installed mod filenames
@@ -36,13 +46,15 @@
         // Explicitly depend on installedNames and refreshKey to ensure reactivity
         const names = installedNames;
         const _key = refreshKey; // Force recalculation
+        const local = localInstalled;
         return results.reduce((acc, project) => {
             const slug = project.slug.toLowerCase();
             const title = project.title.toLowerCase();
-            acc[project.project_id] = names.some(modName => 
+            const installedByName = names.some(modName =>
                 modName.includes(slug) || slug.includes(modName) || 
                 modName.includes(title) || title.includes(modName)
             );
+            acc[project.project_id] = installedByName || local.has(project.project_id);
             return acc;
         }, {});
     })();
@@ -65,8 +77,7 @@
 
     async function install(project) {
         const id = project.project_id;
-        installing[id] = true;
-        installing = installing; // Trigger reactivity
+        installing = { ...installing, [id]: true };
         
         try {
             const filename = await invoke("modrinth_install", {
@@ -78,12 +89,13 @@
             });
             // Add to store for instant UI update across all components
             installedMods.addMod({ name: filename.replace('.jar', ''), enabled: true });
+            localInstalled = new Set(localInstalled);
+            localInstalled.add(id);
             dispatch("installed");
         } catch (e) {
             console.error("Install failed:", e);
         }
-        installing[id] = false;
-        installing = installing;
+        installing = { ...installing, [id]: false };
     }
 
     function handleKeydown(e) {

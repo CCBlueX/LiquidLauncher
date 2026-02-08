@@ -80,6 +80,7 @@ pub fn gui_main() {
             modrinth_get_version,
             modrinth_install,
             modrinth_update_mod,
+            modrinth_uninstall,
             modrinth_check_updates,
             modrinth_get_installed,
             modrinth_sync_existing

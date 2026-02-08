@@ -227,6 +227,36 @@ pub(crate) async fn modrinth_update_mod(
     Ok(file.filename.clone())
 }
 
+#[tauri::command]
+pub(crate) async fn modrinth_uninstall(
+    project_id: String,
+    branch: String,
+    mc_version: String,
+) -> Result<(), String> {
+    let mut metadata = load_metadata(&branch, &mc_version).await;
+    let info = metadata
+        .get(&project_id)
+        .cloned()
+        .ok_or("Mod not found in metadata")?;
+
+    let data = LAUNCHER_DIRECTORY.data_dir();
+    let mod_path = data
+        .join("custom_mods")
+        .join(format!("{}-{}", branch, mc_version));
+
+    let file_path = mod_path.join(&info.filename);
+    if file_path.exists() {
+        fs::remove_file(&file_path)
+            .await
+            .map_err(|e| format!("Failed to remove mod file: {:?}", e))?;
+    }
+
+    metadata.remove(&project_id);
+    save_metadata(&branch, &mc_version, &metadata).await;
+
+    Ok(())
+}
+
 
 /// Scans existing mods and identifies which ones are from Modrinth.
 /// Adds them to metadata for update tracking.
