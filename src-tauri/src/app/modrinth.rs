@@ -74,7 +74,6 @@ pub async fn search_mods(query: &str, mc_version: &str, loader: &str) -> Result<
 
     let response: SearchResponse = HTTP_CLIENT
         .get(&url)
-        .header("User-Agent", "LiquidLauncher/0.5.0")
         .send()
         .await?
         .json()
@@ -91,7 +90,6 @@ pub async fn get_compatible_version(project_id: &str, mc_version: &str, loader: 
 
     let versions: Vec<ModrinthVersion> = HTTP_CLIENT
         .get(&url)
-        .header("User-Agent", "LiquidLauncher/0.5.0")
         .send()
         .await?
         .json()
@@ -109,7 +107,6 @@ pub async fn download_mod(file: &ModrinthFile, dest_path: &std::path::Path) -> R
     
     let response = HTTP_CLIENT
         .get(&file.url)
-        .header("User-Agent", "LiquidLauncher/0.5.0")
         .timeout(std::time::Duration::from_secs(300))
         .send()
         .await
@@ -156,7 +153,6 @@ pub async fn get_project_from_hash(hash: &str) -> Result<Option<String>> {
     
     let response = HTTP_CLIENT
         .get(&url)
-        .header("User-Agent", "LiquidLauncher/0.5.0")
         .send()
         .await;
 
@@ -175,7 +171,6 @@ pub async fn get_version_from_hash(hash: &str) -> Result<Option<ModrinthVersion>
     
     let response = HTTP_CLIENT
         .get(&url)
-        .header("User-Agent", "LiquidLauncher/0.5.0")
         .send()
         .await;
 
@@ -193,7 +188,6 @@ pub async fn get_project(project_id: &str) -> Result<Option<ModrinthProjectDetai
     
     let response = HTTP_CLIENT
         .get(&url)
-        .header("User-Agent", "LiquidLauncher/0.5.0")
         .send()
         .await;
 
