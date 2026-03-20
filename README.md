@@ -62,6 +62,15 @@ LiquidLauncher is using Tauri and is written in the programming language Rust, s
 3. Execute the command `bun install && bun run build`
 4. Now you can start the launcher using `bun run tauri dev` or build it by using `bun run tauri build`
 
+## Imprint
+
+**CCBlueX**  
+Vahrenwalder Str. 269A
+30179 Hanover
+Germany
+
+**Owner and responsible for the content:** Marco Beyer
+
 ## Contributing
 
 We appreciate contributions. So if you want to support us, feel free to make changes to LiquidLauncher's source code and submit a pull request.
