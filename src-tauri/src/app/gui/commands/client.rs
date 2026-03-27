@@ -19,6 +19,7 @@
 
 use anyhow::anyhow;
 use backon::{ExponentialBuilder, Retryable};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::{
     sync::{Arc, Mutex},
@@ -28,6 +29,7 @@ use tauri::{Emitter, Window};
 use tokio::fs;
 use tracing::{error, info, warn};
 use uuid::Uuid;
+use serde_json;
 
 use crate::app::client_api::{BlogPost, Branches, Build, Changelog, Client, PaginatedResponse};
 use crate::app::client_api::{LoaderMod, ModSource};
@@ -195,9 +197,60 @@ pub(crate) async fn delete_custom_mod(
     let mod_path = mod_cache_path.join(mod_name);
 
     if mod_path.exists() {
-        fs::remove_file(mod_path)
+        fs::remove_file(&mod_path)
             .await
             .map_err(|e| format!("unable to delete custom mod: {:?}", e))?;
+    }
+
+    // Remove Modrinth metadata entry for this mod
+    let metadata_path = mod_cache_path.join(".modrinth_meta.json");
+    if metadata_path.exists() {
+        match fs::read_to_string(&metadata_path).await {
+            Ok(content) => {
+                match serde_json::from_str::<HashMap<String, serde_json::Value>>(&content) {
+                    Ok(mut metadata) => {
+                        let filename_without_ext = mod_name.replace(".jar", "");
+                        let mut found = false;
+                        metadata.retain(|_key, value| {
+                            if let Some(file) = value.get("filename").and_then(|f| f.as_str()) {
+                                if file == mod_name || file.replace(".jar", "") == filename_without_ext {
+                                    found = true;
+                                    return false;
+                                }
+                            }
+                            true
+                        });
+                        
+                        if found {
+                            if metadata.is_empty() {
+                                // Remove metadata file if empty
+                                if let Err(e) = fs::remove_file(&metadata_path).await {
+                                    warn!("Failed to remove empty Modrinth metadata file: {:?}", e);
+                                }
+                            } else {
+                                // Save updated metadata
+                                match serde_json::to_string(&metadata) {
+                                    Ok(json) => {
+                                        if let Err(e) = fs::write(&metadata_path, json).await {
+                                            warn!("Failed to update Modrinth metadata file: {:?}", e);
+                                        }
+                                    }
+                                    Err(e) => {
+                                        warn!("Failed to serialize Modrinth metadata: {:?}", e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to parse Modrinth metadata file: {:?}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("Failed to read Modrinth metadata file: {:?}", e);
+            }
+        }
     }
 
     Ok(())
