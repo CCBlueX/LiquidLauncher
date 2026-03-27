@@ -29,7 +29,7 @@ backon = { version = "1.3.0", default-features = false, features = ["tokio-sleep
 
 # Generic
 void = "1"
-directories = "5.0"
+directories = "6.0"
 once_cell = "1.16.0"
 
 # FS libs
