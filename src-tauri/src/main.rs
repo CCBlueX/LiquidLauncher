@@ -16,7 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
-#![feature(duration_constructors)]
 #![cfg_attr(
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
