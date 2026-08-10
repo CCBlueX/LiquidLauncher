@@ -55,8 +55,6 @@ pub(crate) struct StartOptions {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct VersionOptions {
-    #[serde(rename = "branchName")]
-    pub branch_name: Option<String>,
     #[serde(rename = "buildId", default)]
     pub build_id: i32,
     #[serde(rename = "options", default)]
@@ -120,7 +118,6 @@ impl Options {
                 memory: 4096,   // No equivalent in legacy format - default to 4GB
             },
             version_options: VersionOptions {
-                branch_name: None, // Force recommended branch
                 build_id: -1,      // Force newest
                 options: legacy.branch_options,
             },
@@ -160,7 +157,6 @@ impl Default for StartOptions {
 impl Default for VersionOptions {
     fn default() -> Self {
         Self {
-            branch_name: None,
             build_id: -1,
             options: HashMap::new(),
         }

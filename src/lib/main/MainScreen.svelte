@@ -29,7 +29,6 @@
     let log = [];
 
     let versionState = {
-        branches: [],
         builds: [],
         currentBuild: null,
         recommendedMods: [],
@@ -50,7 +49,7 @@
     }
 
     function updateModStates() {
-        const branchName = options.version.branchName;
+        const branchName = "nextgen"; // todo: remove this later
         if (!options.version.options[branchName]) {
             options.version.options[branchName] = {
                 modStates: {},
@@ -73,7 +72,6 @@
         try {
             newBuilds = await invoke("request_builds", {
                 client,
-                branch: options.version.branchName,
                 release: !options.launcher.showNightlyBuilds
             });
         } catch (e) {
@@ -99,7 +97,8 @@
             await options.store();
         }
 
-        const activeBuild = buildId === -1 ? versionState.builds[0] : versionState.builds.find(build => build.buildId === buildId);
+        const activeBuild = buildId === -1 ? versionState.builds[0] :
+            versionState.builds.find(build => build.buildId === buildId);
         if (!activeBuild) return;
 
         const changelog = await invoke("fetch_changelog", {
@@ -143,8 +142,7 @@
 
     async function runClientWithWarning() {
         if (!versionState.currentBuild) return;
-        const isWarning = options.version.branchName === "legacy" ||
-            (options.version.branchName === "nextgen" && options.version.buildId !== -1);
+        const isWarning = options.version.buildId !== -1;
 
         if (isWarning) {
             launchVersionWarningShown = true;
@@ -250,7 +248,6 @@
     
     async function switchToNextgen() {
         launchVersionWarningShown = false;
-        options.version.branchName = "nextgen";
         options.version.buildId = -1;
         await options.store();
         await updateData();
@@ -285,27 +282,6 @@
     });
 
     onMount(async () => {
-        let branchesData;
-        try {
-            branchesData = await invoke("request_branches", {
-                client
-            });
-        } catch (e) {
-            console.error("Failed to request branches:", e);
-            error = {
-                message: "Failed to establish connection with LiquidBounce API",
-                error: e
-            };
-            return;
-        }
-        versionState.branches = branchesData.branches.sort((a, b) =>
-            (a === branchesData.defaultBranch ? -1 : b === branchesData.defaultBranch ? 1 : 0));
-
-        if (!options.version.branchName || !versionState.branches.includes(options.version.branchName)) {
-            options.version.branchName = branchesData.defaultBranch;
-            await options.store();
-        }
-
         await updateData();
     });
 </script>
@@ -373,7 +349,7 @@
                 versionInfo={{
                     bannerUrl: "img/banner.png",
                     title: versionState.currentBuild ?
-                        `LiquidBounce ${versionState.currentBuild.lbVersion.startsWith("b") ? versionState.currentBuild.lbVersion : `v${versionState.currentBuild.lbVersion}`}` :
+                        `LiquidBounce v${versionState.currentBuild.lbVersion}` :
                         "Loading...",
                     date: versionState.currentBuild?.dateDay || "Loading...",
                     description: versionState.currentBuild?.changelog || "Loading..."
