@@ -62,6 +62,36 @@ LiquidLauncher is using Tauri and is written in the programming language Rust, s
 3. Execute the command `bun install && bun run build`
 4. Now you can start the launcher using `bun run tauri dev` or build it by using `bun run tauri build`
 
+### Windows: automatic setup
+
+If you are on Windows and do not want to install the toolchain by hand, run **`setup.bat`**
+from the repository root. It checks what you already have and downloads *only* what is
+missing — nothing is reinstalled, upgraded or duplicated.
+
+```
+setup.bat            check, then install anything missing, then run "bun install"
+setup.bat /check     report what is missing and exit, install nothing
+```
+
+It verifies and, if needed, installs:
+
+| Component | Why it is needed | Installed from |
+|---|---|---|
+| Visual Studio Build Tools (C++ workload) | provides the MSVC linker Rust needs on Windows | `aka.ms/vs/17/release/vs_BuildTools.exe` |
+| WebView2 runtime | the browser engine Tauri renders the UI in (preinstalled on Windows 11) | Microsoft Evergreen bootstrapper |
+| Rust + `rustup`, nightly channel | the backend in `src-tauri/` — nightly is pinned by `rust-toolchain.toml` | `rustup.rs` |
+| bun | package manager and task runner used by this project | `bun.sh/install.ps1` |
+| Node.js LTS | required by the Vite/Svelte frontend toolchain | `winget` (`OpenJS.NodeJS.LTS`) |
+
+Notes:
+
+- Only the Build Tools, WebView2 and Node.js steps need administrator rights. The script
+  requests elevation with a single UAC prompt *and only if* one of those is actually
+  missing; Rust and bun install per-user with no prompt.
+- The Build Tools download is large (~3–4 GB) and is by far the slowest step.
+- Open a **new** terminal after the first run so the updated `PATH` is picked up.
+- If the Build Tools installer asks for a reboot, reboot before building.
+
 ## Imprint
 
 **CCBlueX**  

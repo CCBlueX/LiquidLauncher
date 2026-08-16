@@ -1,0 +1,5 @@
+# cmd.exe resolves batch labels by byte offset and needs CRLF line endings.
+# With LF-only endings, "call :label" / "goto :label" can intermittently fail
+# with "The system cannot find the batch label specified".
+*.bat text eol=crlf
+*.cmd text eol=crlf
