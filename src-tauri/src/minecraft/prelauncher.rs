@@ -20,9 +20,8 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
-use async_zip::read::mem::ZipFileReader;
+use async_zip::base::read::mem::ZipFileReader;
 use tokio::fs;
-use tokio::io::AsyncReadExt;
 use tracing::*;
 
 use crate::app::client_api::{Client, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
@@ -328,19 +327,25 @@ pub async fn retrieve_and_copy_mods(
                             .file()
                             .entries()
                             .iter()
-                            .position(|x| x.entry().filename().ends_with(".jar"))
+                            .position(|x| {
+                                x.filename()
+                                    .as_str()
+                                    .is_ok_and(|name| name.ends_with(".jar"))
+                            })
                             .ok_or_else(|| {
                                 LauncherError::InvalidVersionProfile(
                                     "There is no JAR in the downloaded archive".to_string(),
                                 )
                             })?;
-                        let entry = reader.file().entries()[index_of_file_to_extract].entry();
+                        let entry = &reader.file().entries()[index_of_file_to_extract];
 
                         // Read file to extract
-                        let mut entry_reader = reader.entry(index_of_file_to_extract).await?;
-
                         let mut output = Vec::with_capacity(entry.uncompressed_size() as usize);
-                        entry_reader.read_to_end(&mut output).await?;
+                        reader
+                            .reader_with_entry(index_of_file_to_extract)
+                            .await?
+                            .read_to_end_checked(&mut output)
+                            .await?;
 
                         output
                     } else {

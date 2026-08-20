@@ -99,40 +99,7 @@ impl Options {
             info!("Successfully loaded options from file");
             return Ok(options);
         }
-
-        if let Ok(legacy) = serde_json::from_slice::<LegacyOptions>(&file_content) {
-            info!("Successfully loaded legacy options from file");
-            return Ok(Self::from_legacy(legacy));
-        }
-
         Ok(serde_json::from_slice::<Self>(&file_content)?)
-    }
-
-    fn from_legacy(legacy: LegacyOptions) -> Self {
-        Self {
-            start_options: StartOptions {
-                custom_data_path: legacy.custom_data_path,
-                java_distribution: DistributionSelection::default(),
-                minecraft_account: legacy.current_account,
-                jvm_args: None, // No equivalent in legacy format
-                memory: 4096,   // No equivalent in legacy format - default to 4GB
-            },
-            version_options: VersionOptions {
-                build_id: -1,      // Force newest
-                options: legacy.branch_options,
-            },
-            launcher_options: LauncherOptions {
-                first_run: false,
-                keep_launcher_open: legacy.keep_launcher_open,
-                show_nightly_builds: legacy.show_nightly_builds,
-                concurrent_downloads: legacy.concurrent_downloads as u32,
-                session_token: random_token()
-            },
-            premium_options: PremiumOptions {
-                account: legacy.client_account,
-                skip_advertisement: legacy.skip_advertisement,
-            },
-        }
     }
 
     pub async fn store(&self, app_data: &Path) -> Result<()> {
@@ -201,34 +168,4 @@ fn default_memory() -> u64 {
 
 fn random_token() -> String {
     Alphanumeric.sample_string(&mut rand::rng(), 16)
-}
-
-// Legacy format structure
-#[derive(Deserialize)]
-#[allow(unused)]
-pub(crate) struct LegacyOptions {
-    #[serde(rename = "keepLauncherOpen")]
-    pub keep_launcher_open: bool,
-    #[serde(rename = "customDataPath", default)]
-    pub custom_data_path: String,
-    #[serde(rename = "showNightlyBuilds")]
-    pub show_nightly_builds: bool,
-    #[serde(rename = "memoryPercentage")]
-    pub memory_percentage: i32,
-    #[serde(rename = "customJavaPath", default)]
-    pub custom_java_path: String,
-    #[serde(rename = "selectedBranch")]
-    pub selected_branch: Option<String>,
-    #[serde(rename = "selectedBuild")]
-    pub selected_build: Option<i32>,
-    #[serde(rename = "clientAccount")]
-    pub client_account: Option<ClientAccount>,
-    #[serde(rename = "skipAdvertisement", default)]
-    pub skip_advertisement: bool,
-    #[serde(rename = "currentAccount")]
-    pub current_account: Option<MinecraftAccount>,
-    #[serde(rename = "branchOptions", default)]
-    pub branch_options: HashMap<String, BranchOptions>,
-    #[serde(rename = "concurrentDownloads")]
-    pub concurrent_downloads: i32,
 }
