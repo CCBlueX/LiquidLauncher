@@ -24,6 +24,8 @@ use std::{
     sync::{Arc, Mutex},
     thread,
 };
+use minecraft_auth::java::JavaAuthManager;
+use minecraft_auth::msa::constants::JAVA_TITLE_ID;
 use tauri::{Emitter, Window};
 use tokio::fs;
 use tracing::{error, info, warn};
@@ -261,7 +263,7 @@ pub(crate) async fn run_client(
         .ok_or("no account selected")?;
     let (account_name, uuid, token, user_type) = match minecraft_account {
         MinecraftAccount::MsaAccount { state, name, id } => {
-            let manager = minecraft_auth::java::JavaAuthManager::from_json(HTTP_CLIENT.clone(), &state)
+            let manager = JavaAuthManager::from_json(HTTP_CLIENT.clone(), &state)
                 .map_err(|e| format!("unable to load account: {}", e))?;
             let token = manager
                 .minecraft_token()
@@ -324,7 +326,7 @@ pub(crate) async fn run_client(
         auth_uuid: uuid,
         auth_access_token: token,
         auth_xuid: xuid,
-        clientid: auth::AZURE_CLIENT_ID.to_string(),
+        clientid: JAVA_TITLE_ID.to_string(),
         user_type,
         keep_launcher_open: options.launcher_options.keep_launcher_open,
         concurrent_downloads: options.launcher_options.concurrent_downloads,
