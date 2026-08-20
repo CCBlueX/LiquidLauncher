@@ -1,0 +1,17 @@
+{
+    "identifier": "msa-login-capability",
+    "description": "Capability for the embedded Microsoft sign-in window",
+    "remote": {
+        "urls": [
+            "https://login.live.com",
+            "https://login.microsoftonline.com",
+            "https://account.live.com",
+            "https://login.microsoft.com"
+        ]
+    },
+    "windows": ["msa_login-*"],
+    "local": false,
+    "permissions": [
+        "core:event:default"
+    ]
+}

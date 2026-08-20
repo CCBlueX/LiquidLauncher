@@ -37,7 +37,7 @@ use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     launcher::{LauncherData, StartParameter},
     prelauncher,
     progress::ProgressUpdate,
-}, LAUNCHER_DIRECTORY};
+}, HTTP_CLIENT, LAUNCHER_DIRECTORY};
 
 #[tauri::command]
 pub(crate) async fn request_branches(client: Client) -> Result<Branches, String> {
@@ -273,21 +273,15 @@ pub(crate) async fn run_client(
         .minecraft_account
         .ok_or("no account selected")?;
     let (account_name, uuid, token, user_type) = match minecraft_account {
-        MinecraftAccount::MsaAccount {
-            msa: _,
-            xbl: _,
-            mca,
-            profile,
-            ..
-        } => (
-            profile.name,
-            profile.id.to_string(),
-            mca.data.access_token,
-            "msa".to_string(),
-        ),
-        MinecraftAccount::LegacyMsaAccount {
-            name, uuid, token, ..
-        } => (name, uuid.to_string(), token, "msa".to_string()),
+        MinecraftAccount::MsaAccount { state, name, id } => {
+            let manager = minecraft_auth::java::JavaAuthManager::from_json(HTTP_CLIENT.clone(), &state)
+                .map_err(|e| format!("unable to load account: {}", e))?;
+            let token = manager
+                .minecraft_token()
+                .await
+                .map_err(|e| format!("unable to refresh account: {}", e))?;
+            (name, id.to_string(), token.access_token, "msa".to_string())
+        }
         MinecraftAccount::OfflineAccount { name, id, .. } => {
             (name, id.to_string(), "-".to_string(), "legacy".to_string())
         }
