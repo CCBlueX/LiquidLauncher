@@ -28,6 +28,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, debug_span, error, info, warn};
+use crate::app::client_api_target::CLIENT_BRANCH;
 
 /// API endpoint url
 pub const LAUNCHER_API: [&str; 3] = [
@@ -134,7 +135,7 @@ impl Client {
         }
 
         // If no API endpoint is reachable, we bail with the technical information
-        // as the error message, because we already have 'Unable to connect to LiquidBounce API'
+        // as the error message because we already have 'Unable to connect to LiquidBounce API'
         // as header.
         Err(technical_information)
     }
@@ -157,17 +158,14 @@ impl Client {
         self.request_from_endpoint(API_V3, &format!("blog?page={}", page)).await
     }
 
-    /// Request all available branches
-    pub async fn branches(&self) -> Result<Branches> {
-        self.request_from_endpoint(API_V1, "version/branches").await
-    }
-
-    /// Request all builds of branch
-    pub async fn builds_by_branch(&self, branch: &str, release: bool) -> Result<Vec<Build>> {
+    /// Request a list of released versions or mixed with development builds
+    pub async fn builds(&self, release: bool) -> Result<Vec<Build>> {
         self.request_from_endpoint(API_V1, &if release {
-            format!("version/builds/{}/release", branch)
+            // Only includes released builds
+            format!("version/builds/{}/release", CLIENT_BRANCH)
         } else {
-            format!("version/builds/{}", branch)
+            // Includes development builds
+            format!("version/builds/{}", CLIENT_BRANCH)
         })
         .await
     }
@@ -266,13 +264,6 @@ pub struct BlogPost {
     pub banner_text: String,
     #[serde(rename(serialize = "bannerImageUrl"))]
     pub banner_image_url: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Branches {
-    #[serde(rename = "defaultBranch")]
-    pub default_branch: String,
-    pub branches: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
