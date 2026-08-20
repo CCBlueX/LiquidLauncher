@@ -27,11 +27,6 @@ use uuid::Uuid;
 use crate::app::gui::ShareableWindow;
 use crate::HTTP_CLIENT;
 
-/// Passed to the game process as `--clientId`, an anonymous per-launcher
-/// telemetry identifier. Unrelated to `minecraft-auth`'s own Microsoft OAuth
-/// application id and unaffected by which login flow was used.
-pub(crate) const AZURE_CLIENT_ID: &str = "0add8caf-2cc6-4546-b798-c3d171217dd9";
-
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum MinecraftAccount {
@@ -41,8 +36,6 @@ pub enum MinecraftAccount {
         /// tokens), refreshed lazily and re-saved after every login/refresh.
         state: serde_json::Value,
         name: String,
-        // Named `id`, not `uuid`, to match `OfflineAccount` below — the
-        // frontend reads `account.id` regardless of account type.
         id: Uuid,
     },
     #[serde(rename = "Offline")]
@@ -140,9 +133,6 @@ impl MinecraftAccount {
         }
     }
 
-    /// Drives the manager's token chain to an up-to-date state and captures
-    /// it as an account. Shared by fresh logins and `refresh`, so both end
-    /// up with a validated Minecraft Services token and current profile.
     async fn from_manager(manager: JavaAuthManager) -> Result<Self> {
         manager.minecraft_token().await?;
         let profile = manager.profile().await?;
@@ -154,4 +144,5 @@ impl MinecraftAccount {
             id: profile.id,
         })
     }
+
 }

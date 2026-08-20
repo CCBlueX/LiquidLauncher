@@ -30,8 +30,9 @@ use std::{
     },
     time::Duration,
 };
+use minecraft_auth::msa::MsaEnvironment;
 use tauri::{Listener, Manager, Url, WebviewUrl, WebviewWindowBuilder, WindowEvent};
-use tokio::time::sleep;
+use tokio::time::{sleep, Instant};
 use tracing::{debug, info};
 
 use super::gui::ShareableWindow;
@@ -160,7 +161,7 @@ const MSA_LOGIN_TIMEOUT: Duration = Duration::from_secs(300);
 /// via a local HTTP server: the completion navigation is intercepted and
 /// cancelled before it loads, so the window never shows a blank page.
 pub async fn show_msa_login_webview(window: &ShareableWindow, authorize_url: Url) -> Result<Url> {
-    let redirect_prefix = minecraft_auth::msa::MsaEnvironment::Live.native_client_url();
+    let redirect_prefix = MsaEnvironment::Live.native_client_url();
     let redirect_cell = Arc::new(Mutex::new(None));
     let cloned_cell = redirect_cell.clone();
 
@@ -183,9 +184,7 @@ pub async fn show_msa_login_webview(window: &ShareableWindow, authorize_url: Url
             .inner_size(480.0, 650.0)
             .center()
             .parent(&main_window)?
-            // Each sign-in attempt starts from a clean slate — no cookies or storage
-            // carried over from a previous login (which would otherwise silently
-            // reuse a stale or wrong Microsoft session instead of prompting again).
+            // Prevents saving credentials in the launcher's cookie store
             .incognito(true)
             .on_navigation(move |url| {
                 // The expected completion redirect, and a defensive catch-all for any
@@ -211,7 +210,7 @@ pub async fn show_msa_login_webview(window: &ShareableWindow, authorize_url: Url
         }
     });
 
-    let start = std::time::Instant::now();
+    let start = Instant::now();
     let redirect_url = loop {
         sleep(Duration::from_millis(100)).await;
 
