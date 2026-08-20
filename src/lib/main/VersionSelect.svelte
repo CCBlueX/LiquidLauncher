@@ -12,7 +12,6 @@
     export let options;
     export let versionState = {
         builds: [],
-        branches: [],
         recommendedMods: [],
         customMods: [],
         currentBuild: null
@@ -65,15 +64,6 @@
         title="Select version"
         on:hideSettings={() => dispatch('hide')}
 >
-    <SelectSetting
-            title="Branch"
-            items={versionState.branches.map(e => ({
-                value: e,
-                text: `${e.charAt(0).toUpperCase()}${e.slice(1)} ${e === "legacy" ? "(unsupported)" : ""}`
-            }))}
-            bind:value={options.version.branchName}
-            on:change={() => dispatch('updateData')}
-    />
     <SelectSetting
             title="Build"
             items={[

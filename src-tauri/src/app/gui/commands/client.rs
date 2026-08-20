@@ -29,7 +29,7 @@ use tokio::fs;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
-use crate::app::client_api::{BlogPost, Branches, Build, Changelog, Client, PaginatedResponse};
+use crate::app::client_api::{BlogPost, Build, Changelog, Client, PaginatedResponse};
 use crate::app::client_api::{LoaderMod, ModSource};
 use crate::app::options::Options;
 use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
@@ -40,21 +40,8 @@ use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
 }, HTTP_CLIENT, LAUNCHER_DIRECTORY};
 
 #[tauri::command]
-pub(crate) async fn request_branches(client: Client) -> Result<Branches, String> {
-    let branches = (|| async { client.branches().await })
-        .retry(ExponentialBuilder::default())
-        .notify(|err, dur| {
-            warn!("Failed to request branches. Retrying in {:?}. Error: {}", dur, err);
-        })
-        .await
-        .map_err(|e| format!("unable to request branches: {:?}", e))?;
-
-    Ok(branches)
-}
-
-#[tauri::command]
-pub(crate) async fn request_builds(client: Client, branch: &str, release: bool) -> Result<Vec<Build>, String> {
-    let builds = (|| async { client.builds_by_branch(branch, release).await })
+pub(crate) async fn request_builds(client: Client, release: bool) -> Result<Vec<Build>, String> {
+    let builds = (|| async { client.builds(release).await })
         .retry(ExponentialBuilder::default())
         .notify(|err, dur| {
             warn!("Failed to request builds. Retrying in {:?}. Error: {}", dur, err);
