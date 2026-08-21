@@ -4,6 +4,7 @@
     import PremiumSettings from "./PremiumSettings.svelte";
     import SettingsContainer from "../../settings/SettingsContainer.svelte";
     import Tabs from "../../settings/tab/Tabs.svelte";
+    import MinecraftSettings from "./MinecraftSettings.svelte";
 
     export let client;
     export let options;
@@ -17,13 +18,17 @@
         on:hideSettings={() => dispatch('hide')}
 >
     <Tabs
-            tabs={["General", "Premium"]}
+            tabs={["General", "Minecraft", "Premium"]}
             bind:activeTab={activeSettingsTab}
             slot="tabs"
     />
 
     {#if activeSettingsTab === "General"}
         <GeneralSettings
+                bind:options
+        />
+    {:else if activeSettingsTab === "Minecraft"}
+        <MinecraftSettings
                 bind:options
         />
     {:else if activeSettingsTab === "Premium"}

@@ -51,6 +51,20 @@ pub(crate) struct StartOptions {
     pub jvm_args: Option<Vec<String>>,
     #[serde(rename = "memory", default = "default_memory")]
     pub memory: u64,
+    #[serde(rename = "installation", default)]
+    pub installation: MinecraftInstallationOptions,
+}
+
+#[derive(Clone, Serialize, Deserialize, Default)]
+pub struct MinecraftInstallationOptions {
+    #[serde(rename = "customPath", default)]
+    pub custom_path: String,
+    #[serde(rename = "useVanillaSaves", default)]
+    pub use_vanilla_saves: bool,
+    #[serde(rename = "useVanillaResourcePacks", default)]
+    pub use_vanilla_resource_packs: bool,
+    #[serde(rename = "useVanillaShaderPacks", default)]
+    pub use_vanilla_shader_packs: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -117,6 +131,7 @@ impl Default for StartOptions {
             custom_data_path: String::new(),
             jvm_args: None,
             memory: 4096,
+            installation: MinecraftInstallationOptions::default(),
         }
     }
 }
