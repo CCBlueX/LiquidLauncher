@@ -85,9 +85,9 @@ impl MinecraftAccount {
     /// Generates UUID from following format: OfflinePlayer:<username>
     /// Java/Kotlin equivalent: UUID.nameUUIDFromBytes("OfflinePlayer:$name".toByteArray())
     ///
-    // Explanation: [nameUUIDFromBytes] uses MD5 to generate a UUID from the input bytes.
-    // The input bytes are the UTF-8 bytes of the string "OfflinePlayer:$name".
-    // The UUID generated is a version 3 UUID, which is based on the MD5 hash of the input bytes.
+    /// Explanation: [nameUUIDFromBytes] uses MD5 to generate a UUID from the input bytes.
+    /// The input bytes are the UTF-8 bytes of the string "OfflinePlayer:$name".
+    /// The UUID generated is a version 3 UUID, which is based on the MD5 hash of the input bytes.
     ///
     /// Returns a `MinecraftAccount::OfflineAccount` if successful
     pub async fn auth_offline(username: String) -> Self {
@@ -110,7 +110,7 @@ impl MinecraftAccount {
         }
     }
 
-    /// Refresh access token if necessary
+    /// Refresh the access token if necessary
     pub async fn refresh(self) -> Result<MinecraftAccount> {
         match self {
             MinecraftAccount::MsaAccount { state, .. } => {
@@ -121,8 +121,9 @@ impl MinecraftAccount {
         }
     }
 
-    /// Logout the account
+    /// Log out the account
     pub async fn logout(&self) -> Result<()> {
+        // todo: invalidate session
         Ok(())
     }
 
