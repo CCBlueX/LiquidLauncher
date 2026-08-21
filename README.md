@@ -3,7 +3,7 @@ The official launcher for LiquidBounce.
 
 Website: https://liquidbounce.net \
 Forum: https://forums.ccbluex.net \
-Guilded: https://guilded.gg/CCBlueX \
+Discord: https://liquidbounce.net/discord \
 YouTube: https://youtube.com/CCBlueX \
 Twitter: https://twitter.com/CCBlueX
 
@@ -65,11 +65,11 @@ LiquidLauncher is using Tauri and is written in the programming language Rust, s
 ## Imprint
 
 **CCBlueX**  
-Vahrenwalder Str. 269A
-30179 Hanover
+Vahrenwalder Str. 269A \
+30179 Hanover \
 Germany
 
-**Owner and responsible for the content:** Marco Beyer
+Owner and responsible for the content: Marco Beyer
 
 ## Contributing
 
