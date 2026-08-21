@@ -20,17 +20,38 @@
 
     async function handleUpdate() {
         try {
-            const result = await check();
-            console.debug("Update Check Result", result);
+            const update = await check();
+            console.debug("Update Check Result", update);
 
-            if (result?.available) {
+            if (update) {
+                console.debug(`Found update ${update.version} from ${update.date} with notes ${update.body}`);
+
                 const shouldUpdate = await ask(
                     "A Launcher update is available. Would you like to install it now?",
                     "LiquidLauncher"
                 );
 
                 if (shouldUpdate) {
-                    await result.downloadAndInstall();
+                    let downloaded = 0;
+                    let contentLength = 0;
+
+                    await update.downloadAndInstall((event) => {
+                        switch (event.event) {
+                            case "Started":
+                                contentLength = event.data.contentLength ?? 0;
+                                console.debug(`Started downloading ${event.data.contentLength} bytes`);
+                                break;
+                            case "Progress":
+                                downloaded += event.data.chunkLength;
+                                console.debug(`Downloaded ${downloaded} from ${contentLength}`);
+                                break;
+                            case "Finished":
+                                console.debug("Download finished");
+                                break;
+                        }
+                    });
+
+                    console.debug("Update installed");
                     await relaunch();
                 }
             }
