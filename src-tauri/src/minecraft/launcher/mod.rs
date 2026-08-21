@@ -26,6 +26,7 @@ use std::process::exit;
 use anyhow::{bail, Context, Result};
 
 use path_absolutize::Absolutize;
+use tokio::io;
 use tracing::*;
 
 use crate::app::client_api::{Client, LaunchManifest};
@@ -363,6 +364,10 @@ fn setup_installation_link<D: Send + Sync>(
                 if target.is_symlink() {
                     continue;
                 }
+
+                // To prevent losing our saves, resource packs or shader packs,
+                // we need to copy the content of the target folder to the source folder.
+                copy_dir_all(&target, &source).ok();
                 fs::remove_dir_all(&target).ok();
             }
             
@@ -396,4 +401,21 @@ fn get_vanilla_minecraft_dir() -> Option<PathBuf> {
     {
         dirs::home_dir().map(|p| p.join(".minecraft"))
     }
+}
+
+// Source - https://stackoverflow.com/a/65192210
+// Posted by Simon Buchan, modified by community. See post 'Timeline' for change history
+// Retrieved 2026-08-21, License - CC BY-SA 4.0
+pub fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
+    fs::create_dir_all(&dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        } else {
+            fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        }
+    }
+    Ok(())
 }
