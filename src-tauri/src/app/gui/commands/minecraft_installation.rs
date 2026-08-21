@@ -21,8 +21,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 
 #[derive(Serialize)]
-pub struct VanillaStatus {
-    pub found: bool,
+pub struct MinecraftInstallation {
     pub path: String,
     pub saves_count: usize,
     pub resource_packs_count: usize,
@@ -49,7 +48,7 @@ fn count_entries(path: &PathBuf) -> usize {
 }
 
 #[tauri::command]
-pub(crate) async fn get_vanilla_status(custom_path: Option<String>) -> Result<VanillaStatus, String> {
+pub(crate) async fn get_minecraft_installation(custom_path: Option<String>) -> Result<Option<MinecraftInstallation>, String> {
     let mc_dir = if let Some(ref path) = custom_path {
         if !path.is_empty() {
             Some(PathBuf::from(path))
@@ -62,20 +61,13 @@ pub(crate) async fn get_vanilla_status(custom_path: Option<String>) -> Result<Va
     
     match mc_dir {
         Some(path) if path.exists() => {
-            Ok(VanillaStatus {
-                found: true,
+            Ok(Some(MinecraftInstallation {
                 path: path.to_string_lossy().to_string(),
                 saves_count: count_entries(&path.join("saves")),
                 resource_packs_count: count_entries(&path.join("resourcepacks")),
                 shader_packs_count: count_entries(&path.join("shaderpacks")),
-            })
+            }))
         }
-        _ => Ok(VanillaStatus {
-            found: false,
-            path: String::new(),
-            saves_count: 0,
-            resource_packs_count: 0,
-            shader_packs_count: 0,
-        }),
+        _ => Ok(None),
     }
 }

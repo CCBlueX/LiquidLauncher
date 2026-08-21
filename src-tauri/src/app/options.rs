@@ -51,12 +51,12 @@ pub(crate) struct StartOptions {
     pub jvm_args: Option<Vec<String>>,
     #[serde(rename = "memory", default = "default_memory")]
     pub memory: u64,
-    #[serde(rename = "vanillaIntegration", default)]
-    pub vanilla_integration: VanillaIntegration,
+    #[serde(rename = "installation", default)]
+    pub installation: MinecraftInstallationOptions,
 }
 
 #[derive(Clone, Serialize, Deserialize, Default)]
-pub struct VanillaIntegration {
+pub struct MinecraftInstallationOptions {
     #[serde(rename = "customPath", default)]
     pub custom_path: String,
     #[serde(rename = "useVanillaSaves", default)]
@@ -131,7 +131,7 @@ impl Default for StartOptions {
             custom_data_path: String::new(),
             jvm_args: None,
             memory: 4096,
-            vanilla_integration: VanillaIntegration::default(),
+            installation: MinecraftInstallationOptions::default(),
         }
     }
 }

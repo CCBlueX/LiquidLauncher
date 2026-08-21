@@ -7,22 +7,21 @@
 
     export let options;
 
-    let status = null;
+    let installation = null;
 
-    async function refreshStatus() {
+    async function getInstallation() {
         try {
-            status = await invoke("get_vanilla_status", {
-                customPath: options.start.vanillaIntegration.customPath || null 
+            installation = await invoke("get_minecraft_installation", {
+                customPath: options.start.installation.customPath || null 
             });
         } catch (e) {
             console.error("Failed to get vanilla status:", e);
         }
     }
 
-    onMount(refreshStatus);
-
-    $: if (options.start.vanillaIntegration.customPath !== undefined) {
-        refreshStatus();
+    onMount(getInstallation);
+    $: if (options.start.installation.customPath !== undefined) {
+        getInstallation();
     }
 </script>
 
@@ -30,28 +29,28 @@
 
 <DirectorySelectorSetting
         title="Minecraft Directory"
-        placeholder={status?.path || "Auto-detect"}
-        bind:value={options.start.vanillaIntegration.customPath}
+        placeholder={installation?.path || "Auto-detect"}
+        bind:value={options.start.installation.customPath}
         windowTitle="Select Minecraft directory"
 />
 
-{#if status?.found}
+{#if installation}
     <ToggleSetting
-        title="Link worlds ({status.saves_count})"
+        title="Link worlds ({installation.saves_count})"
         disabled={false}
-        bind:value={options.start.vanillaIntegration.useVanillaSaves}
+        bind:value={options.start.installation.useVanillaSaves}
     />
 
     <ToggleSetting
-        title="Link resource packs ({status.resource_packs_count})"
+        title="Link resource packs ({installation.resource_packs_count})"
         disabled={false}
-        bind:value={options.start.vanillaIntegration.useVanillaResourcePacks}
+        bind:value={options.start.installation.useVanillaResourcePacks}
     />
 
     <ToggleSetting
-        title="Link shader packs ({status.shader_packs_count})"
+        title="Link shader packs ({installation.shader_packs_count})"
         disabled={false}
-        bind:value={options.start.vanillaIntegration.useVanillaShaderPacks}
+        bind:value={options.start.installation.useVanillaShaderPacks}
     />
 {:else}
     <Description description="No Minecraft vanilla installation found."/>

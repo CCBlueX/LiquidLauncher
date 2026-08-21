@@ -75,7 +75,7 @@ pub fn gui_main() {
             get_custom_mods,
             install_custom_mod,
             delete_custom_mod,
-            get_vanilla_status
+            get_minecraft_installation
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

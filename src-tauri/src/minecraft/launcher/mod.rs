@@ -38,7 +38,7 @@ use crate::{
     utils::{OS, OS_VERSION},
     LAUNCHER_VERSION,
 };
-
+use crate::app::options::MinecraftInstallationOptions;
 use self::assets::setup_assets;
 use self::client_jar::setup_client_jar;
 use self::jre::load_jre;
@@ -105,7 +105,7 @@ pub async fn launch<D: Send + Sync>(
     let game_dir = join_and_mkdir_vec!(data, vec!["gameDir", &*manifest.build.branch]);
 
     // Setup vanilla integration symlinks
-    setup_vanilla_integration(&game_dir, &launching_parameter.vanilla_integration, &launcher_data)?;
+    setup_installation_link(&game_dir, &launching_parameter.vanilla_integration, &launcher_data)?;
 
     let java_bin = load_jre(
         &runtimes_folder,
@@ -280,10 +280,8 @@ pub struct StartParameter {
     pub client: Client,
     pub client_account: Option<ClientAccount>,
     pub skip_advertisement: bool,
-    pub vanilla_integration: VanillaIntegration,
+    pub vanilla_integration: MinecraftInstallationOptions,
 }
-
-use crate::app::options::VanillaIntegration;
 
 fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(
     input: &String,
@@ -333,13 +331,13 @@ fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(
     Ok(output)
 }
 
-fn setup_vanilla_integration<D: Send + Sync>(
+fn setup_installation_link<D: Send + Sync>(
     game_dir: &Path,
-    integration: &VanillaIntegration,
+    minecraft_installation: &MinecraftInstallationOptions,
     launcher_data: &LauncherData<D>,
 ) -> Result<()> {
-    let vanilla_dir = if !integration.custom_path.is_empty() {
-        let custom = PathBuf::from(&integration.custom_path);
+    let vanilla_dir = if !minecraft_installation.custom_path.is_empty() {
+        let custom = PathBuf::from(&minecraft_installation.custom_path);
         if custom.exists() { Some(custom) } else { None }
     } else {
         get_vanilla_minecraft_dir().filter(|p| p.exists())
@@ -351,9 +349,9 @@ fn setup_vanilla_integration<D: Send + Sync>(
     };
 
     let links = [
-        ("saves", integration.use_vanilla_saves),
-        ("resourcepacks", integration.use_vanilla_resource_packs),
-        ("shaderpacks", integration.use_vanilla_shader_packs),
+        ("saves", minecraft_installation.use_vanilla_saves),
+        ("resourcepacks", minecraft_installation.use_vanilla_resource_packs),
+        ("shaderpacks", minecraft_installation.use_vanilla_shader_packs),
     ];
 
     for (folder, enabled) in links {
@@ -365,7 +363,7 @@ fn setup_vanilla_integration<D: Send + Sync>(
                 if target.is_symlink() {
                     continue;
                 }
-                std::fs::remove_dir_all(&target).ok();
+                fs::remove_dir_all(&target).ok();
             }
             
             #[cfg(unix)]
