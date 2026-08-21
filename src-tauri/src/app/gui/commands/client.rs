@@ -337,6 +337,7 @@ pub(crate) async fn run_client(
         client,
         client_account,
         skip_advertisement,
+        vanilla_integration: options.start_options.installation,
     };
 
     thread::spawn(move || {

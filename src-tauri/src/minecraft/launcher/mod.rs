@@ -18,13 +18,15 @@
  */
 
 use std::collections::HashSet;
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use std::process::exit;
 
 use anyhow::{bail, Context, Result};
 
 use path_absolutize::Absolutize;
+use tokio::io;
 use tracing::*;
 
 use crate::app::client_api::{Client, LaunchManifest};
@@ -37,7 +39,7 @@ use crate::{
     utils::{OS, OS_VERSION},
     LAUNCHER_VERSION,
 };
-
+use crate::app::options::MinecraftInstallationOptions;
 use self::assets::setup_assets;
 use self::client_jar::setup_client_jar;
 use self::jre::load_jre;
@@ -102,6 +104,9 @@ pub async fn launch<D: Send + Sync>(
     let libraries_folder = join_and_mkdir!(data, "libraries");
     let assets_folder = join_and_mkdir!(data, "assets");
     let game_dir = join_and_mkdir_vec!(data, vec!["gameDir", &*manifest.build.branch]);
+
+    // Setup vanilla integration symlinks
+    setup_installation_link(&game_dir, &launching_parameter.vanilla_integration, &launcher_data)?;
 
     let java_bin = load_jre(
         &runtimes_folder,
@@ -276,6 +281,7 @@ pub struct StartParameter {
     pub client: Client,
     pub client_account: Option<ClientAccount>,
     pub skip_advertisement: bool,
+    pub vanilla_integration: MinecraftInstallationOptions,
 }
 
 fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(
@@ -324,4 +330,92 @@ fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(
     }
 
     Ok(output)
+}
+
+fn setup_installation_link<D: Send + Sync>(
+    game_dir: &Path,
+    minecraft_installation: &MinecraftInstallationOptions,
+    launcher_data: &LauncherData<D>,
+) -> Result<()> {
+    let vanilla_dir = if !minecraft_installation.custom_path.is_empty() {
+        let custom = PathBuf::from(&minecraft_installation.custom_path);
+        if custom.exists() { Some(custom) } else { None }
+    } else {
+        get_vanilla_minecraft_dir().filter(|p| p.exists())
+    };
+
+    let vanilla_dir = match vanilla_dir {
+        Some(p) => p,
+        None => return Ok(()),
+    };
+
+    let links = [
+        ("saves", minecraft_installation.use_vanilla_saves),
+        ("resourcepacks", minecraft_installation.use_vanilla_resource_packs),
+        ("shaderpacks", minecraft_installation.use_vanilla_shader_packs),
+    ];
+
+    for (folder, enabled) in links {
+        let target = game_dir.join(folder);
+        let source = vanilla_dir.join(folder);
+
+        if enabled && source.exists() {
+            if target.exists() {
+                if target.is_symlink() {
+                    continue;
+                }
+
+                // To prevent losing our saves, resource packs or shader packs,
+                // we need to copy the content of the target folder to the source folder.
+                copy_dir_all(&target, &source).ok();
+                fs::remove_dir_all(&target).ok();
+            }
+            
+            #[cfg(unix)]
+            std::os::unix::fs::symlink(&source, &target)?;
+            
+            #[cfg(windows)]
+            std::os::windows::fs::symlink_dir(&source, &target)?;
+
+            launcher_data.log(&format!("Linked vanilla {} folder", folder));
+        } else if !enabled && target.is_symlink() {
+            fs::remove_file(&target).ok();
+            fs::create_dir_all(&target)?;
+            launcher_data.log(&format!("Unlinked vanilla {} folder", folder));
+        }
+    }
+
+    Ok(())
+}
+
+fn get_vanilla_minecraft_dir() -> Option<PathBuf> {
+    #[cfg(target_os = "windows")]
+    {
+        dirs::data_dir().map(|p| p.join(".minecraft"))
+    }
+    #[cfg(target_os = "macos")]
+    {
+        dirs::home_dir().map(|p| p.join("Library/Application Support/minecraft"))
+    }
+    #[cfg(target_os = "linux")]
+    {
+        dirs::home_dir().map(|p| p.join(".minecraft"))
+    }
+}
+
+// Source - https://stackoverflow.com/a/65192210
+// Posted by Simon Buchan, modified by community. See post 'Timeline' for change history
+// Retrieved 2026-08-21, License - CC BY-SA 4.0
+pub fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
+    fs::create_dir_all(&dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        } else {
+            fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        }
+    }
+    Ok(())
 }
