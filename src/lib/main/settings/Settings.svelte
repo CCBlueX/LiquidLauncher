@@ -2,9 +2,9 @@
     import {createEventDispatcher} from "svelte";
     import GeneralSettings from "./GeneralSettings.svelte";
     import PremiumSettings from "./PremiumSettings.svelte";
-    import VanillaIntegration from "./VanillaIntegration.svelte";
     import SettingsContainer from "../../settings/SettingsContainer.svelte";
     import Tabs from "../../settings/tab/Tabs.svelte";
+    import MinecraftSettings from "./MinecraftSettings.svelte";
 
     export let client;
     export let options;
@@ -28,7 +28,7 @@
                 bind:options
         />
     {:else if activeSettingsTab === "Minecraft"}
-        <VanillaIntegration
+        <MinecraftSettings
                 bind:options
         />
     {:else if activeSettingsTab === "Premium"}
