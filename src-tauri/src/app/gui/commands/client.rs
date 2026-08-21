@@ -24,6 +24,8 @@ use std::{
     sync::{Arc, Mutex},
     thread,
 };
+use minecraft_auth::java::JavaAuthManager;
+use minecraft_auth::msa::constants::JAVA_TITLE_ID;
 use tauri::{Emitter, Window};
 use tokio::fs;
 use tracing::{error, info, warn};
@@ -37,7 +39,7 @@ use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     launcher::{LauncherData, StartParameter},
     prelauncher,
     progress::ProgressUpdate,
-}, LAUNCHER_DIRECTORY};
+}, HTTP_CLIENT, LAUNCHER_DIRECTORY};
 
 #[tauri::command]
 pub(crate) async fn request_builds(client: Client, release: bool) -> Result<Vec<Build>, String> {
@@ -260,21 +262,15 @@ pub(crate) async fn run_client(
         .minecraft_account
         .ok_or("no account selected")?;
     let (account_name, uuid, token, user_type) = match minecraft_account {
-        MinecraftAccount::MsaAccount {
-            msa: _,
-            xbl: _,
-            mca,
-            profile,
-            ..
-        } => (
-            profile.name,
-            profile.id.to_string(),
-            mca.data.access_token,
-            "msa".to_string(),
-        ),
-        MinecraftAccount::LegacyMsaAccount {
-            name, uuid, token, ..
-        } => (name, uuid.to_string(), token, "msa".to_string()),
+        MinecraftAccount::MsaAccount { state, name, id } => {
+            let manager = JavaAuthManager::from_json(HTTP_CLIENT.clone(), &state)
+                .map_err(|e| format!("unable to load account: {}", e))?;
+            let token = manager
+                .minecraft_token()
+                .await
+                .map_err(|e| format!("unable to refresh account: {}", e))?;
+            (name, id.to_string(), token.access_token, "msa".to_string())
+        }
         MinecraftAccount::OfflineAccount { name, id, .. } => {
             (name, id.to_string(), "-".to_string(), "legacy".to_string())
         }
@@ -330,7 +326,7 @@ pub(crate) async fn run_client(
         auth_uuid: uuid,
         auth_access_token: token,
         auth_xuid: xuid,
-        clientid: auth::AZURE_CLIENT_ID.to_string(),
+        clientid: JAVA_TITLE_ID.to_string(),
         user_type,
         keep_launcher_open: options.launcher_options.keep_launcher_open,
         concurrent_downloads: options.launcher_options.concurrent_downloads,

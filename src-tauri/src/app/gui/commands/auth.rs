@@ -17,6 +17,8 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::sync::{Arc, Mutex};
+
 use tauri::{Emitter, Window};
 use tracing::{debug, info};
 
@@ -33,11 +35,30 @@ pub(crate) async fn login_offline(username: &str) -> Result<MinecraftAccount, St
 }
 
 #[tauri::command]
-pub(crate) async fn login_microsoft(window: Window) -> Result<MinecraftAccount, String> {
-    let account = MinecraftAccount::auth_msa(|uri, code| {
-        debug!("enter code {} on {} to sign-in", code, uri);
-        let _ = window.emit("microsoft_code", code);
+pub(crate) async fn login_microsoft_device_code(window: Window) -> Result<MinecraftAccount, String> {
+    let account = MinecraftAccount::auth_msa_device_code(|device_code| {
+        debug!(
+            "enter code {} at {} to sign-in",
+            device_code.user_code, device_code.verification_uri
+        );
+        let _ = window.emit(
+            "microsoft_device_code",
+            serde_json::json!({
+                "userCode": device_code.user_code,
+                "verificationUri": device_code.verification_uri,
+                "directVerificationUri": device_code.direct_verification_uri(),
+            }),
+        );
     })
+        .await
+        .map_err(|e| format!("{}", e))?;
+
+    Ok(account)
+}
+
+#[tauri::command]
+pub(crate) async fn login_microsoft_webview(window: Window) -> Result<MinecraftAccount, String> {
+    let account = MinecraftAccount::auth_msa_webview(Arc::new(Mutex::new(window)))
         .await
         .map_err(|e| format!("{}", e))?;
 

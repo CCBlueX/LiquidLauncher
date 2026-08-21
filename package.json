@@ -24,6 +24,7 @@
     "@tauri-apps/plugin-opener": "^2.5.3",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.9.0",
-    "nouislider": "^15.8.1"
+    "nouislider": "^15.8.1",
+    "qrcode-generator": "^2.0.4"
   }
 }

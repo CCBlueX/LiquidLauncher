@@ -42,8 +42,8 @@ jobs:
         with:
           bun-version: latest
 
-      - name: install Rust nightly
-        uses: dtolnay/rust-toolchain@nightly
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: >-
             ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
