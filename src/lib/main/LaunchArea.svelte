@@ -7,6 +7,7 @@
     export let mcVersion;
     export let lbVersion;
     export let running;
+    export let canLaunch = true;
 
     const dispatch = createEventDispatcher();
 
@@ -43,7 +44,12 @@
             <ButtonLaunchArea text="Log" active={false} on:click={() => dispatch("showClientLog")} />  
         </div>
     {:else}
-        <ButtonLaunchArea text="Launch LiquidBounce" active={false} on:click={() => dispatch("launch")} />
+        <ButtonLaunchArea
+                text="Launch LiquidBounce"
+                active={false}
+                disabled={!canLaunch}
+                on:click={() => dispatch("launch")}
+        />
     {/if}
 </div>
 

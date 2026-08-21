@@ -3,8 +3,8 @@
   "version": "0.5.0",
   "identifier": "net.ccbluex.liquidlauncher",
   "build": {
-    "beforeBuildCommand": "npm run build",
-    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "bun run build",
+    "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },

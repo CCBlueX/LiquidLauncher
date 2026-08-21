@@ -19,11 +19,12 @@
 
 use anyhow::{Context, Result};
 use async_compression::tokio::bufread::GzipDecoder;
-use async_zip::read::seek::ZipFileReader;
+use async_zip::base::read::seek::ZipFileReader;
 use std::path::{Path, PathBuf};
 use tokio::fs::{create_dir_all, OpenOptions};
 use tokio::io;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeek, BufReader};
+use tokio_util::compat::FuturesAsyncReadCompatExt;
 
 /// Extracts everything from the ZIP archive to the output directory
 ///
@@ -32,19 +33,19 @@ pub async fn zip_extract<R>(archive: R, out_dir: &Path) -> Result<()>
 where
     R: AsyncRead + AsyncSeek + Unpin,
 {
-    let mut reader = ZipFileReader::new(archive).await?;
+    let mut reader = ZipFileReader::with_tokio(BufReader::new(archive)).await?;
     for index in 0..reader.file().entries().len() {
-        let entry = &reader.file().entries().get(index).unwrap().entry();
-        let file_name = entry.filename();
+        let entry = reader.file().entries().get(index).unwrap();
+        let file_name = entry.filename().as_str()?.to_owned();
 
-        let path = out_dir.join(sanitize_file_path(file_name));
+        let path = out_dir.join(sanitize_file_path(&file_name));
         // If the filename of the entry ends with '/', it is treated as a directory.
         // This is implemented by previous versions of this crate and the Python Standard Library.
         // https://docs.rs/async_zip/0.0.8/src/async_zip/read/mod.rs.html#63-65
         // https://github.com/python/cpython/blob/820ef62833bd2d84a141adedd9a05998595d6b6d/Lib/zipfile.py#L528
         let entry_is_dir = file_name.ends_with('/');
 
-        let mut entry_reader = reader.entry(index).await?;
+        let mut entry_reader = reader.reader_without_entry(index).await?.compat();
 
         if entry_is_dir {
             // The directory may have been created if iteration is out of order.

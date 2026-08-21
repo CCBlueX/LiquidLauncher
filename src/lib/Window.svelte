@@ -114,7 +114,7 @@
         />
     {:else if options}
         {#if options.start.account}
-            <MainScreen {client} bind:options />
+            <MainScreen {client} bind:options bind:error />
         {:else}
             <LoginScreen bind:options />
         {/if}

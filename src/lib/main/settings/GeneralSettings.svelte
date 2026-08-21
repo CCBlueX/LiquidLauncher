@@ -74,6 +74,7 @@
         items={[
             { value: "temurin", text: "Eclipse Temurin" },
             { value: "graalvm", text: "GraalVM" },
+            { value: "zulu", text: "Azul Zulu" },
         ]}
         bind:value={options.start.javaDistribution.value}
     />

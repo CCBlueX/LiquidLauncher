@@ -94,7 +94,7 @@ where
     }
     fs::create_dir_all(&runtime_path).await?;
 
-    let url = jre_distribution.get_url(jre_version)?;
+    let url = jre_distribution.get_url(jre_version).await?;
     let retrieved_bytes = download_file(&url, on_progress).await?;
     let cursor = Cursor::new(&retrieved_bytes[..]);
 

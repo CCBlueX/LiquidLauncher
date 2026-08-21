@@ -21,7 +21,7 @@ use once_cell::sync::Lazy;
 use serde::Deserialize;
 use std::env::consts;
 use std::fmt::Display;
-use sysinfo::{RefreshKind, System, SystemExt};
+use sysinfo::{MemoryRefreshKind, RefreshKind, System};
 
 use std::fs;
 use std::path::Path;
@@ -29,7 +29,9 @@ use std::time::{Duration, SystemTime};
 
 /// Get the total memory of the system in
 pub fn sys_memory() -> u64 {
-    let sys = System::new_with_specifics(RefreshKind::new().with_memory());
+    let sys = System::new_with_specifics(
+        RefreshKind::nothing().with_memory(MemoryRefreshKind::nothing().with_ram()),
+    );
 
     sys.total_memory()
 }
@@ -116,6 +118,15 @@ impl OperatingSystem {
         })
     }
 
+    pub fn get_zulu_name(&self) -> Result<&'static str> {
+        Ok(match self {
+            OperatingSystem::WINDOWS => "windows",
+            OperatingSystem::LINUX => "linux",
+            OperatingSystem::OSX => "macos",
+            _ => bail!("Unsupported operating system for Zulu runtime"),
+        })
+    }
+
     pub fn get_archive_type(&self) -> Result<&'static str> {
         Ok(match self {
             OperatingSystem::WINDOWS => "zip",
@@ -141,6 +152,15 @@ impl Architecture {
             _ => bail!("Invalid architecture"),
         })
     }
+    pub fn get_zulu_name(&self) -> Result<&'static str> {
+        Ok(match self {
+            Architecture::X86 => "x86",
+            Architecture::X64 => "x86_64",
+            Architecture::ARM => "arm",
+            Architecture::AARCH64 => "aarch64",
+            _ => bail!("Unsupported architecture for Zulu runtime"),
+        })
+    }
 }
 
 impl Display for Architecture {
@@ -154,7 +174,7 @@ pub fn clean_directory(
     max_age_days: u64,
 ) -> Result<()> {
     let now = SystemTime::now();
-    let max_age = Duration::from_days(max_age_days);
+    let max_age = Duration::from_secs(max_age_days * 24 * 60 * 60);
 
     for entry in fs::read_dir(path)? {
         let entry = entry?;

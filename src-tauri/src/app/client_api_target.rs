@@ -1,7 +1,7 @@
 /*
  * This file is part of LiquidLauncher (https://github.com/CCBlueX/LiquidLauncher)
  *
- * Copyright (c) 2015 - 2024 CCBlueX
+ * Copyright (c) 2015 - 2025 CCBlueX
  *
  * LiquidLauncher is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,11 +17,7 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use anyhow::Result;
-use sha1::{Digest, Sha1};
-use std::path::PathBuf;
 
-pub fn sha1sum(path: &PathBuf) -> Result<String> {
-    let hash = Sha1::digest(std::fs::read(path)?);
-    Ok(base16ct::lower::encode_string(&hash))
-}
+// We must no longer request the branches from our API,
+//   as there is just one supported.
+pub const CLIENT_BRANCH: &str = "nextgen";
