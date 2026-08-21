@@ -4,6 +4,7 @@
 
     import ModalButton from "./ModalButton.svelte";
     import ModalInput from "./ModalInput.svelte";
+    import RippleLoader from "../../common/RippleLoader.svelte";
 
     import {invoke} from "@tauri-apps/api/core";
     import {listen} from "@tauri-apps/api/event";
@@ -123,9 +124,8 @@
     {#if view === "webview"}
         <div class="title">Microsoft sign-in</div>
 
-        <div class="spinner"></div>
-        <div class="hint">Finish signing in in the Microsoft window.</div>
-        <div class="hint-subtle">Waiting for the account to be linked&hellip;</div>
+        <RippleLoader></RippleLoader>
+        <div class="hint">Finish signing in in the popup window.</div>
 
         <ModalButton text="Cancel" primary={false} on:click={cancelWebviewLogin} />
     {:else if view === "code"}
@@ -143,10 +143,12 @@
                 on any device and enter the code above.
             </div>
 
+            <div class="divider">or</div>
+
             <div class="qr-row">
                 <div class="qr-code">{@html deviceCodeQr}</div>
                 <div class="qr-copy">
-                    <span class="qr-copy-title">Or scan the code</span>
+                    <span class="qr-copy-title">Scan the code</span>
                     <span class="qr-copy-desc">Opens the page with the code already filled in.</span>
                 </div>
             </div>
@@ -226,17 +228,11 @@
     }
 
     .hint {
-        color: rgba(255, 255, 255, .6);
-        font-size: 13px;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 12px;
         text-align: center;
         line-height: 1.4;
         padding: 0 6px;
-    }
-
-    .hint-subtle {
-        color: rgba(255, 255, 255, .4);
-        font-size: 12px;
-        text-align: center;
     }
 
     .inline-link {
@@ -250,20 +246,6 @@
         font-family: inherit;
         cursor: pointer;
         text-decoration: underline;
-    }
-
-    .spinner {
-        align-self: center;
-        width: 46px;
-        height: 46px;
-        border-radius: 50%;
-        border: 3px solid rgba(255, 255, 255, .1);
-        border-top-color: #4677FF;
-        animation: spin .9s linear infinite;
-    }
-
-    @keyframes spin {
-        to { transform: rotate(360deg); }
     }
 
     .code-box {
@@ -337,14 +319,13 @@
 
     .qr-copy-title {
         color: rgba(255, 255, 255, .85);
-        font-size: 12.5px;
+        font-size: 12px;
         font-weight: 700;
     }
 
     .qr-copy-desc {
-        color: rgba(255, 255, 255, .45);
-        font-size: 11.5px;
-        line-height: 1.4;
+        color: rgba(255, 255, 255, .5);
+        font-size: 12px;
     }
 
     .waiting {
@@ -370,7 +351,6 @@
 
     .waiting span {
         color: rgba(255, 255, 255, .5);
-        font-size: 11.5px;
-        font-weight: 600;
+        font-size: 12px;
     }
 </style>
