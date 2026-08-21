@@ -3,14 +3,15 @@
     import DirectorySelectorSetting from "../../settings/DirectorySelectorSetting.svelte";
     import {onMount} from "svelte";
     import {invoke} from "@tauri-apps/api/core";
+    import Description from "../../settings/Description.svelte";
 
     export let options;
 
-    let vanillaStatus = null;
+    let status = null;
 
     async function refreshStatus() {
         try {
-            vanillaStatus = await invoke("get_vanilla_status", { 
+            status = await invoke("get_vanilla_status", {
                 customPath: options.start.vanillaIntegration.customPath || null 
             });
         } catch (e) {
@@ -25,50 +26,33 @@
     }
 </script>
 
+<Description description="This will allow you to use worlds, resource packs, and shader packs from another installation of Minecraft." />
+
 <DirectorySelectorSetting
-    title="Minecraft Directory"
-    placeholder={vanillaStatus?.path || "Auto-detect"}
-    bind:value={options.start.vanillaIntegration.customPath}
-    windowTitle="Select Minecraft directory"
+        title="Minecraft Directory"
+        placeholder={status?.path || "Auto-detect"}
+        bind:value={options.start.vanillaIntegration.customPath}
+        windowTitle="Select Minecraft directory"
 />
 
-{#if vanillaStatus?.found}
-    <div class="vanilla-info">
-        {vanillaStatus.saves_count} worlds • {vanillaStatus.resource_packs_count} resource packs • {vanillaStatus.shader_packs_count} shader packs
-    </div>
-
+{#if status?.found}
     <ToggleSetting
-        title="Use vanilla worlds"
+        title="Link worlds ({status.saves_count})"
         disabled={false}
         bind:value={options.start.vanillaIntegration.useVanillaSaves}
     />
 
     <ToggleSetting
-        title="Use vanilla resource packs"
+        title="Link resource packs ({status.resource_packs_count})"
         disabled={false}
         bind:value={options.start.vanillaIntegration.useVanillaResourcePacks}
     />
 
     <ToggleSetting
-        title="Use vanilla shader packs"
+        title="Link shader packs ({status.shader_packs_count})"
         disabled={false}
         bind:value={options.start.vanillaIntegration.useVanillaShaderPacks}
     />
 {:else}
-    <div class="vanilla-not-found">
-        Minecraft installation not found
-    </div>
+    <Description description="No Minecraft vanilla installation found."/>
 {/if}
-
-<style>
-    .vanilla-info {
-        color: #666;
-        font-size: 11px;
-        margin-bottom: 8px;
-    }
-
-    .vanilla-not-found {
-        color: #888;
-        font-size: 12px;
-    }
-</style>
