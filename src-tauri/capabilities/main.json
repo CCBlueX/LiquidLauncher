@@ -14,13 +14,10 @@
         "core:tray:default",
         "core:window:allow-set-title",
         "core:window:allow-start-dragging",
-        "dialog:allow-message",
-        "dialog:allow-open",
-        "dialog:allow-confirm",
-        "dialog:allow-ask",
+        "dialog:default",
         "clipboard-manager:allow-write-text",
         "opener:default",
-        "process:allow-exit",
+        "process:default",
         "updater:default"
     ]
 }

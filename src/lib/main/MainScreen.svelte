@@ -2,6 +2,7 @@
 <script>
     import {invoke} from "@tauri-apps/api/core";
     import {listen} from "@tauri-apps/api/event";
+    import {confirm} from "@tauri-apps/plugin-dialog";
     import VerticalFlexWrapper from "../common/VerticalFlexWrapper.svelte";
     import MainHeader from "./MainHeader.svelte";
     import ContentWrapper from "./ContentWrapper.svelte";
