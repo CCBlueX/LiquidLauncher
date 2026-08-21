@@ -54,13 +54,14 @@ md5 = "^0.8.1"
 sha1 = "^0.11.0"
 base16ct = { version = "^1.0.0", features = ["alloc"] }
 
-# UI library
-tauri = { version = "^2", features = [] }
-tauri-plugin-process = "^2"
-tauri-plugin-dialog = "^2"
-tauri-plugin-opener = "^2"
-tauri-plugin-updater = "^2"
-tauri-plugin-clipboard-manager = "^2"
+# Tauri Plugins
+# which must match package.json dependencies
+tauri = { version = "^2.11", features = [] }
+tauri-plugin-process = "^2.3.1"
+tauri-plugin-dialog = "^2.7.2"
+tauri-plugin-opener = "^2.5.4"
+tauri-plugin-updater = "^2.10.1"
+tauri-plugin-clipboard-manager = "^2.3.2"
 
 # Client libs
 reqwest = { version = "0.13.1", default-features = false, features = ["http2", "charset", "rustls", "system-proxy", "gzip", "json"] }

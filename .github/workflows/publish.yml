@@ -1,0 +1,123 @@
+name: Publish
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to (re-)publish to the API
+        required: true
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      API_TOKEN: ${{ secrets.API_TOKEN }}
+    steps:
+      - name: Publish release to the API
+        run: |
+          set -euo pipefail
+
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > release.json
+          
+          if [ "$(jq -r '.draft' release.json)" = "true" ]; then
+            echo "[ERROR] ${RELEASE_TAG} is still a draft - publish it first" >&2
+            exit 1
+          fi
+          
+          if [ "$(jq -r '.prerelease' release.json)" = "true" ]; then
+            echo "[ERROR] ${RELEASE_TAG} is a prerelease" >&2
+            exit 1
+          fi
+          
+          gh release download "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --dir assets --clobber
+          if [ ! -f assets/latest.json ]; then
+            echo "[ERROR] ${RELEASE_TAG} has no latest.json asset" >&2
+            exit 1
+          fi
+          
+          function classify {
+            local name="${1,,}"
+            case "$name" in
+              latest.json|*.sig|*.msi.zip|*.nsis.zip|*.appimage.tar.gz) return 1 ;;
+              *.app.tar.gz) os=darwin;  type=app ;;
+              *.msi)        os=windows; type=msi ;;
+              *.exe)        os=windows; type=nsis ;;
+              *.deb)        os=linux;   type=deb ;;
+              *.rpm)        os=linux;   type=rpm ;;
+              *.appimage)   os=linux;   type=appimage ;;
+              *.dmg)        os=darwin;  type=dmg ;;
+              *) return 1 ;;
+            esac
+            case "$name" in
+              *aarch64*|*arm64*) arch=aarch64 ;;
+              *) arch=x86_64 ;;
+            esac
+          }
+          
+          function updater_keys {
+            case "$1:$2" in
+              windows:msi)    echo "windows-$3 windows-$3-msi" ;;
+              windows:nsis)   echo "windows-$3-nsis" ;;
+              linux:appimage) echo "linux-$3-appimage linux-$3" ;;
+              linux:deb)      echo "linux-$3-deb" ;;
+              linux:rpm)      echo "linux-$3-rpm" ;;
+              darwin:app)     echo "darwin-$3 darwin-$3-app" ;;
+              *) echo "" ;;
+            esac
+          }
+
+          : > binaries.jsonl
+          while IFS=$'\t' read -r name installer_url; do
+            os=""; arch=""; type=""
+            classify "$name" || continue
+
+            checksum=$(sha256sum "assets/${name}" | cut -d' ' -f1)
+            echo "${name} -> ${os}/${arch}/${type} (${checksum})"
+
+            updater_url=""; signature=""
+            for key in $(updater_keys "$os" "$type" "$arch"); do
+              updater_url=$(jq -r --arg k "$key" '.platforms[$k].url // empty' assets/latest.json)
+              if [ -n "$updater_url" ]; then
+                signature=$(jq -r --arg k "$key" '.platforms[$k].signature // empty' assets/latest.json)
+                break
+              fi
+            done
+
+            jq -nc \
+              --arg os "$os" --arg arch "$arch" --arg type "$type" \
+              --arg installer_url "$installer_url" --arg checksum "$checksum" \
+              --arg updater_url "$updater_url" --arg signature "$signature" \
+              '{os: $os, arch: $arch, type: $type, installer_url: $installer_url,
+                checksum: $checksum,
+                updater_url: (if $updater_url == "" then null else $updater_url end),
+                signature: (if $signature == "" then null else $signature end)}' \
+              >> binaries.jsonl
+          done < <(jq -r '.assets[] | [.name, .browser_download_url] | @tsv' release.json)
+
+          if [ ! -s binaries.jsonl ]; then
+            echo "[ERROR] ${RELEASE_TAG} contains no recognised binaries" >&2
+            exit 1
+          fi
+
+          jq -n \
+            --arg version "${RELEASE_TAG#v}" \
+            --slurpfile release release.json \
+            --slurpfile binaries binaries.jsonl \
+            '{version: $version,
+              pub_date: $release[0].published_at,
+              notes: (($release[0].body // "") | if . == "" then null else . end),
+              binaries: $binaries}' > payload.json
+
+          curl -fsS -X POST "https://api.liquidbounce.net/api/v1/launcher/publish" \
+            -H "Authorization: Bearer ${API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data-binary @payload.json
+          echo

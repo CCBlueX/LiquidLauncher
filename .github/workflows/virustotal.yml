@@ -1,0 +1,55 @@
+name: VirusTotal
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to submit to VirusTotal
+        required: true
+
+jobs:
+  scan:
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+
+      - name: Scan release assets
+        if: github.event_name == 'release'
+        uses: crazy-max/ghaction-virustotal@v5
+        with:
+          vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
+          request_rate: 4
+          files: |
+            \.msi$
+            \.exe$
+            \.deb$
+            \.rpm$
+            \.AppImage$
+            \.dmg$
+            \.app\.tar\.gz$
+
+      - name: Download release assets
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release download "${{ inputs.tag }}" --repo "${{ github.repository }}" --dir assets --clobber
+
+      - name: Scan downloaded assets
+        if: github.event_name == 'workflow_dispatch'
+        uses: crazy-max/ghaction-virustotal@v5
+        with:
+          vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
+          request_rate: 4
+          files: |
+            assets/*.msi
+            assets/*.exe
+            assets/*.deb
+            assets/*.rpm
+            assets/*.AppImage
+            assets/*.dmg
+            assets/*.app.tar.gz
