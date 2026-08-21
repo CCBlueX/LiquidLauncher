@@ -1,6 +1,6 @@
 {
   "productName": "LiquidLauncher",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "identifier": "net.ccbluex.liquidlauncher",
   "build": {
     "beforeBuildCommand": "bun run build",
