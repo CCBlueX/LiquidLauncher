@@ -2,6 +2,7 @@
     import { fly } from "svelte/transition";
     import VirtualList from "./VirtualList.svelte";
     import { createEventDispatcher } from "svelte";
+    import { confirm } from "@tauri-apps/plugin-dialog";
     import ToggleSetting from "../../settings/ToggleSetting.svelte";
     import ButtonSetting from "../../settings/ButtonSetting.svelte"
     import LogMessage from "./LogMessage.svelte";
