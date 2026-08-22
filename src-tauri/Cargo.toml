@@ -67,7 +67,7 @@ tauri-plugin-clipboard-manager = "^2.3.2"
 reqwest = { version = "0.13.1", default-features = false, features = ["http2", "charset", "rustls", "system-proxy", "gzip", "json"] }
 # oauth2 5.0.0 does not support reqwest 0.13 (10.08.2026 and still waiting)
 oauth2 = { git = "https://github.com/martijnberger/oauth2-rs.git", default-features = false, features = ["reqwest", "rustls"] }
-minecraft-auth = "0.1.0"
+minecraft-auth = "0.1.1"
 
 # Data serialization libs
 serde = { version = "1.0", features = ["derive"] }

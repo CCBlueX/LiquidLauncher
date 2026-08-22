@@ -28,6 +28,7 @@ use directories::ProjectDirs;
 use once_cell::sync::Lazy;
 use reqwest::Client;
 use std::io;
+use std::time::Duration;
 use tracing::{debug, debug_span, error, info};
 use tracing_subscriber::layer::SubscriberExt;
 use utils::ARCHITECTURE;
@@ -54,6 +55,10 @@ static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_P
 static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
     let client = reqwest::ClientBuilder::new()
         .user_agent(APP_USER_AGENT)
+        .connect_timeout(Duration::from_secs(15))
+        // Stall between reads, not a whole-request timeout: this client also
+        // downloads large assets, which are slow but not stuck.
+        .read_timeout(Duration::from_secs(60))
         .build()
         .unwrap_or_else(|_| Client::new());
 
