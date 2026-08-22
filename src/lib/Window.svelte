@@ -1,8 +1,7 @@
 <script>
     import {invoke} from "@tauri-apps/api/core";
-    import {check} from "@tauri-apps/plugin-updater";
-    import {exit, relaunch} from "@tauri-apps/plugin-process";
-    import {ask} from "@tauri-apps/plugin-dialog";
+    import {listen} from "@tauri-apps/api/event";
+    import {exit} from "@tauri-apps/plugin-process";
     import {onMount} from "svelte";
     import MainScreen from "./main/MainScreen.svelte";
     import LoginScreen from "./login/LoginScreen.svelte";
@@ -18,45 +17,37 @@
     // Asks if the user allows non-secure connections
     let allowNonSecure = false;
 
+    // Set once the launcher starts updating itself, drives the splash progress bar
+    let updateProgress = null;
+
     async function handleUpdate() {
-        try {
-            const update = await check();
-            console.debug("Update Check Result", update);
+        const unlisten = await listen("progress-update", (event) => {
+            const { type, value } = event.payload;
+            updateProgress ??= { value: 0, max: 0, text: "", speed: 0 };
 
-            if (update) {
-                console.debug(`Found update ${update.version} from ${update.date} with notes ${update.body}`);
-
-                const shouldUpdate = await ask(
-                    "A Launcher update is available. Would you like to install it now?",
-                    "LiquidLauncher"
-                );
-
-                if (shouldUpdate) {
-                    let downloaded = 0;
-                    let contentLength = 0;
-
-                    await update.downloadAndInstall((event) => {
-                        switch (event.event) {
-                            case "Started":
-                                contentLength = event.data.contentLength ?? 0;
-                                console.debug(`Started downloading ${event.data.contentLength} bytes`);
-                                break;
-                            case "Progress":
-                                downloaded += event.data.chunkLength;
-                                console.debug(`Downloaded ${downloaded} from ${contentLength}`);
-                                break;
-                            case "Finished":
-                                console.debug("Download finished");
-                                break;
-                        }
-                    });
-
-                    console.debug("Update installed");
-                    await relaunch();
-                }
+            switch (type) {
+                case "max":
+                    updateProgress.max = value;
+                    break;
+                case "progress":
+                    updateProgress.value = value;
+                    break;
+                case "label":
+                    updateProgress.text = value;
+                    break;
+                case "speed":
+                    updateProgress.speed = value;
+                    break;
             }
-        } catch (error) {
-            console.error("Update process failed:", error);
+        });
+
+        try {
+            await invoke("check_for_updates");
+        } catch (e) {
+            console.error("Update process failed:", e);
+        } finally {
+            unlisten();
+            updateProgress = null;
         }
     }
 
@@ -123,7 +114,7 @@
     {#if error}
         <ErrorScreen {error} />
     {:else if loading || !client}
-        <LoadingScreen />
+        <LoadingScreen progressState={updateProgress} />
     {:else if client && !client.is_secure && !allowNonSecure}
         <NonSecureConnectionScreen
             on:allowNonSecure={() => {
