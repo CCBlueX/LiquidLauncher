@@ -3,12 +3,21 @@
     import TitleBar from "../common/TitleBar.svelte";
     import Logo from "../common/Logo.svelte";
     import ButtonClose from "../common/ButtonClose.svelte";
+    import StatusBar from "./statusbar/StatusBar.svelte";
+    import ProgressStatus from "./statusbar/ProgressStatus.svelte";
     import {Jumper} from "svelte-loading-spinners";
+
+    export let progressState = null;
 </script>
 
 <VerticalFlexWrapper blur={false}>
     <TitleBar>
         <Logo />
+        {#if progressState}
+            <StatusBar>
+                <ProgressStatus {...progressState} />
+            </StatusBar>
+        {/if}
         <ButtonClose />
     </TitleBar>
 

@@ -17,7 +17,6 @@
         "dialog:default",
         "clipboard-manager:allow-write-text",
         "opener:default",
-        "process:default",
-        "updater:default"
+        "process:default"
     ]
 }

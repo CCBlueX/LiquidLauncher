@@ -35,7 +35,7 @@ use crate::app::client_api::{BlogPost, Build, Changelog, Client, PaginatedRespon
 use crate::app::client_api::{LoaderMod, ModSource};
 use crate::app::options::Options;
 use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
-    auth::{self, MinecraftAccount},
+    auth::MinecraftAccount,
     launcher::{LauncherData, StartParameter},
     prelauncher,
     progress::ProgressUpdate,
