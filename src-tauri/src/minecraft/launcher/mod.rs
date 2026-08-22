@@ -20,13 +20,16 @@
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use std::process::exit;
 
 use anyhow::{bail, Context, Result};
 
 use path_absolutize::Absolutize;
-use tokio::io;
+use tokio::{io, spawn};
+use tokio::task::JoinHandle;
+use tokio::time::sleep;
 use tracing::*;
 
 use crate::app::client_api::{Client, LaunchManifest};
@@ -36,7 +39,7 @@ use crate::minecraft::java::{DistributionSelection, JavaRuntime};
 use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
 use crate::{join_and_mkdir, join_and_mkdir_vec};
 use crate::{
-    utils::{OS, OS_VERSION},
+    utils::{downloaded_bytes, OS, OS_VERSION},
     LAUNCHER_VERSION,
 };
 use crate::app::options::MinecraftInstallationOptions;
@@ -74,6 +77,66 @@ impl<D: Send + Sync> ProgressReceiver for LauncherData<D> {
     }
     fn log(&self, msg: &str) {
         let _ = (self.on_log)(&self.data, msg);
+    }
+}
+
+impl<D: Send + Sync + Clone + 'static> LauncherData<D> {
+    pub(crate) fn start_speed_meter(&self) -> DownloadSpeedMeter<D> {
+        const SPEED_SAMPLE_INTERVAL: Duration = Duration::from_millis(500);
+        
+        let data = (*self.data).clone();
+        let on_progress = self.on_progress;
+
+        let task = spawn({
+            let data = data.clone();
+            
+            async move {
+                let mut last_total = downloaded_bytes();
+                let mut speed = 0u64;
+                let mut reported = 0u64;
+                
+                loop {
+                    sleep(SPEED_SAMPLE_INTERVAL).await;
+
+                    let total = downloaded_bytes();
+                    let delta = total.saturating_sub(last_total);
+                    last_total = total;
+                    
+                    let sample = delta * 1000 / SPEED_SAMPLE_INTERVAL.as_millis() as u64;
+                    speed = match (delta, speed) {
+                        // Nothing moved: drop straight to zero so the meter
+                        // clears between steps instead of decaying towards it.
+                        (0, _) => 0,
+                        (_, 0) => sample,
+                        _ => (sample * 2 + speed * 3) / 5,
+                    };
+                    
+                    if speed != reported {
+                        reported = speed;
+                        let _ = on_progress(&data, ProgressUpdate::SetDownloadSpeed(speed));
+                    }
+                }
+            }
+        });
+
+        DownloadSpeedMeter {
+            task,
+            data,
+            on_progress,
+        }
+    }
+}
+
+pub(crate) struct DownloadSpeedMeter<D: Send + Sync> {
+    task: JoinHandle<()>,
+    data: D,
+    on_progress: fn(&D, ProgressUpdate) -> Result<()>,
+}
+
+impl<D: Send + Sync> Drop for DownloadSpeedMeter<D> {
+    fn drop(&mut self) {
+        self.task.abort();
+        let _ = (self.on_progress)(&self.data, ProgressUpdate::SetDownloadSpeed(0));
     }
 }
 

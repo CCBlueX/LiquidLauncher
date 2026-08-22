@@ -39,7 +39,8 @@
     let progressState = {
         max: 0,
         value: 0,
-        text: ""
+        text: "",
+        speed: 0
     };
 
     $: if (launchVersionWarningShown && launchVersionWarningCountdown > 0) {
@@ -167,7 +168,7 @@
 
         try {
             running = true;
-            progressState = { max: 0, value: 0, text: "Starting client..." };
+            progressState = { max: 0, value: 0, text: "Starting client...", speed: 0 };
 
             await authenticate();
             await checkMemory();
@@ -270,6 +271,9 @@
                 break;
             case "label":
                 progressState.text = value;
+                break;
+            case "speed":
+                progressState.speed = value;
                 break;
         }
     });
