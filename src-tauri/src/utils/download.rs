@@ -18,6 +18,7 @@
  */
 
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::error::map_into_connection_error;
 use crate::HTTP_CLIENT;
@@ -26,12 +27,23 @@ use backon::{ExponentialBuilder, Retryable};
 use tokio::fs;
 use tracing::{debug, warn};
 
+static DOWNLOADED_BYTES: AtomicU64 = AtomicU64::new(0);
+
+pub fn downloaded_bytes() -> u64 {
+    DOWNLOADED_BYTES.load(Ordering::Relaxed)
+}
+
 /// Download a file using HTTP_CLIENT without any progress tracking
 pub async fn download_file_untracked(url: &str, path: impl AsRef<Path>) -> Result<()> {
     let path = path.as_ref().to_owned();
-    let response = HTTP_CLIENT.get(url).send().await?.error_for_status()?;
+    let mut response = HTTP_CLIENT.get(url).send().await?.error_for_status()?;
 
-    let content = response.bytes().await?;
+    let mut content = Vec::with_capacity(response.content_length().unwrap_or(0) as usize);
+    while let Some(chunk) = response.chunk().await? {
+        DOWNLOADED_BYTES.fetch_add(chunk.len() as u64, Ordering::Relaxed);
+        content.extend_from_slice(&chunk);
+    }
+
     fs::write(path, content).await?;
     Ok(())
 }
@@ -66,6 +78,7 @@ where
     debug!("Reading data from response chunk...");
     while let Some(data) = response.chunk().await
         .map_err(|e| map_into_connection_error(e.into()))? {
+        DOWNLOADED_BYTES.fetch_add(data.len() as u64, Ordering::Relaxed);
         output.extend_from_slice(&data);
         curr_len += data.len();
         on_progress(curr_len as u64, max_len);

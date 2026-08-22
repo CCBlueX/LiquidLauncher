@@ -49,6 +49,9 @@ pub(crate) async fn launch(
     additional_mods: Vec<LoaderMod>,
     launcher_data: LauncherData<ShareableWindow>,
 ) -> Result<()> {
+    // Starts the speed meter, kills it when the launch is completed.
+    let _speed_meter = launcher_data.start_speed_meter();
+
     launcher_data.progress_update(ProgressUpdate::set_max());
     launcher_data.progress_update(ProgressUpdate::SetProgress(0));
     launcher_data.progress_update(ProgressUpdate::set_label("Loading version manifest..."));

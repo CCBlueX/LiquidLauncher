@@ -61,6 +61,8 @@ pub enum ProgressUpdate {
     SetProgress(u64),
     #[serde(rename = "label")]
     SetLabel(String),
+    #[serde(rename = "speed")]
+    SetDownloadSpeed(u64),
 }
 
 const PER_STEP: u64 = 1024;
