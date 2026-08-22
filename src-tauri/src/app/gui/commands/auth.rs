@@ -20,7 +20,7 @@
 use std::sync::{Arc, Mutex};
 
 use tauri::{Emitter, Window};
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::app::client_api::Client;
 use crate::{
@@ -98,10 +98,12 @@ pub(crate) async fn client_account_update(client: Client, account: ClientAccount
 #[tauri::command]
 pub(crate) async fn refresh(account_data: MinecraftAccount) -> Result<MinecraftAccount, String> {
     info!("Refreshing account...");
-    let account = account_data
-        .refresh()
-        .await
-        .map_err(|e| format!("unable to refresh: {:?}", e))?;
+    let account = account_data.refresh().await.map_err(|e| {
+        // The frontend only logs this to the webview console, which never
+        // reaches launcher.log.
+        error!("Failed to refresh account: {:?}", e);
+        format!("unable to refresh: {:?}", e)
+    })?;
     info!(
         "Account was refreshed - username {}",
         account.get_username()
