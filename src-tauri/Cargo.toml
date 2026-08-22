@@ -38,6 +38,7 @@ once_cell = "^1.16.0"
 async_zip = { version = "^0.0.18", features = ["full"] }
 tokio-tar = "^0.3.1"
 async-compression = { version= "^0.4.43", features = ["gzip"] }
+liblzma = { version = "^0.4.8", default-features = false, features = ["static"] }
 sanitize-filename = "0.6.0"
 path-absolutize = "^4.0.1"
 
@@ -72,6 +73,10 @@ minecraft-auth = "0.1.0"
 # Data serialization libs
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+[package.metadata.cargo-machete]
+# For static linking only
+ignored = ["liblzma"]
 
 [features]
 # by default Tauri runs in production mode

@@ -2633,6 +2633,7 @@ dependencies = [
  "directories",
  "dirs 5.0.1",
  "futures",
+ "liblzma",
  "md5",
  "minecraft-auth",
  "oauth2",
