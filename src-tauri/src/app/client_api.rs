@@ -19,6 +19,7 @@
 
 use std::collections::BTreeMap;
 
+use crate::app::marketplace::MarketplaceItemType;
 use crate::auth::ClientAccount;
 use crate::minecraft::java::JavaDistribution;
 use crate::utils::get_maven_artifact_path;
@@ -158,6 +159,51 @@ impl Client {
         self.request_from_endpoint(API_V3, &format!("blog?page={}", page)).await
     }
 
+    /// Browse marketplace items.
+    ///
+    /// `include_addons` is required for add-ons to appear at all: the API hides them from untyped
+    /// listings so that LiquidBounce builds predating add-ons never receive a type they cannot
+    /// deserialize.
+    pub async fn marketplace_items(
+        &self,
+        page: u32,
+        limit: u32,
+        query: Option<&str>,
+        item_type: Option<&str>,
+    ) -> Result<PaginatedResponse<MarketplaceItem>> {
+        let mut endpoint = format!(
+            "marketplace?page={}&limit={}&branch={}&include_addons=true",
+            page, limit, CLIENT_BRANCH
+        );
+
+        if let Some(query) = query {
+            endpoint.push_str(&format!("&q={}", query));
+        }
+        if let Some(item_type) = item_type {
+            endpoint.push_str(&format!("&type={}", item_type));
+        }
+
+        self.request_from_endpoint(API_V3, &endpoint).await
+    }
+
+    pub async fn marketplace_revisions(
+        &self,
+        item_id: u32,
+    ) -> Result<PaginatedResponse<MarketplaceRevision>> {
+        self.request_from_endpoint(
+            API_V3,
+            &format!("marketplace/{}/revisions?limit=1", item_id),
+        )
+        .await
+    }
+
+    pub fn marketplace_download_url(&self, item_id: u32, revision_id: u32) -> String {
+        format!(
+            "{}/{}/marketplace/{}/revisions/{}/download",
+            self.url, API_V3, item_id, revision_id
+        )
+    }
+
     /// Request a list of released versions or mixed with development builds
     pub async fn builds(&self, release: bool) -> Result<Vec<Build>> {
         self.request_from_endpoint(API_V1, &if release {
@@ -235,6 +281,27 @@ impl Client {
             .json::<T>()
             .await?)
     }
+}
+
+/// A marketplace item as served by the API.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MarketplaceItem {
+    pub id: u32,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub item_type: MarketplaceItemType,
+    pub description: String,
+    #[serde(rename = "thumbnail_pid")]
+    pub thumbnail_pid: Option<String>,
+    #[serde(default)]
+    pub featured: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MarketplaceRevision {
+    pub id: u32,
+    pub version: String,
+    pub changelog: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]

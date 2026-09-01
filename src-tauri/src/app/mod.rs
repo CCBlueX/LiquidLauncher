@@ -23,3 +23,4 @@ pub mod options;
 pub mod webview;
 pub mod client_api;
 pub mod client_api_target;
+pub mod marketplace;
