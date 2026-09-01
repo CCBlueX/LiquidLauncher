@@ -77,7 +77,11 @@ pub fn gui_main() {
             install_custom_mod,
             delete_custom_mod,
             get_minecraft_installation,
-            check_for_updates
+            check_for_updates,
+            get_marketplace_subscriptions,
+            browse_marketplace_items,
+            subscribe_marketplace_item,
+            unsubscribe_marketplace_item
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
