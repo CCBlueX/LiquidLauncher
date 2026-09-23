@@ -17,14 +17,29 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::path::PathBuf;
+
 use crate::app::client_api::{Client, MarketplaceItem, PaginatedResponse};
 use crate::app::client_api_target::CLIENT_BRANCH;
 use crate::app::marketplace::{self, MarketplaceItemType, SubscribedItem};
+use crate::app::options::Options;
+use crate::LAUNCHER_DIRECTORY;
+
+/// Takes the options from the frontend, like `run_client`: Settings stores them only once it
+/// closes, so the stored ones may point at another data directory.
+fn data_directory(options: &Options) -> PathBuf {
+    match options.start_options.custom_data_path.as_str() {
+        "" => LAUNCHER_DIRECTORY.data_dir().to_path_buf(),
+        path => PathBuf::from(path),
+    }
+}
 
 /// What LiquidBounce currently has subscribed, add-ons and themes alike.
 #[tauri::command]
-pub(crate) async fn get_marketplace_subscriptions() -> Result<Vec<SubscribedItem>, String> {
-    marketplace::read_subscriptions(CLIENT_BRANCH)
+pub(crate) async fn get_marketplace_subscriptions(
+    options: Options,
+) -> Result<Vec<SubscribedItem>, String> {
+    marketplace::read_subscriptions(&data_directory(&options), CLIENT_BRANCH)
         .await
         .map_err(|e| format!("unable to read marketplace subscriptions: {:?}", e))
 }
@@ -47,6 +62,7 @@ pub(crate) async fn browse_marketplace_items(
 #[tauri::command]
 pub(crate) async fn subscribe_marketplace_item(
     client: Client,
+    options: Options,
     item_id: u32,
     name: String,
     item_type: MarketplaceItemType,
@@ -69,6 +85,7 @@ pub(crate) async fn subscribe_marketplace_item(
     };
 
     marketplace::install(
+        &data_directory(&options),
         CLIENT_BRANCH,
         &item,
         revision.id,
@@ -79,8 +96,11 @@ pub(crate) async fn subscribe_marketplace_item(
 }
 
 #[tauri::command]
-pub(crate) async fn unsubscribe_marketplace_item(item_id: u32) -> Result<(), String> {
-    marketplace::uninstall(CLIENT_BRANCH, item_id)
+pub(crate) async fn unsubscribe_marketplace_item(
+    options: Options,
+    item_id: u32,
+) -> Result<(), String> {
+    marketplace::uninstall(&data_directory(&options), CLIENT_BRANCH, item_id)
         .await
         .map_err(|e| format!("unable to remove marketplace item: {:?}", e))
 }

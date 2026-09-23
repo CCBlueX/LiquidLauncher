@@ -6,6 +6,7 @@
     import {invoke} from "@tauri-apps/api/core";
 
     export let client;
+    export let options;
 
     let subscribed = [];
     let available = [];
@@ -21,7 +22,7 @@
 
         try {
             [subscribed, available] = await Promise.all([
-                invoke("get_marketplace_subscriptions"),
+                invoke("get_marketplace_subscriptions", {options}),
                 invoke("browse_marketplace_items", {
                     client,
                     page: 1,
@@ -45,11 +46,12 @@
         try {
             await invoke("subscribe_marketplace_item", {
                 client,
+                options,
                 itemId: item.id,
                 name: item.name,
                 itemType: item.type
             });
-            subscribed = await invoke("get_marketplace_subscriptions");
+            subscribed = await invoke("get_marketplace_subscriptions", {options});
         } catch (e) {
             console.error("Failed to subscribe:", e);
             error = `${e}`;
@@ -63,8 +65,8 @@
         error = null;
 
         try {
-            await invoke("unsubscribe_marketplace_item", {itemId: item.id});
-            subscribed = await invoke("get_marketplace_subscriptions");
+            await invoke("unsubscribe_marketplace_item", {options, itemId: item.id});
+            subscribed = await invoke("get_marketplace_subscriptions", {options});
         } catch (e) {
             console.error("Failed to unsubscribe:", e);
             error = `${e}`;

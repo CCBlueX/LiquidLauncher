@@ -35,6 +35,7 @@
     {:else if activeSettingsTab === "Marketplace"}
         <MarketplaceSettings
                 {client}
+                {options}
         />
     {:else if activeSettingsTab === "Premium"}
         <PremiumSettings

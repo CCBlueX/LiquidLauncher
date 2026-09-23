@@ -31,7 +31,6 @@ use tokio::fs;
 use tracing::{info, warn};
 
 use crate::utils::{download_file, zip_extract};
-use crate::LAUNCHER_DIRECTORY;
 
 /// Filename prefix for add-on jars staged into the mods directory.
 ///
@@ -59,33 +58,28 @@ pub struct SubscribedItem {
     pub installed_revision_id: Option<u32>,
 }
 
-fn client_dir(branch: &str) -> PathBuf {
-    LAUNCHER_DIRECTORY
-        .data_dir()
-        .join("gameDir")
-        .join(branch)
-        .join("LiquidBounce")
+fn client_dir(data: &Path, branch: &str) -> PathBuf {
+    data.join("gameDir").join(branch).join("LiquidBounce")
 }
 
-fn subscriptions_path(branch: &str) -> PathBuf {
-    client_dir(branch).join("marketplace.json")
+fn subscriptions_path(data: &Path, branch: &str) -> PathBuf {
+    client_dir(data, branch).join("marketplace.json")
 }
 
-pub fn marketplace_root(branch: &str) -> PathBuf {
-    client_dir(branch).join("marketplace")
+fn item_dir(data: &Path, branch: &str, item_id: u32) -> PathBuf {
+    client_dir(data, branch)
+        .join("marketplace")
+        .join("items")
+        .join(item_id.to_string())
 }
 
-fn mods_dir(branch: &str) -> PathBuf {
-    LAUNCHER_DIRECTORY
-        .data_dir()
-        .join("gameDir")
-        .join(branch)
-        .join("mods")
+fn mods_dir(data: &Path, branch: &str) -> PathBuf {
+    data.join("gameDir").join(branch).join("mods")
 }
 
 /// Reads the subscription list, returning empty if the client has never written the file.
-pub async fn read_subscriptions(branch: &str) -> Result<Vec<SubscribedItem>> {
-    let path = subscriptions_path(branch);
+pub async fn read_subscriptions(data: &Path, branch: &str) -> Result<Vec<SubscribedItem>> {
+    let path = subscriptions_path(data, branch);
     if !path.exists() {
         return Ok(vec![]);
     }
@@ -125,8 +119,12 @@ fn subscribed_array(root: &serde_json::Value) -> Option<&Vec<serde_json::Value>>
 }
 
 /// Writes the subscription list back, leaving every other key in the file untouched.
-pub async fn write_subscriptions(branch: &str, items: &[SubscribedItem]) -> Result<()> {
-    let path = subscriptions_path(branch);
+pub async fn write_subscriptions(
+    data: &Path,
+    branch: &str,
+    items: &[SubscribedItem],
+) -> Result<()> {
+    let path = subscriptions_path(data, branch);
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).await?;
     }
@@ -171,15 +169,13 @@ fn default_root() -> serde_json::Value {
 
 /// Downloads and extracts a revision into the same layout the client uses, then records it.
 pub async fn install(
+    data: &Path,
     branch: &str,
     item: &SubscribedItem,
     revision_id: u32,
     download_url: &str,
 ) -> Result<()> {
-    let revision_dir = marketplace_root(branch)
-        .join("items")
-        .join(item.id.to_string())
-        .join(revision_id.to_string());
+    let revision_dir = item_dir(data, branch, item.id).join(revision_id.to_string());
 
     if revision_dir.exists() {
         fs::remove_dir_all(&revision_dir).await.ok();
@@ -196,7 +192,7 @@ pub async fn install(
             )
         })?;
 
-    let mut items = read_subscriptions(branch).await?;
+    let mut items = read_subscriptions(data, branch).await?;
     match items.iter_mut().find(|existing| existing.id == item.id) {
         Some(existing) => existing.installed_revision_id = Some(revision_id),
         None => {
@@ -205,7 +201,7 @@ pub async fn install(
             items.push(stored);
         }
     }
-    write_subscriptions(branch, &items).await?;
+    write_subscriptions(data, branch, &items).await?;
 
     info!(
         "Installed marketplace item {} revision {}",
@@ -215,28 +211,26 @@ pub async fn install(
 }
 
 /// Removes a subscription and everything it installed.
-pub async fn uninstall(branch: &str, item_id: u32) -> Result<()> {
-    let item_dir = marketplace_root(branch)
-        .join("items")
-        .join(item_id.to_string());
+pub async fn uninstall(data: &Path, branch: &str, item_id: u32) -> Result<()> {
+    let item_dir = item_dir(data, branch, item_id);
     if item_dir.exists() {
         fs::remove_dir_all(&item_dir).await.ok();
     }
 
-    let items: Vec<SubscribedItem> = read_subscriptions(branch)
+    let items: Vec<SubscribedItem> = read_subscriptions(data, branch)
         .await?
         .into_iter()
         .filter(|item| item.id != item_id)
         .collect();
-    write_subscriptions(branch, &items).await
+    write_subscriptions(data, branch, &items).await
 }
 
 /// Copies subscribed add-on jars into the mods directory.
 ///
 /// Called after `clear_mods`, which wipes that directory on every launch.
-pub async fn stage_addons(branch: &str) -> Result<()> {
-    let items = read_subscriptions(branch).await?;
-    let mods = mods_dir(branch);
+pub async fn stage_addons(data: &Path, branch: &str) -> Result<()> {
+    let items = read_subscriptions(data, branch).await?;
+    let mods = mods_dir(data, branch);
     fs::create_dir_all(&mods).await?;
 
     for item in items {
@@ -248,7 +242,8 @@ pub async fn stage_addons(branch: &str) -> Result<()> {
             continue;
         };
 
-        match stage_one(branch, item.id, revision_id, &mods).await {
+        let revision_dir = item_dir(data, branch, item.id).join(revision_id.to_string());
+        match stage_one(&revision_dir, item.id, revision_id, &mods).await {
             Ok(name) => info!("Staged add-on '{}' as {}", item.name, name),
             Err(error) => warn!("Failed to stage add-on '{}': {:?}", item.name, error),
         }
@@ -257,8 +252,13 @@ pub async fn stage_addons(branch: &str) -> Result<()> {
     Ok(())
 }
 
-async fn stage_one(branch: &str, item_id: u32, revision_id: u32, mods: &Path) -> Result<String> {
-    let installation = installation_dir(branch, item_id, revision_id)
+async fn stage_one(
+    revision_dir: &Path,
+    item_id: u32,
+    revision_id: u32,
+    mods: &Path,
+) -> Result<String> {
+    let installation = installation_dir(revision_dir)
         .await
         .with_context(|| format!("No installed files for add-on {item_id}"))?;
 
@@ -288,21 +288,16 @@ async fn stage_one(branch: &str, item_id: u32, revision_id: u32, mods: &Path) ->
 
 /// Mirrors the client's `SubscribedItem.getInstallationFolder`: the revision directory, or the one
 /// subdirectory inside it that actually holds files.
-async fn installation_dir(branch: &str, item_id: u32, revision_id: u32) -> Option<PathBuf> {
-    let revision_dir = marketplace_root(branch)
-        .join("items")
-        .join(item_id.to_string())
-        .join(revision_id.to_string());
-
+async fn installation_dir(revision_dir: &Path) -> Option<PathBuf> {
     if !revision_dir.is_dir() {
         return None;
     }
 
-    if contains_file(&revision_dir).await {
-        return Some(revision_dir);
+    if contains_file(revision_dir).await {
+        return Some(revision_dir.to_path_buf());
     }
 
-    let mut entries = fs::read_dir(&revision_dir).await.ok()?;
+    let mut entries = fs::read_dir(revision_dir).await.ok()?;
     while let Some(entry) = entries.next_entry().await.ok()? {
         let path = entry.path();
         if path.is_dir() && contains_file(&path).await {
