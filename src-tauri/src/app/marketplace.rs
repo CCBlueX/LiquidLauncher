@@ -25,7 +25,8 @@
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::io::Cursor;
+use serde_json::{json, Value};
+use std::io::{Cursor, ErrorKind};
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::{info, warn};
@@ -43,11 +44,13 @@ pub enum MarketplaceItemType {
     Config,
     Theme,
     Addon,
-    /// Also what the retired `Script` type deserializes to, matching the client.
+    Script,
     #[serde(other)]
     Other,
 }
 
+/// A subscription as read for display and staging. Nothing writes this back: edits change the raw
+/// entries, so types and fields this launcher does not know survive.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SubscribedItem {
     pub name: String,
@@ -79,23 +82,16 @@ fn mods_dir(data: &Path, branch: &str) -> PathBuf {
 
 /// Reads the subscription list, returning empty if the client has never written the file.
 pub async fn read_subscriptions(data: &Path, branch: &str) -> Result<Vec<SubscribedItem>> {
-    let path = subscriptions_path(data, branch);
-    if !path.exists() {
+    let Some(root) = read_root(&subscriptions_path(data, branch)).await? else {
         return Ok(vec![]);
-    }
+    };
 
-    let raw = fs::read_to_string(&path)
-        .await
-        .with_context(|| format!("Failed to read {}", path.display()))?;
-    let root: serde_json::Value = serde_json::from_str(&raw)
-        .with_context(|| format!("Failed to parse {}", path.display()))?;
-
-    let Some(array) = subscribed_array(&root) else {
+    let Some(entries) = subscribed_entries(&root) else {
         return Ok(vec![]);
     };
 
     // One unreadable entry must not hide the rest.
-    Ok(array
+    Ok(entries
         .iter()
         .filter_map(
             |entry| match serde_json::from_value::<SubscribedItem>(entry.clone()) {
@@ -109,50 +105,73 @@ pub async fn read_subscriptions(data: &Path, branch: &str) -> Result<Vec<Subscri
         .collect())
 }
 
-fn subscribed_array(root: &serde_json::Value) -> Option<&Vec<serde_json::Value>> {
+async fn read_root(path: &Path) -> Result<Option<Value>> {
+    let raw = match fs::read_to_string(path).await {
+        Ok(raw) => raw,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(error).with_context(|| format!("Failed to read {}", path.display()))
+        }
+    };
+
+    serde_json::from_str(&raw)
+        .map(Some)
+        .with_context(|| format!("Failed to parse {}", path.display()))
+}
+
+fn subscribed_entries(root: &Value) -> Option<&Vec<Value>> {
     root.get("value")?
         .as_array()?
         .iter()
-        .find(|entry| entry.get("name").and_then(|n| n.as_str()) == Some("subscribed"))?
+        .find(|entry| is_subscribed_list(entry))?
         .get("value")?
         .as_array()
 }
 
-/// Writes the subscription list back, leaving every other key in the file untouched.
-pub async fn write_subscriptions(
+fn subscribed_entries_mut(root: &mut Value) -> Option<&mut Vec<Value>> {
+    let values = root.get_mut("value")?.as_array_mut()?;
+    let index = match values.iter().position(is_subscribed_list) {
+        Some(index) => index,
+        None => {
+            values.push(json!({ "name": "subscribed", "value": [] }));
+            values.len() - 1
+        }
+    };
+    values[index].get_mut("value")?.as_array_mut()
+}
+
+fn is_subscribed_list(entry: &Value) -> bool {
+    entry.get("name").and_then(Value::as_str) == Some("subscribed")
+}
+
+fn entry_id(entry: &Value) -> Option<u64> {
+    entry.get("id").and_then(Value::as_u64)
+}
+
+/// Applies `edit` to the raw subscription entries and writes the file back. Everything `edit` does
+/// not touch stays as the client wrote it.
+async fn edit_subscriptions(
     data: &Path,
     branch: &str,
-    items: &[SubscribedItem],
+    edit: impl FnOnce(&mut Vec<Value>),
 ) -> Result<()> {
+    // Commands run concurrently, and each would write back a file without the other's edit.
+    static EDITING: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+    let _editing = EDITING.lock().await;
+
     let path = subscriptions_path(data, branch);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).await?;
-    }
 
     // Re-read immediately before writing, so a value the client added is carried over rather than
     // replaced by whatever the launcher last saw.
-    let mut root: serde_json::Value = match fs::read_to_string(&path).await {
-        Ok(raw) => serde_json::from_str(&raw).unwrap_or_else(|_| default_root()),
-        Err(_) => default_root(),
-    };
+    let mut root = read_root(&path)
+        .await?
+        .unwrap_or_else(|| json!({ "name": "marketplace", "value": [] }));
+    let entries = subscribed_entries_mut(&mut root)
+        .with_context(|| format!("Unexpected layout of {}", path.display()))?;
+    edit(entries);
 
-    let encoded = serde_json::to_value(items)?;
-    let mut replaced = false;
-
-    if let Some(values) = root.get_mut("value").and_then(|v| v.as_array_mut()) {
-        for entry in values.iter_mut() {
-            if entry.get("name").and_then(|n| n.as_str()) == Some("subscribed") {
-                entry["value"] = encoded.clone();
-                replaced = true;
-                break;
-            }
-        }
-        if !replaced {
-            values.push(serde_json::json!({ "name": "subscribed", "value": encoded }));
-        }
-    } else {
-        root = default_root();
-        root["value"] = serde_json::json!([{ "name": "subscribed", "value": encoded }]);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).await?;
     }
 
     // Write beside the target and rename, so an interrupted write cannot truncate the file the
@@ -161,10 +180,6 @@ pub async fn write_subscriptions(
     fs::write(&temporary, serde_json::to_vec_pretty(&root)?).await?;
     fs::rename(&temporary, &path).await?;
     Ok(())
-}
-
-fn default_root() -> serde_json::Value {
-    serde_json::json!({ "name": "marketplace", "value": [] })
 }
 
 /// Downloads and extracts a revision into the same layout the client uses, then records it.
@@ -192,16 +207,20 @@ pub async fn install(
             )
         })?;
 
-    let mut items = read_subscriptions(data, branch).await?;
-    match items.iter_mut().find(|existing| existing.id == item.id) {
-        Some(existing) => existing.installed_revision_id = Some(revision_id),
-        None => {
-            let mut stored = item.clone();
-            stored.installed_revision_id = Some(revision_id);
-            items.push(stored);
-        }
-    }
-    write_subscriptions(data, branch, &items).await?;
+    edit_subscriptions(data, branch, |entries| {
+        let index = match entries
+            .iter()
+            .position(|entry| entry_id(entry) == Some(item.id.into()))
+        {
+            Some(index) => index,
+            None => {
+                entries.push(json!({ "name": item.name, "id": item.id, "type": item.item_type }));
+                entries.len() - 1
+            }
+        };
+        entries[index]["installedRevisionId"] = json!(revision_id);
+    })
+    .await?;
 
     info!(
         "Installed marketplace item {} revision {}",
@@ -217,12 +236,10 @@ pub async fn uninstall(data: &Path, branch: &str, item_id: u32) -> Result<()> {
         fs::remove_dir_all(&item_dir).await.ok();
     }
 
-    let items: Vec<SubscribedItem> = read_subscriptions(data, branch)
-        .await?
-        .into_iter()
-        .filter(|item| item.id != item_id)
-        .collect();
-    write_subscriptions(data, branch, &items).await
+    edit_subscriptions(data, branch, |entries| {
+        entries.retain(|entry| entry_id(entry) != Some(item_id.into()))
+    })
+    .await
 }
 
 /// Copies subscribed add-on jars into the mods directory.
@@ -320,4 +337,83 @@ async fn contains_file(dir: &Path) -> bool {
     }
 
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn scratch(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("liquidlauncher-test-{}-{name}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[tokio::test]
+    async fn concurrent_edits_all_land() {
+        let data = scratch("concurrent");
+        let path = subscriptions_path(&data, "nextgen");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let subscribed: Vec<_> = (1..=8)
+            .map(|id| json!({ "name": format!("Theme {id}"), "id": id, "type": "Theme" }))
+            .collect();
+        let file = json!({
+            "name": "marketplace",
+            "value": [{ "name": "subscribed", "value": subscribed }],
+        });
+        std::fs::write(&path, file.to_string()).unwrap();
+
+        futures::future::try_join_all((1..=8).map(|id| uninstall(&data, "nextgen", id)))
+            .await
+            .unwrap();
+        let left = read_subscriptions(&data, "nextgen").await.unwrap();
+        assert!(left.is_empty());
+
+        std::fs::remove_dir_all(&data).unwrap();
+    }
+
+    #[tokio::test]
+    async fn edits_keep_unknown_types_fields_and_entries() {
+        let data = scratch("subscriptions");
+        let path = subscriptions_path(&data, "nextgen");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+
+        let history = json!({ "name": "history", "value": [1, 2] });
+        let script = json!({ "name": "Scripts", "id": 12, "type": "Script", "pinned": true });
+        let unknown = json!({ "name": "Shaders", "id": 13, "type": "Shader" });
+        let theme = json!({ "name": "Beautify", "id": 14, "type": "Theme" });
+        let file = |subscribed: Value| {
+            json!({
+                "name": "marketplace",
+                "version": 3,
+                "value": [history, { "name": "subscribed", "value": subscribed }],
+            })
+        };
+        std::fs::write(
+            &path,
+            file(json!([script, unknown, "broken", theme])).to_string(),
+        )
+        .unwrap();
+
+        uninstall(&data, "nextgen", 14).await.unwrap();
+
+        let written: Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(written, file(json!([script, unknown, "broken"])));
+
+        let types: Vec<_> = read_subscriptions(&data, "nextgen")
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|item| item.item_type)
+            .collect();
+        assert_eq!(
+            types,
+            [MarketplaceItemType::Script, MarketplaceItemType::Other]
+        );
+
+        std::fs::remove_dir_all(&data).unwrap();
+    }
 }
