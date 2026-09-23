@@ -648,7 +648,19 @@ async fn addon_jar(revision_dir: &Path) -> Result<PathBuf> {
 
 async fn stage_one(jar: &Path, item_id: u32, revision_id: u32, mods: &Path) -> Result<String> {
     let name = format!("{ADDON_PREFIX}{item_id}-{revision_id}.jar");
-    fs::copy(jar, mods.join(&name)).await?;
+
+    // Fabric ignores non-jars, so a failed copy leaves no truncated jar behind.
+    let part = mods.join(format!("{name}.part"));
+    let copied = async {
+        fs::copy(jar, &part).await?;
+        rename(&part, &mods.join(&name)).await
+    }
+    .await;
+    if let Err(error) = copied {
+        let _ = fs::remove_file(&part).await;
+        return Err(error.into());
+    }
+
     Ok(name)
 }
 
