@@ -26,6 +26,7 @@ use crate::utils::get_maven_artifact_path;
 use crate::HTTP_CLIENT;
 use anyhow::{Error, Result};
 use chrono::{DateTime, NaiveDateTime, Utc};
+use reqwest::{IntoUrl, Url};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, debug_span, error, info, warn};
@@ -161,9 +162,8 @@ impl Client {
 
     /// Browse marketplace items.
     ///
-    /// `include_addons` is required for add-ons to appear at all: the API hides them from untyped
-    /// listings so that LiquidBounce builds predating add-ons never receive a type they cannot
-    /// deserialize.
+    /// The API leaves add-ons out of untyped listings, so LiquidBounce builds predating add-ons
+    /// never receive a type they cannot deserialize. Add-ons are listed with `item_type` `Addon`.
     pub async fn marketplace_items(
         &self,
         page: u32,
@@ -171,19 +171,22 @@ impl Client {
         query: Option<&str>,
         item_type: Option<&str>,
     ) -> Result<PaginatedResponse<MarketplaceItem>> {
-        let mut endpoint = format!(
-            "marketplace?page={}&limit={}&branch={}&include_addons=true",
-            page, limit, CLIENT_BRANCH
-        );
-
-        if let Some(query) = query {
-            endpoint.push_str(&format!("&q={}", query));
+        let mut url = Url::parse(&format!("{}/{}/marketplace", self.url, API_V3))?;
+        {
+            let mut pairs = url.query_pairs_mut();
+            pairs
+                .append_pair("page", &page.to_string())
+                .append_pair("limit", &limit.to_string())
+                .append_pair("branch", CLIENT_BRANCH);
+            if let Some(query) = query {
+                pairs.append_pair("q", query);
+            }
+            if let Some(item_type) = item_type {
+                pairs.append_pair("type", item_type);
+            }
         }
-        if let Some(item_type) = item_type {
-            endpoint.push_str(&format!("&type={}", item_type));
-        }
 
-        self.request_from_endpoint(API_V3, &endpoint).await
+        self.request_url(url).await
     }
 
     pub async fn marketplace_revisions(
@@ -257,8 +260,13 @@ impl Client {
 
     /// Request JSON formatted data from launcher API
     pub async fn request_from_endpoint<T: DeserializeOwned>(&self, api_version: &str, endpoint: &str) -> Result<T> {
+        self.request_url(format!("{}/{}/{}", self.url, api_version, endpoint))
+            .await
+    }
+
+    async fn request_url<T: DeserializeOwned>(&self, url: impl IntoUrl) -> Result<T> {
         Ok(HTTP_CLIENT
-            .get(format!("{}/{}/{}", self.url, api_version, endpoint))
+            .get(url)
             .header("X-Session-Token", &self.session_token)
             .send()
             .await?

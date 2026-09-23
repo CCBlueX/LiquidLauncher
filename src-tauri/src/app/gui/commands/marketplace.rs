@@ -44,6 +44,7 @@ pub(crate) async fn get_marketplace_subscriptions(
         .map_err(|e| format!("unable to read marketplace subscriptions: {:?}", e))
 }
 
+/// Without a type, add-ons are asked for on their own, since the API leaves them out then.
 #[tauri::command]
 pub(crate) async fn browse_marketplace_items(
     client: Client,
@@ -52,10 +53,26 @@ pub(crate) async fn browse_marketplace_items(
     query: Option<String>,
     item_type: Option<String>,
 ) -> Result<PaginatedResponse<MarketplaceItem>, String> {
-    client
-        .marketplace_items(page, limit, query.as_deref(), item_type.as_deref())
-        .await
-        .map_err(|e| format!("unable to browse marketplace: {:?}", e))
+    let query = query.as_deref();
+    let items = match item_type.as_deref() {
+        Some(item_type) => {
+            client
+                .marketplace_items(page, limit, query, Some(item_type))
+                .await
+        }
+        None => tokio::try_join!(
+            client.marketplace_items(page, limit, query, None),
+            client.marketplace_items(page, limit, query, Some("Addon")),
+        )
+        .map(|(mut items, addons)| {
+            items.items.extend(addons.items);
+            items.pagination.pages = items.pagination.pages.max(addons.pagination.pages);
+            items.pagination.items += addons.pagination.items;
+            items
+        }),
+    };
+
+    items.map_err(|e| format!("unable to browse marketplace: {:?}", e))
 }
 
 /// Subscribes to an item and installs its newest revision.
