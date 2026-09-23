@@ -25,6 +25,7 @@
 
 use anyhow::{Context, Result};
 use backon::{ConstantBuilder, Retryable};
+use chrono::{TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::io::{Cursor, ErrorKind};
@@ -319,6 +320,12 @@ pub async fn uninstall(data: &Path, branch: &str, item_id: u32) -> Result<()> {
     .await
 }
 
+/// A build's date is its commit date, and LiquidBounce #9122 brought add-ons at this one. The
+/// version cannot tell: 0.40.1 builds exist on both sides of it.
+fn supports_addons(build: &Build) -> bool {
+    build.date >= Utc.with_ymd_and_hms(2026, 9, 14, 17, 38, 44).unwrap()
+}
+
 /// Installs and copies into the mods directory, for the launched build, the newest revision of
 /// every subscribed add-on that fits it.
 ///
@@ -335,6 +342,15 @@ pub async fn stage_addons(
         .filter(|item| item.item_type == MarketplaceItemType::Addon)
         .collect();
     if addons.is_empty() {
+        return Ok(());
+    }
+
+    if !supports_addons(build) {
+        let names: Vec<_> = addons.iter().map(|item| item.name.as_str()).collect();
+        progress.log(&format!(
+            "This build predates add-ons, so {} will not load.",
+            names.join(", ")
+        ));
         return Ok(());
     }
 
@@ -923,5 +939,37 @@ mod tests {
                 None
             ]
         );
+    }
+
+    #[test]
+    fn only_builds_with_the_addon_system_get_addons() {
+        // Release 0.40.0, the last nightly before #9122, #9122 itself, the first nightly after it.
+        for (build_id, lb_version, date, expected) in [
+            (16941, "0.40.0", "2026-08-21T03:16:52Z", false),
+            (17221, "0.40.1", "2026-09-14T12:35:25Z", false),
+            (0, "0.40.1", "2026-09-14T17:38:44Z", true),
+            (17223, "0.40.1", "2026-09-14T18:08:10Z", true),
+        ] {
+            let build: Build = serde_json::from_value(json!({
+                "build_id": build_id,
+                "commit_id": "",
+                "branch": "nextgen",
+                "subsystem": "fabric",
+                "lb_version": lb_version,
+                "mc_version": "26.2",
+                "release": build_id == 16941,
+                "date": date,
+                "message": "",
+                "url": "",
+                "jre_version": 25,
+                "jre_distribution": "temurin",
+                "fabric_api_version": "0.153.0+26.2",
+                "fabric_loader_version": "0.19.3",
+                "kotlin_version": "2.4.0",
+                "kotlin_mod_version": "1.13.12+kotlin.2.4.0",
+            }))
+            .unwrap();
+            assert_eq!(supports_addons(&build), expected, "build {build_id}");
+        }
     }
 }
