@@ -1,5 +1,6 @@
 <script>
     export let title;
+    export let unbounded = false;
 </script>
 
 <div class="wrapper">
@@ -7,7 +8,7 @@
         <span class="title">{title}</span>
         <slot name="title-element" />
     </div>
-    <div class="wrapped-settings">
+    <div class="wrapped-settings" class:unbounded>
         <slot />
     </div>
 </div>
@@ -36,5 +37,10 @@
         row-gap: 5px;
         max-height: 150px;
         overflow: auto;
+    }
+
+    .wrapped-settings.unbounded {
+        max-height: none;
+        overflow: visible;
     }
 </style>
