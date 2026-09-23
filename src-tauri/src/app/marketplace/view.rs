@@ -35,6 +35,7 @@ use super::{
     read_subscriptions, revisions, supports_addons, Installed, MarketplaceItemType, Pending,
     SubscribedItem,
 };
+use crate::app::builds::Selection;
 use crate::app::client_api::{Build, Client, MarketplaceItem, MarketplaceRevision};
 
 const LISTED: u32 = 50;
@@ -75,6 +76,7 @@ pub struct LibraryItem {
 pub struct Library {
     minecraft: Option<String>,
     liquidbounce: Option<String>,
+    selection: Option<Selection>,
     notice: Notice,
     addons: Vec<LibraryItem>,
     themes: Vec<LibraryItem>,
@@ -268,7 +270,7 @@ fn tag(
         })
 }
 
-fn short_date(date: NaiveDateTime) -> String {
+pub fn short_date(date: NaiveDateTime) -> String {
     if date.year() == Utc::now().year() {
         date.format("%b %-d").to_string()
     } else {
@@ -339,12 +341,20 @@ pub enum Remote<'a> {
     Failed(String),
 }
 
+/// The build the library is for.
+pub struct Selected<'a> {
+    pub build: Option<&'a Build>,
+    /// "Latest" is selected rather than this build.
+    pub latest: bool,
+}
+
 pub async fn library(
     data: &Path,
     branch: &str,
-    build: Option<&Build>,
+    selected: &Selected<'_>,
     remote: Remote<'_>,
 ) -> Result<Library> {
+    let build = selected.build;
     let pending = pending();
     let items = library_items(data, branch, &pending).await?;
     let supports = build.is_none_or(supports_addons);
@@ -403,6 +413,7 @@ pub async fn library(
     let mut library = Library {
         minecraft: build.map(|build| build.mc_version.clone()),
         liquidbounce: build.map(|build| build.lb_version.clone()),
+        selection: build.map(|build| Selection::of(build, selected.latest)),
         notice: Notice::Checking,
         addons: vec![],
         themes: vec![],

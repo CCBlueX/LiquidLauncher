@@ -22,10 +22,11 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use tauri::State;
 
+use crate::app::builds::{self, Resolved};
 use crate::app::client_api::{Build, Client};
 use crate::app::client_api_target::CLIENT_BRANCH;
 use crate::app::gui::AppState;
-use crate::app::marketplace::view::{self, Browse, Detail, Library, Remote};
+use crate::app::marketplace::view::{self, Browse, Detail, Library, Remote, Selected};
 use crate::app::marketplace::{self, MarketplaceItemType, SubscribedItem};
 use crate::app::options::Options;
 use crate::LAUNCHER_DIRECTORY;
@@ -39,19 +40,37 @@ pub(crate) fn data_directory(options: &Options) -> PathBuf {
     }
 }
 
-/// The build selected to launch, resolved like the main screen does.
+/// The build selected to launch, if it was resolved for the same choice.
 fn cached_build(options: &Options, state: &AppState) -> Option<Build> {
-    let builds = state.builds.lock().ok()?;
-    select(&builds, options.version_options.build_id).cloned()
+    let resolved = state.build.lock().ok()?;
+    resolved
+        .as_ref()
+        .filter(|resolved| {
+            resolved.is_for(
+                options.version_options.build_id,
+                options.launcher_options.show_nightly_builds,
+            )
+        })
+        .map(|resolved| resolved.build.clone())
 }
 
-fn select(builds: &[Build], build_id: i32) -> Option<&Build> {
-    match build_id {
-        -1 => builds.first(),
-        id => builds
-            .iter()
-            .find(|build| i64::from(build.build_id) == i64::from(id)),
+/// Resolves the build selected to launch and keeps it for the views that follow.
+pub(crate) async fn resolve_build(
+    client: &Client,
+    options: &Options,
+    state: &AppState,
+) -> Result<Build> {
+    let build_id = options.version_options.build_id;
+    let nightly = options.launcher_options.show_nightly_builds;
+    let build = builds::resolve(client, build_id, nightly).await?;
+    if let Ok(mut resolved) = state.build.lock() {
+        *resolved = Some(Resolved {
+            build_id,
+            nightly,
+            build: build.clone(),
+        });
     }
+    Ok(build)
 }
 
 pub(crate) async fn selected_build(
@@ -59,16 +78,10 @@ pub(crate) async fn selected_build(
     options: &Options,
     state: &AppState,
 ) -> Result<Build> {
-    if let Some(build) = cached_build(options, state) {
-        return Ok(build);
+    match cached_build(options, state) {
+        Some(build) => Ok(build),
+        None => resolve_build(client, options, state).await,
     }
-
-    let builds = client
-        .builds(!options.launcher_options.show_nightly_builds)
-        .await?;
-    select(&builds, options.version_options.build_id)
-        .cloned()
-        .context("The selected build is not available")
 }
 
 /// The installed add-ons, themes and scripts. Without `check` it reads the disk alone and returns at
@@ -81,23 +94,26 @@ pub(crate) async fn get_marketplace_library(
     app_state: State<'_, AppState>,
 ) -> Result<Library, String> {
     let data = data_directory(&options);
-    let library = if check {
+    let (build, remote) = if check {
         match selected_build(&client, &options, &app_state).await {
-            Ok(build) => {
-                view::library(&data, CLIENT_BRANCH, Some(&build), Remote::Check(&client)).await
-            }
+            Ok(build) => (Some(build), Remote::Check(&client)),
             Err(error) => {
                 let error = format!(
                     "unable to check the marketplace: {}",
                     view::describe(&error)
                 );
-                view::library(&data, CLIENT_BRANCH, None, Remote::Failed(error)).await
+                (None, Remote::Failed(error))
             }
         }
     } else {
-        let build = cached_build(&options, &app_state);
-        view::library(&data, CLIENT_BRANCH, build.as_ref(), Remote::Skip).await
+        (cached_build(&options, &app_state), Remote::Skip)
     };
+
+    let selected = Selected {
+        build: build.as_ref(),
+        latest: options.version_options.build_id == -1,
+    };
+    let library = view::library(&data, CLIENT_BRANCH, &selected, remote).await;
 
     library.map_err(|e| {
         format!(

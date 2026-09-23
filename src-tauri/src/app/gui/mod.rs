@@ -22,7 +22,7 @@ use std::sync::{Arc, Mutex};
 use commands::*;
 use tauri::Window;
 
-use crate::app::client_api::Build;
+use crate::app::builds::Resolved;
 
 pub type ShareableWindow = Arc<Mutex<Window>>;
 
@@ -32,15 +32,15 @@ pub struct RunnerInstance {
 
 pub struct AppState {
     pub runner_instance: Arc<Mutex<Option<RunnerInstance>>>,
-    /// The builds the main screen last listed, to resolve the selected one from.
-    pub builds: Mutex<Vec<Build>>,
+    /// The build that launches, as last resolved.
+    pub build: Mutex<Option<Resolved>>,
 }
 
 impl AppState {
     pub fn new() -> Self {
         Self {
             runner_instance: Arc::new(Mutex::new(None)),
-            builds: Mutex::new(vec![]),
+            build: Mutex::new(None),
         }
     }
 }
@@ -63,6 +63,7 @@ pub fn gui_main() {
             get_options,
             store_options,
             request_builds,
+            request_build_page,
             request_mods,
             run_client,
             login_offline,

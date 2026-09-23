@@ -261,6 +261,38 @@ impl Client {
         .await
     }
 
+    /// A page of builds, newest first: releases, or every build with `nightly`. `query` searches
+    /// commit messages and ids.
+    pub async fn build_page(
+        &self,
+        page: u32,
+        limit: u32,
+        query: Option<&str>,
+        nightly: bool,
+    ) -> Result<PaginatedResponse<Build>> {
+        let mut url = Url::parse(&format!(
+            "{}/{}/version/{}/builds",
+            self.url, API_V3, CLIENT_BRANCH
+        ))?;
+        {
+            let mut pairs = url.query_pairs_mut();
+            pairs
+                .append_pair("page", &page.to_string())
+                .append_pair("limit", &limit.to_string())
+                .append_pair("nightly", &nightly.to_string());
+            if let Some(query) = query {
+                pairs.append_pair("q", query);
+            }
+        }
+
+        self.request_url(url).await
+    }
+
+    pub async fn build(&self, build_id: u32) -> Result<Build> {
+        self.request_from_endpoint(API_V3, &format!("version/build/{}", build_id))
+            .await
+    }
+
     /// Request launch manifest of specific build
     pub async fn fetch_launch_manifest(&self, build_id: u32) -> Result<LaunchManifest> {
         self.request_from_endpoint(API_V1, &format!("version/launch/{}", build_id))

@@ -32,9 +32,11 @@ use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use super::marketplace::data_directory;
+use crate::app::builds::{self, BuildPage};
 use crate::app::client_api::{BlogPost, Build, Changelog, Client, PaginatedResponse};
 use crate::app::client_api::LoaderMod;
 use crate::app::marketplace;
+use crate::app::marketplace::view::describe;
 use crate::app::modrinth::{self, CustomMod};
 use crate::app::options::Options;
 use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
@@ -45,11 +47,7 @@ use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
 }, HTTP_CLIENT, LAUNCHER_DIRECTORY};
 
 #[tauri::command]
-pub(crate) async fn request_builds(
-    client: Client,
-    release: bool,
-    app_state: tauri::State<'_, AppState>,
-) -> Result<Vec<Build>, String> {
+pub(crate) async fn request_builds(client: Client, release: bool) -> Result<Vec<Build>, String> {
     let builds = (|| async { client.builds(release).await })
         .retry(ExponentialBuilder::default())
         .notify(|err, dur| {
@@ -58,10 +56,30 @@ pub(crate) async fn request_builds(
         .await
         .map_err(|e| format!("unable to request builds: {:?}", e))?;
 
-    if let Ok(mut cached) = app_state.builds.lock() {
-        cached.clone_from(&builds);
-    }
     Ok(builds)
+}
+
+/// A page of the builds to choose from, releases or all of them as the options show them.
+#[tauri::command]
+pub(crate) async fn request_build_page(
+    client: Client,
+    options: Options,
+    query: Option<String>,
+    page: u32,
+) -> Result<BuildPage, String> {
+    let query = query
+        .as_deref()
+        .map(str::trim)
+        .filter(|query| !query.is_empty());
+    builds::page(
+        &client,
+        page,
+        query,
+        options.launcher_options.show_nightly_builds,
+        options.version_options.build_id,
+    )
+    .await
+    .map_err(|e| format!("unable to request builds: {}", describe(&e)))
 }
 
 #[tauri::command]
