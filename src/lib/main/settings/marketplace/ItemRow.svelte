@@ -5,12 +5,13 @@
     export let description = null;
     export let removable = false;
     export let dim = false;
+    export let openable = true;
 
     const dispatch = createEventDispatcher();
 </script>
 
-<div class="row" class:dim>
-    <button class="open" type="button" on:click={() => dispatch("open")}>
+<div class="row" class:dim class:openable>
+    <button class="open" type="button" disabled={!openable} on:click={() => dispatch("open")}>
         <span class="name">{name}</span>
         {#if description}
             <span class="line">{description}</span>
@@ -26,7 +27,9 @@
         {/if}
         <slot name="side" />
     </div>
-    <img class="chevron" src="img/icon/icon-next.svg" alt="" aria-hidden="true">
+    {#if openable}
+        <img class="chevron" src="img/icon/icon-next.svg" alt="" aria-hidden="true">
+    {/if}
 </div>
 
 <style>
@@ -43,7 +46,11 @@
         transition: ease border-color .2s;
     }
 
-    .row:hover, .row:focus-within {
+    .row:not(.openable) {
+        grid-template-columns: minmax(0, 1fr) max-content;
+    }
+
+    .row.openable:hover, .row.openable:focus-within {
         border-color: #4677FF;
     }
 
@@ -57,6 +64,10 @@
         font-size: 14px;
         cursor: pointer;
         min-width: 0;
+    }
+
+    .open:disabled {
+        cursor: default;
     }
 
     .open::after {

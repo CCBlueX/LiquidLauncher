@@ -67,7 +67,8 @@ async fn selected_build(client: &Client, options: &Options, state: &AppState) ->
         .context("The selected build is not available")
 }
 
-/// The installed themes and add-ons. Without `check` it reads the disk alone and returns at once.
+/// The installed add-ons, themes and scripts. Without `check` it reads the disk alone and returns at
+/// once.
 #[tauri::command]
 pub(crate) async fn get_marketplace_library(
     client: Client,
@@ -152,8 +153,8 @@ pub(crate) async fn get_marketplace_item(
     .map_err(|e| format!("unable to load marketplace item: {}", view::describe(&e)))
 }
 
-/// Installs a theme at once, and an add-on in the revision that fits the selected build. While the
-/// game runs, both wait until it exits.
+/// Installs a theme or script at once, and an add-on in the revision that fits the selected build.
+/// While the game runs, all of them wait until it exits.
 #[tauri::command]
 pub(crate) async fn install_marketplace_item(
     client: Client,

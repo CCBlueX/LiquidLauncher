@@ -215,6 +215,12 @@ impl Client {
         .await
     }
 
+    /// The items an item needs installed beside it.
+    pub async fn marketplace_dependencies(&self, item_id: u32) -> Result<Vec<LinkedItem>> {
+        self.request_from_endpoint(API_V3, &format!("marketplace/{}/dependencies", item_id))
+            .await
+    }
+
     /// The revisions that fit a build with the given versions, newest first.
     pub async fn marketplace_compatible_revisions(
         &self,
@@ -340,6 +346,11 @@ pub struct MarketplaceItem {
     #[serde(default)]
     pub downloads: u32,
     pub updated_at: Option<NaiveDateTime>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct LinkedItem {
+    pub item: MarketplaceItem,
 }
 
 #[derive(Deserialize, Debug, Clone)]

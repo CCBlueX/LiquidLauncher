@@ -1,12 +1,14 @@
 <script>
     import { createEventDispatcher } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
+    import { confirm } from "@tauri-apps/plugin-dialog";
     import SettingWrapper from "../../../settings/SettingWrapper.svelte";
     import IconButtonSetting from "../../../settings/IconButtonSetting.svelte";
     import ButtonSetting from "../../../settings/ButtonSetting.svelte";
     import SmallButtonSetting from "../../../settings/SmallButtonSetting.svelte";
     import RippleLoader from "../../../common/RippleLoader.svelte";
-    import { count, versionTag } from "./copy.js";
+    import ItemRow from "./ItemRow.svelte";
+    import { count, itemTypes, neededByLine, removeQuestion, versionTag } from "./copy.js";
 
     export let client;
     export let options;
@@ -48,6 +50,11 @@
     }
 
     async function remove() {
+        const neededBy = detail.neededBy.map(dependent => dependent.name);
+        if (neededBy.length > 0 && !await confirm(removeQuestion(detail.name, neededBy))) {
+            return;
+        }
+
         busy = true;
         try {
             await invoke("remove_marketplace_item", { options, itemId: detail.id });
@@ -77,7 +84,7 @@
             <div>
                 <div class="name">{detail.name}</div>
                 <div class="meta">
-                    {detail.type === "Addon" ? "Add-on" : "Theme"} by {detail.author} &middot; {count(detail.downloads, "download", "downloads")}
+                    {itemTypes[detail.type].name} by {detail.author} &middot; {count(detail.downloads, "download", "downloads")}
                 </div>
             </div>
             {#if detail.subscribed}
@@ -113,6 +120,14 @@
                     </span>
                 {/each}
             </div>
+        </SettingWrapper>
+    {/if}
+
+    {#if detail.neededBy.length > 0}
+        <SettingWrapper title="Needed by" unbounded>
+            {#each detail.neededBy as dependent}
+                <ItemRow name={dependent.name} openable={false}>{neededByLine(dependent)}</ItemRow>
+            {/each}
         </SettingWrapper>
     {/if}
 {:else if error}

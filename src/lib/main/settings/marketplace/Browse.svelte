@@ -8,7 +8,7 @@
     import TextSetting from "../../../settings/TextSetting.svelte";
     import ItemRow from "./ItemRow.svelte";
     import Tone from "./Tone.svelte";
-    import { browseLine } from "./copy.js";
+    import { browseLine, itemTypes } from "./copy.js";
 
     export let client;
     export let options;
@@ -16,7 +16,7 @@
     export let query = "";
 
     const dispatch = createEventDispatcher();
-    const plural = type === "Addon" ? "add-ons" : "themes";
+    const { title, plural } = itemTypes[type];
 
     let result = null;
     let error = null;
@@ -73,7 +73,7 @@
     <TextSetting placeholder="Search {plural}" bind:value={query} on:keydown={e => e.key === "Escape" && (query = "")} />
 </div>
 
-<SettingWrapper title={type === "Addon" ? "Add-ons" : "Themes"} unbounded>
+<SettingWrapper {title} unbounded>
     <svelte:fragment slot="title-element">
         {#if type === "Addon" && result}
             <span class="aside">LiquidBounce {result.liquidbounce}</span>

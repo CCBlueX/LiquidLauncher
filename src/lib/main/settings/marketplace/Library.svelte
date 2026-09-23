@@ -2,13 +2,14 @@
     import { createEventDispatcher, onDestroy, onMount } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
     import { listen } from "@tauri-apps/api/event";
+    import { confirm } from "@tauri-apps/plugin-dialog";
     import SettingWrapper from "../../../settings/SettingWrapper.svelte";
     import IconButtonSetting from "../../../settings/IconButtonSetting.svelte";
     import SmallButtonSetting from "../../../settings/SmallButtonSetting.svelte";
     import RippleLoader from "../../../common/RippleLoader.svelte";
     import ItemRow from "./ItemRow.svelte";
     import Tone from "./Tone.svelte";
-    import { noticeLine, rowLine } from "./copy.js";
+    import { noticeLine, removeQuestion, rowLine } from "./copy.js";
 
     export let client;
     export let options;
@@ -23,7 +24,8 @@
     $: notice = library ? noticeLine(library.notice) : null;
     $: sections = library ? [
         { title: "Add-ons", type: "Addon", rows: library.addons, empty: "No add-ons yet." },
-        { title: "Themes", type: "Theme", rows: library.themes, empty: "No themes yet." }
+        { title: "Themes", type: "Theme", rows: library.themes, empty: "No themes yet." },
+        { title: "Scripts", type: "Script", rows: library.scripts, empty: "No scripts yet." }
     ] : [];
 
     async function load() {
@@ -56,8 +58,11 @@
         await load();
     }
 
-    function remove(row) {
-        return act(row, "remove_marketplace_item", {});
+    async function remove(row) {
+        if (row.neededBy.length > 0 && !await confirm(removeQuestion(row.name, row.neededBy))) {
+            return;
+        }
+        await act(row, "remove_marketplace_item", {});
     }
 
     function undo(row, type) {
