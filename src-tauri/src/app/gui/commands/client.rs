@@ -31,8 +31,10 @@ use tokio::fs;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
+use super::marketplace::data_directory;
 use crate::app::client_api::{BlogPost, Build, Changelog, Client, PaginatedResponse};
 use crate::app::client_api::{LoaderMod, ModSource};
+use crate::app::marketplace;
 use crate::app::options::Options;
 use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     auth::MinecraftAccount,
@@ -42,7 +44,11 @@ use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
 }, HTTP_CLIENT, LAUNCHER_DIRECTORY};
 
 #[tauri::command]
-pub(crate) async fn request_builds(client: Client, release: bool) -> Result<Vec<Build>, String> {
+pub(crate) async fn request_builds(
+    client: Client,
+    release: bool,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<Vec<Build>, String> {
     let builds = (|| async { client.builds(release).await })
         .retry(ExponentialBuilder::default())
         .notify(|err, dur| {
@@ -51,6 +57,9 @@ pub(crate) async fn request_builds(client: Client, release: bool) -> Result<Vec<
         .await
         .map_err(|e| format!("unable to request builds: {:?}", e))?;
 
+    if let Ok(mut cached) = app_state.builds.lock() {
+        cached.clone_from(&builds);
+    }
     Ok(builds)
 }
 
@@ -256,6 +265,7 @@ pub(crate) async fn run_client(
 ) -> Result<(), String> {
     // A shared mutex for the window object.
     let shareable_window: ShareableWindow = Arc::new(Mutex::new(window));
+    let data = data_directory(&options);
 
     let minecraft_account = options
         .start_options
@@ -312,6 +322,8 @@ pub(crate) async fn run_client(
     });
 
     let copy_of_runner_instance = runner_instance.clone();
+    let branch = launch_manifest.build.branch.clone();
+    marketplace::game_started();
 
     let parameters = StartParameter {
         java_distribution: options.start_options.java_distribution,
@@ -369,6 +381,7 @@ pub(crate) async fn run_client(
                         .unwrap();
                     handle_stderr(&shareable_window, message.as_bytes()).unwrap();
                 };
+                marketplace::game_exited(&data, &branch).await;
 
                 *copy_of_runner_instance
                     .lock()

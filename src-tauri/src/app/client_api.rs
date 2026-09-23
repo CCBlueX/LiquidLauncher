@@ -160,42 +160,57 @@ impl Client {
         self.request_from_endpoint(API_V3, &format!("blog?page={}", page)).await
     }
 
-    /// Browse marketplace items.
+    /// Browse marketplace items of one type.
     ///
     /// The API leaves add-ons out of untyped listings, so LiquidBounce builds predating add-ons
-    /// never receive a type they cannot deserialize. Add-ons are listed with `item_type` `Addon`.
+    /// never receive a type they cannot deserialize.
     pub async fn marketplace_items(
         &self,
-        page: u32,
         limit: u32,
         query: Option<&str>,
-        item_type: Option<&str>,
+        item_type: &str,
     ) -> Result<PaginatedResponse<MarketplaceItem>> {
         let mut url = Url::parse(&format!("{}/{}/marketplace", self.url, API_V3))?;
         {
             let mut pairs = url.query_pairs_mut();
             pairs
-                .append_pair("page", &page.to_string())
                 .append_pair("limit", &limit.to_string())
-                .append_pair("branch", CLIENT_BRANCH);
+                .append_pair("branch", CLIENT_BRANCH)
+                .append_pair("type", item_type);
             if let Some(query) = query {
                 pairs.append_pair("q", query);
-            }
-            if let Some(item_type) = item_type {
-                pairs.append_pair("type", item_type);
             }
         }
 
         self.request_url(url).await
     }
 
+    pub async fn marketplace_item(&self, item_id: u32) -> Result<MarketplaceItem> {
+        self.request_from_endpoint(API_V3, &format!("marketplace/{}", item_id))
+            .await
+    }
+
+    /// The newest revisions of an item, whatever they are compatible with.
     pub async fn marketplace_revisions(
         &self,
         item_id: u32,
+        limit: u32,
     ) -> Result<PaginatedResponse<MarketplaceRevision>> {
         self.request_from_endpoint(
             API_V3,
-            &format!("marketplace/{}/revisions?limit=1", item_id),
+            &format!("marketplace/{}/revisions?limit={}", item_id, limit),
+        )
+        .await
+    }
+
+    pub async fn marketplace_revision(
+        &self,
+        item_id: u32,
+        revision_id: u32,
+    ) -> Result<MarketplaceRevision> {
+        self.request_from_endpoint(
+            API_V3,
+            &format!("marketplace/{}/revisions/{}", item_id, revision_id),
         )
         .await
     }
@@ -313,29 +328,30 @@ impl Client {
 }
 
 /// A marketplace item as served by the API.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct MarketplaceItem {
     pub id: u32,
     pub name: String,
     #[serde(rename = "type")]
     pub item_type: MarketplaceItemType,
     pub description: String,
-    #[serde(rename = "thumbnail_pid")]
-    pub thumbnail_pid: Option<String>,
     #[serde(default)]
-    pub featured: bool,
+    pub author: String,
+    #[serde(default)]
+    pub downloads: u32,
+    pub updated_at: Option<NaiveDateTime>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct MarketplaceRevision {
     pub id: u32,
     pub version: String,
-    pub changelog: Option<String>,
+    pub created_at: Option<NaiveDateTime>,
     /// The LiquidBounce versions of the builds it fits; `None` when none does.
     pub liquidbounce: Option<LiquidBounceRange>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct LiquidBounceRange {
     pub min: String,
     pub max: String,

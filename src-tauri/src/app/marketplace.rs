@@ -23,13 +23,17 @@
 //! the format, so everything here matches what its `ConfigSystem` produces, and unknown keys are
 //! preserved rather than dropped. Neither side locks the file; the last writer wins.
 
+pub mod view;
+
 use anyhow::{Context, Result};
 use backon::{ConstantBuilder, Retryable};
 use chrono::{TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::collections::HashSet;
 use std::io::{Cursor, ErrorKind};
 use std::path::{Path, PathBuf};
+use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::time::Duration;
 use tokio::fs;
 use tracing::{info, warn};
@@ -83,8 +87,145 @@ fn mods_dir(data: &Path, branch: &str) -> PathBuf {
     data.join("gameDir").join(branch).join("mods")
 }
 
+/// An edit made while the game runs. LiquidBounce writes its subscriptions back when it exits, so
+/// these are applied only then.
+enum Edit {
+    Subscribe(SubscribedItem),
+    Remove(u32),
+}
+
+#[derive(Default)]
+struct Session {
+    /// From the start of a launch until the game exits.
+    running: bool,
+    queued: Vec<Edit>,
+}
+
+static SESSION: LazyLock<Mutex<Session>> = LazyLock::new(Default::default);
+
+fn session() -> MutexGuard<'static, Session> {
+    SESSION
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+pub fn game_started() {
+    session().running = true;
+}
+
+/// Applies what was edited while the game ran. Called once it exited or failed to start; calling
+/// it again does nothing.
+pub async fn game_exited(data: &Path, branch: &str) {
+    let queued = {
+        let mut session = session();
+        session.running = false;
+        std::mem::take(&mut session.queued)
+    };
+
+    for edit in queued {
+        let applied = match edit {
+            Edit::Subscribe(item) => subscribe(data, branch, &item).await,
+            Edit::Remove(item_id) => uninstall(data, branch, item_id).await,
+        };
+        if let Err(error) = applied {
+            warn!("Failed to apply a marketplace edit: {:?}", error);
+        }
+    }
+}
+
+pub fn game_running() -> bool {
+    session().running
+}
+
+impl Session {
+    /// Replaces what is queued for `item_id` with `edit`, or drops both when `edit` undoes it.
+    fn queue(&mut self, item_id: u32, edit: Edit) {
+        let queued = self.queued.iter().position(|queued| match queued {
+            Edit::Subscribe(item) => item.id == item_id,
+            Edit::Remove(id) => *id == item_id,
+        });
+        match queued.map(|index| self.queued.remove(index)) {
+            Some(Edit::Subscribe(_)) if matches!(edit, Edit::Remove(_)) => {}
+            Some(Edit::Remove(_)) if matches!(edit, Edit::Subscribe(_)) => {}
+            _ => self.queued.push(edit),
+        }
+    }
+}
+
+/// The edits waiting for the running game to exit.
+struct Pending {
+    subscribing: Vec<SubscribedItem>,
+    removing: HashSet<u32>,
+}
+
+fn pending() -> Pending {
+    let session = session();
+    let mut pending = Pending {
+        subscribing: vec![],
+        removing: HashSet::new(),
+    };
+    for edit in &session.queued {
+        match edit {
+            Edit::Subscribe(item) => pending.subscribing.push(item.clone()),
+            Edit::Remove(item_id) => {
+                pending.removing.insert(*item_id);
+            }
+        }
+    }
+    pending
+}
+
+/// Subscribes to `item` and installs `revision`, or, while the game runs, once it exited. Undoes a
+/// removal still waiting for that.
+pub async fn add(
+    client: &Client,
+    data: &Path,
+    branch: &str,
+    item: SubscribedItem,
+    revision: Option<u32>,
+) -> Result<()> {
+    let Some(item) = unless_running(item) else {
+        return Ok(());
+    };
+
+    if let Some(revision) = revision {
+        let download_url = client.marketplace_download_url(item.id, revision);
+        install(data, branch, item.id, revision, &download_url).await?;
+    }
+
+    // A game started during the download has read the subscriptions already, and writes them
+    // back when it exits.
+    let Some(item) = unless_running(item) else {
+        return Ok(());
+    };
+    subscribe(data, branch, &item).await
+}
+
+/// Hands `item` back, or queues subscribing to it while the game runs.
+fn unless_running(item: SubscribedItem) -> Option<SubscribedItem> {
+    let mut session = session();
+    if !session.running {
+        return Some(item);
+    }
+    session.queue(item.id, Edit::Subscribe(item));
+    None
+}
+
+/// Removes an item, or, while the game runs, once it exited. Cancels an addition still waiting.
+pub async fn remove(data: &Path, branch: &str, item_id: u32) -> Result<()> {
+    {
+        let mut session = session();
+        if session.running {
+            session.queue(item_id, Edit::Remove(item_id));
+            return Ok(());
+        }
+    }
+
+    uninstall(data, branch, item_id).await
+}
+
 /// Reads the subscription list, returning empty if the client has never written the file.
-pub async fn read_subscriptions(data: &Path, branch: &str) -> Result<Vec<SubscribedItem>> {
+async fn read_subscriptions(data: &Path, branch: &str) -> Result<Vec<SubscribedItem>> {
     let Some(root) = read_root(&subscriptions_path(data, branch)).await? else {
         return Ok(vec![]);
     };
@@ -186,7 +327,7 @@ async fn edit_subscriptions(
 }
 
 /// Adds `item` to the subscriptions unless it is already there.
-pub async fn subscribe(data: &Path, branch: &str, item: &SubscribedItem) -> Result<()> {
+async fn subscribe(data: &Path, branch: &str, item: &SubscribedItem) -> Result<()> {
     edit_subscriptions(data, branch, |entries| {
         if !entries
             .iter()
@@ -226,8 +367,34 @@ async fn installed_revision(item_dir: &Path) -> Option<u32> {
     revisions.into_iter().map(|(revision, _)| revision).max()
 }
 
+/// The installed revision of an item and the version its files carry, if they name it.
+struct Installed {
+    revision: u32,
+    version: Option<String>,
+}
+
+/// Reads what is installed of `item` from disk alone, and a theme's version from its
+/// `metadata.json`.
+async fn read_installed(data: &Path, branch: &str, item: &SubscribedItem) -> Option<Installed> {
+    let item_dir = item_dir(data, branch, item.id);
+    let revision = installed_revision(&item_dir).await?;
+
+    let version = match item.item_type {
+        MarketplaceItemType::Theme => theme_version(&item_dir.join(revision.to_string())).await,
+        _ => None,
+    };
+
+    Some(Installed { revision, version })
+}
+
+async fn theme_version(revision_dir: &Path) -> Option<String> {
+    let metadata = installation_dir(revision_dir).await?.join("metadata.json");
+    let metadata: Value = serde_json::from_slice(&fs::read(metadata).await.ok()?).ok()?;
+    Some(metadata.get("version")?.as_str()?.to_owned())
+}
+
 /// Downloads and extracts a revision, then leaves it as the only one installed.
-pub async fn install(
+async fn install(
     data: &Path,
     branch: &str,
     item_id: u32,
@@ -308,7 +475,7 @@ async fn rename(from: &Path, to: &Path) -> std::io::Result<()> {
 }
 
 /// Removes a subscription and everything it installed.
-pub async fn uninstall(data: &Path, branch: &str, item_id: u32) -> Result<()> {
+async fn uninstall(data: &Path, branch: &str, item_id: u32) -> Result<()> {
     let item_dir = item_dir(data, branch, item_id);
     if item_dir.exists() {
         fs::remove_dir_all(&item_dir).await.ok();
@@ -463,7 +630,7 @@ async fn revisions(
 ) -> Result<(Vec<MarketplaceRevision>, Option<MarketplaceRevision>)> {
     let (compatible, newest) = tokio::try_join!(
         compatible_revisions(client, build, item_id),
-        client.marketplace_revisions(item_id),
+        client.marketplace_revisions(item_id, 1),
     )?;
     Ok((compatible, newest.items.into_iter().next()))
 }
@@ -851,7 +1018,7 @@ mod tests {
         let revision = |id, range: Option<(&str, &str)>| MarketplaceRevision {
             id,
             version: format!("1.{id}.0"),
-            changelog: None,
+            created_at: None,
             liquidbounce: range.map(|(min, max)| LiquidBounceRange {
                 min: min.to_owned(),
                 max: max.to_owned(),
@@ -983,5 +1150,34 @@ mod tests {
             .unwrap();
             assert_eq!(supports_addons(&build), expected, "build {build_id}");
         }
+    }
+
+    #[test]
+    fn an_edit_while_the_game_runs_undoes_the_opposite_one() {
+        let item = |id| SubscribedItem {
+            name: format!("Item {id}"),
+            id,
+            item_type: MarketplaceItemType::Theme,
+        };
+        let queued = |session: &Session| -> Vec<(u32, bool)> {
+            session
+                .queued
+                .iter()
+                .map(|edit| match edit {
+                    Edit::Subscribe(item) => (item.id, true),
+                    Edit::Remove(id) => (*id, false),
+                })
+                .collect()
+        };
+
+        let mut session = Session::default();
+        session.queue(1, Edit::Subscribe(item(1)));
+        session.queue(1, Edit::Subscribe(item(1)));
+        session.queue(2, Edit::Remove(2));
+        assert_eq!(queued(&session), [(1, true), (2, false)]);
+
+        session.queue(1, Edit::Remove(1));
+        session.queue(2, Edit::Subscribe(item(2)));
+        assert_eq!(queued(&session), []);
     }
 }

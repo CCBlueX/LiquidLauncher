@@ -16,6 +16,7 @@
 
 <SettingsContainer
         title="Settings"
+        fill={activeSettingsTab === "Marketplace"}
         on:hideSettings={() => dispatch('hide')}
 >
     <Tabs
