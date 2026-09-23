@@ -200,6 +200,27 @@ impl Client {
         .await
     }
 
+    /// The revisions that fit a build with the given versions, newest first.
+    pub async fn marketplace_compatible_revisions(
+        &self,
+        item_id: u32,
+        minecraft: &str,
+        liquidbounce: &str,
+        page: u32,
+    ) -> Result<PaginatedResponse<MarketplaceRevision>> {
+        let mut url = Url::parse(&format!(
+            "{}/{}/marketplace/{}/revisions",
+            self.url, API_V3, item_id
+        ))?;
+        url.query_pairs_mut()
+            .append_pair("minecraft", minecraft)
+            .append_pair("liquidbounce", liquidbounce)
+            .append_pair("page", &page.to_string())
+            .append_pair("limit", "50");
+
+        self.request_url(url).await
+    }
+
     pub fn marketplace_download_url(&self, item_id: u32, revision_id: u32) -> String {
         format!(
             "{}/{}/marketplace/{}/revisions/{}/download",
@@ -310,6 +331,14 @@ pub struct MarketplaceRevision {
     pub id: u32,
     pub version: String,
     pub changelog: Option<String>,
+    /// The LiquidBounce versions of the builds it fits; `None` when none does.
+    pub liquidbounce: Option<LiquidBounceRange>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct LiquidBounceRange {
+    pub min: String,
+    pub max: String,
 }
 
 #[derive(Serialize, Deserialize)]

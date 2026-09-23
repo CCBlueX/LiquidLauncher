@@ -107,7 +107,7 @@ pub(crate) async fn launch(
     // Add-ons are ordinary Fabric mods and belong in the directory clear_mods just emptied.
     // A failure here must not stop the game from starting.
     if let Err(error) =
-        marketplace::stage_addons(&data_directory, &launch_manifest.build.branch).await
+        marketplace::stage_addons(client, &data_directory, build, &launcher_data).await
     {
         warn!("Failed to stage marketplace add-ons: {:?}", error);
     }

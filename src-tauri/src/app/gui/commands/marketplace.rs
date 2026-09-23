@@ -75,7 +75,8 @@ pub(crate) async fn browse_marketplace_items(
     items.map_err(|e| format!("unable to browse marketplace: {:?}", e))
 }
 
-/// Subscribes to an item and installs its newest revision.
+/// Subscribes to an item and installs its newest revision. Add-ons are installed on launch
+/// instead, where the revision that fits the launched build is known.
 #[tauri::command]
 pub(crate) async fn subscribe_marketplace_item(
     client: Client,
@@ -84,26 +85,29 @@ pub(crate) async fn subscribe_marketplace_item(
     name: String,
     item_type: MarketplaceItemType,
 ) -> Result<(), String> {
-    let revisions = client
-        .marketplace_revisions(item_id)
-        .await
-        .map_err(|e| format!("unable to resolve revisions: {:?}", e))?;
-
-    let revision = revisions
-        .items
-        .first()
-        .ok_or_else(|| "item has no published revision".to_string())?;
-
     let data = data_directory(&options);
-    marketplace::install(
-        &data,
-        CLIENT_BRANCH,
-        item_id,
-        revision.id,
-        &client.marketplace_download_url(item_id, revision.id),
-    )
-    .await
-    .map_err(|e| format!("unable to install marketplace item: {:?}", e))?;
+
+    if item_type != MarketplaceItemType::Addon {
+        let revisions = client
+            .marketplace_revisions(item_id)
+            .await
+            .map_err(|e| format!("unable to resolve revisions: {:?}", e))?;
+
+        let revision = revisions
+            .items
+            .first()
+            .ok_or_else(|| "item has no published revision".to_string())?;
+
+        marketplace::install(
+            &data,
+            CLIENT_BRANCH,
+            item_id,
+            revision.id,
+            &client.marketplace_download_url(item_id, revision.id),
+        )
+        .await
+        .map_err(|e| format!("unable to install marketplace item: {:?}", e))?;
+    }
 
     let item = SubscribedItem {
         name,

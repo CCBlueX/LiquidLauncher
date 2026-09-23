@@ -33,6 +33,8 @@ use std::time::Duration;
 use tokio::fs;
 use tracing::{info, warn};
 
+use crate::app::client_api::{Build, Client, LiquidBounceRange, MarketplaceRevision};
+use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
 use crate::utils::{download_file, zip_extract};
 
 /// Filename prefix for add-on jars staged into the mods directory.
@@ -317,42 +319,296 @@ pub async fn uninstall(data: &Path, branch: &str, item_id: u32) -> Result<()> {
     .await
 }
 
-/// Copies subscribed add-on jars into the mods directory.
+/// Installs and copies into the mods directory, for the launched build, the newest revision of
+/// every subscribed add-on that fits it.
 ///
-/// Called after `clear_mods`, which wipes that directory on every launch.
-pub async fn stage_addons(data: &Path, branch: &str) -> Result<()> {
-    let items = read_subscriptions(data, branch).await?;
-    let mods = mods_dir(data, branch);
+/// Called once `clear_mods` emptied that directory and the build's and the custom mods are back.
+pub async fn stage_addons(
+    client: &Client,
+    data: &Path,
+    build: &Build,
+    progress: &impl ProgressReceiver,
+) -> Result<()> {
+    let addons: Vec<_> = read_subscriptions(data, &build.branch)
+        .await?
+        .into_iter()
+        .filter(|item| item.item_type == MarketplaceItemType::Addon)
+        .collect();
+    if addons.is_empty() {
+        return Ok(());
+    }
+
+    let mods = mods_dir(data, &build.branch);
     fs::create_dir_all(&mods).await?;
+    let mut remembered = read_staged(data).await;
+    let unchanged = remembered.clone();
 
-    for item in items {
-        if item.item_type != MarketplaceItemType::Addon {
-            continue;
-        }
-
-        let Some(revision_id) = installed_revision(&item_dir(data, branch, item.id)).await else {
+    for item in &addons {
+        let Some((staged, jar)) = resolve(client, data, build, item, &remembered, progress).await
+        else {
             continue;
         };
 
-        let revision_dir = item_dir(data, branch, item.id).join(revision_id.to_string());
-        match stage_one(&revision_dir, item.id, revision_id, &mods).await {
-            Ok(name) => info!("Staged add-on '{}' as {}", item.name, name),
-            Err(error) => warn!("Failed to stage add-on '{}': {:?}", item.name, error),
+        match stage_one(&jar, item.id, staged.revision, &mods).await {
+            Ok(name) => {
+                info!("Staged add-on '{}' as {}", item.name, name);
+                remember(&mut remembered, staged);
+            }
+            Err(error) => {
+                warn!("Failed to stage add-on '{}': {:?}", item.name, error);
+                progress.log(&format!("Could not install {}.", item.name));
+            }
         }
     }
 
+    if remembered != unchanged {
+        if let Err(error) = write_staged(data, &remembered).await {
+            warn!("Failed to remember the staged add-ons: {:?}", error);
+        }
+    }
     Ok(())
 }
 
-async fn stage_one(
-    revision_dir: &Path,
+/// An add-on revision staged for a build with these versions.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+struct Staged {
+    item: u32,
+    liquidbounce: String,
+    minecraft: String,
+    revision: u32,
+    version: String,
+}
+
+impl Staged {
+    fn is_for(&self, item: u32, liquidbounce: &str, minecraft: &str) -> bool {
+        self.item == item && self.liquidbounce == liquidbounce && self.minecraft == minecraft
+    }
+}
+
+/// The launcher's own record, the client never reads it.
+fn staged_path(data: &Path) -> PathBuf {
+    data.join("staged_addons.json")
+}
+
+async fn read_staged(data: &Path) -> Vec<Staged> {
+    let Ok(raw) = fs::read(staged_path(data)).await else {
+        return vec![];
+    };
+    serde_json::from_slice(&raw)
+        .inspect_err(|error| warn!("Failed to read the staged add-ons: {}", error))
+        .unwrap_or_default()
+}
+
+async fn write_staged(data: &Path, staged: &[Staged]) -> Result<()> {
+    fs::write(staged_path(data), serde_json::to_vec_pretty(staged)?).await?;
+    Ok(())
+}
+
+fn last_staged<'a>(
+    staged: &'a [Staged],
+    item: u32,
+    liquidbounce: &str,
+    minecraft: &str,
+) -> Option<&'a Staged> {
+    staged
+        .iter()
+        .find(|staged| staged.is_for(item, liquidbounce, minecraft))
+}
+
+fn remember(remembered: &mut Vec<Staged>, staged: Staged) {
+    remembered.retain(|other| !other.is_for(staged.item, &staged.liquidbounce, &staged.minecraft));
+    remembered.push(staged);
+}
+
+/// Every revision that fits the build, newest first.
+async fn compatible_revisions(
+    client: &Client,
+    build: &Build,
     item_id: u32,
-    revision_id: u32,
-    mods: &Path,
-) -> Result<String> {
+) -> Result<Vec<MarketplaceRevision>> {
+    let mut revisions = vec![];
+    for page in 1.. {
+        let response = client
+            .marketplace_compatible_revisions(item_id, &build.mc_version, &build.lb_version, page)
+            .await?;
+        revisions.extend(response.items);
+        if page >= response.pagination.pages {
+            break;
+        }
+    }
+    Ok(revisions)
+}
+
+/// The revisions that fit the build and the newest one of all.
+async fn revisions(
+    client: &Client,
+    build: &Build,
+    item_id: u32,
+) -> Result<(Vec<MarketplaceRevision>, Option<MarketplaceRevision>)> {
+    let (compatible, newest) = tokio::try_join!(
+        compatible_revisions(client, build, item_id),
+        client.marketplace_revisions(item_id),
+    )?;
+    Ok((compatible, newest.items.into_iter().next()))
+}
+
+/// Picks the revision of `item` to stage, or without the marketplace the one staged for the
+/// build's versions last time. Makes it the installed one and finds its jar, or logs why there is
+/// none. Other installed files stay, another build may take them.
+async fn resolve(
+    client: &Client,
+    data: &Path,
+    build: &Build,
+    item: &SubscribedItem,
+    remembered: &[Staged],
+    progress: &impl ProgressReceiver,
+) -> Option<(Staged, PathBuf)> {
+    let item_dir = item_dir(data, &build.branch, item.id);
+    let installed = installed_revision(&item_dir).await;
+
+    let for_build = |revision: &MarketplaceRevision| Staged {
+        item: item.id,
+        liquidbounce: build.lb_version.clone(),
+        minecraft: build.mc_version.clone(),
+        revision: revision.id,
+        version: revision.version.clone(),
+    };
+    let (target, fallback) = match revisions(client, build, item.id).await {
+        Ok((compatible, newest)) => {
+            let (target, fallback) = pick(
+                item,
+                &build.lb_version,
+                &compatible,
+                newest.as_ref(),
+                installed,
+                progress,
+            )?;
+            (for_build(target), fallback.map(for_build))
+        }
+        // The marketplace decides the fit by the build's LiquidBounce and Minecraft version alone.
+        Err(error) => {
+            warn!("Failed to look up add-on '{}': {:?}", item.name, error);
+            let last = last_staged(remembered, item.id, &build.lb_version, &build.mc_version);
+            let Some(last) = last else {
+                progress.log(&format!("Could not look up {}.", item.name));
+                return None;
+            };
+            progress.log(&format!(
+                "Could not look up {}, staging {} as last time.",
+                item.name,
+                display_version(&last.version)
+            ));
+            (last.clone(), None)
+        }
+    };
+
+    let revision_dir = |revision: u32| item_dir.join(revision.to_string());
+    if installed == Some(target.revision) {
+        match addon_jar(&revision_dir(target.revision)).await {
+            Ok(jar) => return Some((target, jar)),
+            Err(error) => warn!("Reinstalling add-on '{}': {:?}", item.name, error),
+        }
+    }
+
+    progress.progress_update(ProgressUpdate::set_label(format!(
+        "Installing add-on {}",
+        item.name
+    )));
+    let url = client.marketplace_download_url(item.id, target.revision);
+    let chosen = match install(data, &build.branch, item.id, target.revision, &url).await {
+        Ok(()) => Some(target),
+        Err(error) => {
+            warn!("Failed to install add-on '{}': {:?}", item.name, error);
+            fallback
+        }
+    };
+
+    let staged = match chosen {
+        Some(chosen) => addon_jar(&revision_dir(chosen.revision))
+            .await
+            .inspect_err(|error| warn!("Failed to read add-on '{}': {:?}", item.name, error))
+            .ok()
+            .map(|jar| (chosen, jar)),
+        None => None,
+    };
+    if staged.is_none() {
+        progress.log(&format!("Could not install {}.", item.name));
+    }
+    staged
+}
+
+/// The newest revision that fits, and the installed one if it may stand in when installing that
+/// fails.
+fn pick<'a>(
+    item: &SubscribedItem,
+    liquidbounce: &str,
+    compatible: &'a [MarketplaceRevision],
+    newest: Option<&MarketplaceRevision>,
+    installed: Option<u32>,
+    progress: &impl ProgressReceiver,
+) -> Option<(&'a MarketplaceRevision, Option<&'a MarketplaceRevision>)> {
+    let Some(target) = compatible.first() else {
+        progress.log(&no_version(&item.name, liquidbounce));
+        return None;
+    };
+    if let Some(newest) = newest.filter(|newest| newest.id != target.id) {
+        progress.log(&held_back(&item.name, target, newest));
+    }
+
+    let fallback = compatible
+        .iter()
+        .find(|revision| Some(revision.id) == installed);
+    Some((target, fallback))
+}
+
+/// Versions read `v1.0.0` whether or not the marketplace names them so.
+fn display_version(version: &str) -> String {
+    if version.starts_with(|c: char| c.is_ascii_digit()) {
+        format!("v{version}")
+    } else {
+        version.to_owned()
+    }
+}
+
+/// `LiquidBounce v0.39.0 - 0.40.0`, the builds a revision fits.
+fn range_label(range: &LiquidBounceRange) -> String {
+    if range.min == range.max {
+        format!("LiquidBounce v{}", range.min)
+    } else {
+        format!("LiquidBounce v{} - {}", range.min, range.max)
+    }
+}
+
+/// `v1.1.0 needs LiquidBounce v0.41.0`, unless no build fits `revision`.
+fn needs(revision: &MarketplaceRevision) -> Option<String> {
+    let range = revision.liquidbounce.as_ref()?;
+    Some(format!(
+        "{} needs {}",
+        display_version(&revision.version),
+        range_label(range)
+    ))
+}
+
+fn held_back(name: &str, target: &MarketplaceRevision, newest: &MarketplaceRevision) -> String {
+    let stays = format!("{name} stays on {}", display_version(&target.version));
+    match needs(newest) {
+        Some(needs) => format!("{stays}: {needs}."),
+        None => format!("{stays}."),
+    }
+}
+
+fn no_version(name: &str, liquidbounce: &str) -> String {
+    format!(
+        "{name} is not for LiquidBounce {}.",
+        display_version(liquidbounce)
+    )
+}
+
+/// The one jar of an installed add-on revision.
+async fn addon_jar(revision_dir: &Path) -> Result<PathBuf> {
     let installation = installation_dir(revision_dir)
         .await
-        .with_context(|| format!("No installed files for add-on {item_id}"))?;
+        .with_context(|| format!("No installed files in {}", revision_dir.display()))?;
 
     let mut jars = vec![];
     let mut entries = fs::read_dir(&installation).await?;
@@ -365,16 +621,18 @@ async fn stage_one(
 
     // The archive is required to hold exactly one jar; the API server rejects anything else on
     // upload, so more than one here means a hand-placed file.
-    let jar = match jars.len() {
-        1 => jars.remove(0),
+    match jars.len() {
+        1 => Ok(jars.remove(0)),
         count => anyhow::bail!(
             "Expected exactly one jar in {}, found {count}",
             installation.display()
         ),
-    };
+    }
+}
 
+async fn stage_one(jar: &Path, item_id: u32, revision_id: u32, mods: &Path) -> Result<String> {
     let name = format!("{ADDON_PREFIX}{item_id}-{revision_id}.jar");
-    fs::copy(&jar, mods.join(&name)).await?;
+    fs::copy(jar, mods.join(&name)).await?;
     Ok(name)
 }
 
@@ -550,5 +808,120 @@ mod tests {
         assert_eq!(installed_revision(&item).await, Some(4251));
 
         std::fs::remove_dir_all(&item).unwrap();
+    }
+
+    #[test]
+    fn picks_the_newest_revision_that_fits() {
+        struct Log(std::cell::RefCell<Vec<String>>);
+        impl ProgressReceiver for Log {
+            fn progress_update(&self, _: ProgressUpdate) {}
+            fn log(&self, msg: &str) {
+                self.0.borrow_mut().push(msg.to_owned());
+            }
+        }
+
+        let revision = |id, range: Option<(&str, &str)>| MarketplaceRevision {
+            id,
+            version: format!("1.{id}.0"),
+            changelog: None,
+            liquidbounce: range.map(|(min, max)| LiquidBounceRange {
+                min: min.to_owned(),
+                max: max.to_owned(),
+            }),
+        };
+        let item = SubscribedItem {
+            name: "Extras".to_owned(),
+            id: 781,
+            item_type: MarketplaceItemType::Addon,
+        };
+        let log = Log(Default::default());
+        let pick = |compatible: &[MarketplaceRevision], newest, installed| {
+            pick(&item, "0.40.1", compatible, newest, installed, &log)
+                .map(|(target, fallback)| (target.id, fallback.map(|fallback| fallback.id)))
+        };
+
+        let fitting = [
+            revision(2, Some(("0.40.0", "0.40.1"))),
+            revision(1, Some(("0.40.1", "0.40.1"))),
+        ];
+        let newer = revision(3, Some(("0.41.0", "0.41.2")));
+        let unfit = revision(4, None);
+        assert_eq!(
+            pick(&fitting, Some(&fitting[0]), Some(1)),
+            Some((2, Some(1)))
+        );
+        assert_eq!(pick(&fitting, Some(&newer), Some(3)), Some((2, None)));
+        assert_eq!(pick(&fitting, Some(&unfit), None), Some((2, None)));
+        assert_eq!(pick(&[], Some(&newer), Some(3)), None);
+        assert_eq!(pick(&[], None, None), None);
+
+        assert_eq!(
+            log.0.into_inner(),
+            [
+                "Extras stays on v1.2.0: v1.3.0 needs LiquidBounce v0.41.0 - 0.41.2.",
+                "Extras stays on v1.2.0.",
+                "Extras is not for LiquidBounce v0.40.1.",
+                "Extras is not for LiquidBounce v0.40.1.",
+            ]
+        );
+    }
+
+    #[test]
+    fn stages_what_fit_the_same_build_last_time() {
+        let staged = |item, minecraft: &str, revision| Staged {
+            item,
+            liquidbounce: "0.40.1".to_owned(),
+            minecraft: minecraft.to_owned(),
+            revision,
+            version: format!("1.{revision}.0"),
+        };
+        let mut last = vec![];
+        remember(&mut last, staged(1, "26.2", 1));
+        remember(&mut last, staged(1, "26.3", 2));
+        remember(&mut last, staged(3, "26.2", 19));
+        remember(&mut last, staged(1, "26.2", 3));
+        assert_eq!(last.len(), 3);
+
+        let revision = |item, liquidbounce, minecraft| {
+            last_staged(&last, item, liquidbounce, minecraft).map(|staged| staged.revision)
+        };
+        assert_eq!(revision(1, "0.40.1", "26.2"), Some(3));
+        assert_eq!(revision(1, "0.40.1", "26.3"), Some(2));
+        assert_eq!(revision(3, "0.40.1", "26.2"), Some(19));
+        assert_eq!(revision(3, "0.40.1", "26.3"), None);
+        assert_eq!(revision(1, "0.41.0", "26.3"), None);
+    }
+
+    #[test]
+    fn reads_the_builds_a_revision_fits() {
+        let revisions: Vec<MarketplaceRevision> = serde_json::from_value(json!([
+            {
+                "id": 19,
+                "version": "1.0.1",
+                "created_at": "2026-09-20T10:00:00",
+                "liquidbounce": { "min": "0.40.0", "max": "0.40.1" },
+            },
+            {
+                "id": 5,
+                "version": "1.1.0",
+                "liquidbounce": { "min": "0.41.0", "max": "0.41.0" },
+            },
+            { "id": 4, "version": "1.0.0", "liquidbounce": null },
+            { "id": 3, "version": "1.0.0" },
+        ]))
+        .unwrap();
+        let ranges: Vec<_> = revisions
+            .iter()
+            .map(|revision| revision.liquidbounce.as_ref().map(range_label))
+            .collect();
+        assert_eq!(
+            ranges,
+            [
+                Some("LiquidBounce v0.40.0 - 0.40.1".to_owned()),
+                Some("LiquidBounce v0.41.0".to_owned()),
+                None,
+                None
+            ]
+        );
     }
 }
