@@ -24,10 +24,12 @@
 //! preserved rather than dropped. Neither side locks the file; the last writer wins.
 
 use anyhow::{Context, Result};
+use backon::{ConstantBuilder, Retryable};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::io::{Cursor, ErrorKind};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use tokio::fs;
 use tracing::{info, warn};
 
@@ -57,8 +59,6 @@ pub struct SubscribedItem {
     pub id: u32,
     #[serde(rename = "type")]
     pub item_type: MarketplaceItemType,
-    #[serde(rename = "installedRevisionId")]
-    pub installed_revision_id: Option<u32>,
 }
 
 fn client_dir(data: &Path, branch: &str) -> PathBuf {
@@ -182,51 +182,126 @@ async fn edit_subscriptions(
     Ok(())
 }
 
-/// Downloads and extracts a revision into the same layout the client uses, then records it.
+/// Adds `item` to the subscriptions unless it is already there.
+pub async fn subscribe(data: &Path, branch: &str, item: &SubscribedItem) -> Result<()> {
+    edit_subscriptions(data, branch, |entries| {
+        if !entries
+            .iter()
+            .any(|entry| entry_id(entry) == Some(item.id.into()))
+        {
+            entries.push(json!({ "name": item.name, "id": item.id, "type": item.item_type }));
+        }
+    })
+    .await
+}
+
+/// Numeric subdirectories of an item, the ones the client counts as revisions.
+async fn revision_dirs(item_dir: &Path) -> Result<Vec<(u32, PathBuf)>> {
+    let mut revisions = vec![];
+    let mut entries = match fs::read_dir(item_dir).await {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(revisions),
+        Err(error) => return Err(error.into()),
+    };
+
+    while let Some(entry) = entries.next_entry().await? {
+        let path = entry.path();
+        let revision = entry
+            .file_name()
+            .to_str()
+            .and_then(|name| name.parse().ok());
+        if let Some(revision) = revision.filter(|_| path.is_dir()) {
+            revisions.push((revision, path));
+        }
+    }
+    Ok(revisions)
+}
+
+/// Mirrors the client's `SubscribedItem.installedRevisionId`: the highest numeric directory.
+async fn installed_revision(item_dir: &Path) -> Option<u32> {
+    let revisions = revision_dirs(item_dir).await.ok()?;
+    revisions.into_iter().map(|(revision, _)| revision).max()
+}
+
+/// Downloads and extracts a revision, then leaves it as the only one installed.
 pub async fn install(
     data: &Path,
     branch: &str,
-    item: &SubscribedItem,
+    item_id: u32,
     revision_id: u32,
     download_url: &str,
 ) -> Result<()> {
-    let revision_dir = item_dir(data, branch, item.id).join(revision_id.to_string());
+    let item_dir = item_dir(data, branch, item_id);
 
-    if revision_dir.exists() {
-        fs::remove_dir_all(&revision_dir).await.ok();
+    // Named like the client's, which counts only numeric directories as installed and cleans up
+    // dotted ones.
+    let partial = item_dir.join(format!(".{revision_id}.part"));
+    if partial.exists() {
+        fs::remove_dir_all(&partial).await?;
     }
-    fs::create_dir_all(&revision_dir).await?;
+    fs::create_dir_all(&partial).await?;
 
-    let archive = download_file(download_url, |_, _| {}).await?;
-    zip_extract(Cursor::new(archive), &revision_dir)
-        .await
-        .with_context(|| {
-            format!(
-                "Failed to extract revision {revision_id} of item {}",
-                item.id
-            )
-        })?;
+    let extracted = async {
+        let archive = download_file(download_url, |_, _| {}).await?;
+        zip_extract(Cursor::new(archive), &partial).await
+    }
+    .await;
+    if let Err(error) = extracted {
+        let _ = fs::remove_dir_all(&partial).await;
+        return Err(error.context(format!(
+            "Failed to install revision {revision_id} of item {item_id}"
+        )));
+    }
 
-    edit_subscriptions(data, branch, |entries| {
-        let index = match entries
-            .iter()
-            .position(|entry| entry_id(entry) == Some(item.id.into()))
-        {
-            Some(index) => index,
-            None => {
-                entries.push(json!({ "name": item.name, "id": item.id, "type": item.item_type }));
-                entries.len() - 1
-            }
-        };
-        entries[index]["installedRevisionId"] = json!(revision_id);
-    })
-    .await?;
-
-    info!(
-        "Installed marketplace item {} revision {}",
-        item.id, revision_id
-    );
+    commit(&item_dir, &partial, revision_id).await?;
+    info!("Installed marketplace item {item_id} revision {revision_id}");
     Ok(())
+}
+
+/// Moves `partial` in as the only revision. Like the client, old revisions are renamed away before
+/// they are deleted, since a half-deleted one still counts as installed, and they go back when the
+/// new one cannot take their place.
+async fn commit(item_dir: &Path, partial: &Path, revision_id: u32) -> Result<()> {
+    let mut retired = vec![];
+    let committed = async {
+        for (revision, dir) in revision_dirs(item_dir).await? {
+            let old = item_dir.join(format!(".{revision}.old"));
+            if old.exists() {
+                fs::remove_dir_all(&old).await?;
+            }
+            rename(&dir, &old).await?;
+            retired.push((dir, old));
+        }
+        rename(partial, &item_dir.join(revision_id.to_string())).await?;
+        anyhow::Ok(())
+    }
+    .await;
+
+    if let Err(error) = committed {
+        for (dir, old) in retired {
+            let _ = rename(&old, &dir).await;
+        }
+        let _ = fs::remove_dir_all(partial).await;
+        return Err(error.context(format!("Failed to move {}", partial.display())));
+    }
+
+    for (_, old) in retired {
+        if let Err(error) = fs::remove_dir_all(&old).await {
+            warn!("Failed to remove {}: {}", old.display(), error);
+        }
+    }
+    Ok(())
+}
+
+// Windows refuses to rename a file or directory while a virus scanner still reads it.
+async fn rename(from: &Path, to: &Path) -> std::io::Result<()> {
+    (|| fs::rename(from, to))
+        .retry(
+            ConstantBuilder::default()
+                .with_delay(Duration::from_millis(100))
+                .with_max_times(20),
+        )
+        .await
 }
 
 /// Removes a subscription and everything it installed.
@@ -255,7 +330,7 @@ pub async fn stage_addons(data: &Path, branch: &str) -> Result<()> {
             continue;
         }
 
-        let Some(revision_id) = item.installed_revision_id else {
+        let Some(revision_id) = installed_revision(&item_dir(data, branch, item.id)).await else {
             continue;
         };
 
@@ -381,9 +456,16 @@ mod tests {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
 
         let history = json!({ "name": "history", "value": [1, 2] });
-        let script = json!({ "name": "Scripts", "id": 12, "type": "Script", "pinned": true });
+        let script = json!({
+            "name": "Scripts",
+            "id": 12,
+            "type": "Script",
+            "installedRevisionId": 99,
+            "pinned": true,
+        });
         let unknown = json!({ "name": "Shaders", "id": 13, "type": "Shader" });
         let theme = json!({ "name": "Beautify", "id": 14, "type": "Theme" });
+        let addon = json!({ "name": "Extras", "id": 15, "type": "Addon" });
         let file = |subscribed: Value| {
             json!({
                 "name": "marketplace",
@@ -398,22 +480,75 @@ mod tests {
         .unwrap();
 
         uninstall(&data, "nextgen", 14).await.unwrap();
+        for (name, id, item_type) in [
+            ("Extras", 15, MarketplaceItemType::Addon),
+            ("Renamed", 12, MarketplaceItemType::Script),
+        ] {
+            let item = SubscribedItem {
+                name: name.to_string(),
+                id,
+                item_type,
+            };
+            subscribe(&data, "nextgen", &item).await.unwrap();
+        }
 
         let written: Value =
             serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-        assert_eq!(written, file(json!([script, unknown, "broken"])));
+        assert_eq!(written, file(json!([script, unknown, "broken", addon])));
 
-        let types: Vec<_> = read_subscriptions(&data, "nextgen")
+        let items: Vec<_> = read_subscriptions(&data, "nextgen")
             .await
             .unwrap()
             .into_iter()
-            .map(|item| item.item_type)
+            .map(|item| (item.id, item.item_type))
             .collect();
         assert_eq!(
-            types,
-            [MarketplaceItemType::Script, MarketplaceItemType::Other]
+            items,
+            [
+                (12, MarketplaceItemType::Script),
+                (13, MarketplaceItemType::Other),
+                (15, MarketplaceItemType::Addon),
+            ]
         );
 
         std::fs::remove_dir_all(&data).unwrap();
+    }
+
+    #[tokio::test]
+    async fn an_older_revision_replaces_the_installed_ones() {
+        let item = scratch("commit");
+        for name in ["12", "4251", ".4251.old"] {
+            std::fs::create_dir_all(item.join(name)).unwrap();
+        }
+        let partial = item.join(".731.part");
+        std::fs::create_dir_all(&partial).unwrap();
+        std::fs::write(partial.join("extras.jar"), b"").unwrap();
+
+        commit(&item, &partial, 731).await.unwrap();
+
+        let left: Vec<_> = std::fs::read_dir(&item)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        assert_eq!(left, ["731"]);
+        assert!(item.join("731").join("extras.jar").is_file());
+
+        std::fs::remove_dir_all(&item).unwrap();
+    }
+
+    #[tokio::test]
+    async fn installed_revision_is_the_highest_numeric_directory() {
+        let item = scratch("installed");
+        assert_eq!(installed_revision(&item.join("missing")).await, None);
+        assert_eq!(installed_revision(&item).await, None);
+
+        for name in ["12", "4251", "4331.part", "latest"] {
+            std::fs::create_dir_all(item.join(name)).unwrap();
+        }
+        std::fs::write(item.join("9999"), b"").unwrap();
+        std::fs::write(item.join("731.zip"), b"").unwrap();
+        assert_eq!(installed_revision(&item).await, Some(4251));
+
+        std::fs::remove_dir_all(&item).unwrap();
     }
 }

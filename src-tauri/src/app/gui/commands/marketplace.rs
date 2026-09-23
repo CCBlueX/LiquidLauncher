@@ -77,22 +77,25 @@ pub(crate) async fn subscribe_marketplace_item(
         .first()
         .ok_or_else(|| "item has no published revision".to_string())?;
 
-    let item = SubscribedItem {
-        name,
-        id: item_id,
-        item_type,
-        installed_revision_id: None,
-    };
-
+    let data = data_directory(&options);
     marketplace::install(
-        &data_directory(&options),
+        &data,
         CLIENT_BRANCH,
-        &item,
+        item_id,
         revision.id,
         &client.marketplace_download_url(item_id, revision.id),
     )
     .await
-    .map_err(|e| format!("unable to install marketplace item: {:?}", e))
+    .map_err(|e| format!("unable to install marketplace item: {:?}", e))?;
+
+    let item = SubscribedItem {
+        name,
+        id: item_id,
+        item_type,
+    };
+    marketplace::subscribe(&data, CLIENT_BRANCH, &item)
+        .await
+        .map_err(|e| format!("unable to subscribe to marketplace item: {:?}", e))
 }
 
 #[tauri::command]
