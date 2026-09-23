@@ -6,10 +6,6 @@
     import SettingWrapper from "../settings/SettingWrapper.svelte";
     import CustomModSetting from "../settings/CustomModSetting.svelte";
     import IconButtonSetting from "../settings/IconButtonSetting.svelte";
-    import ModrinthSearch from "./ModrinthSearch.svelte";
-    import ModrinthUpdates from "./ModrinthUpdates.svelte";
-    import Tabs from "../settings/tab/Tabs.svelte";
-    import {installedMods} from "../stores/modsStore.js";
     import {invoke} from "@tauri-apps/api/core";
     import {open as dialogOpen} from "@tauri-apps/plugin-dialog";
 
@@ -21,12 +17,7 @@
         currentBuild: null
     };
 
-    let activeTab = "Version";
-    let modrinthUpdatesRef;
     const dispatch = createEventDispatcher();
-
-    // Sync store with versionState.customMods whenever it changes
-    $: installedMods.setMods(versionState.customMods);
 
     async function deleteMod(event) {
         try {
@@ -35,8 +26,6 @@
                 mcVersion: versionState.currentBuild.mcVersion,
                 modName: `${event.detail.name}.jar`
             });
-            // Update store immediately for instant UI feedback
-            installedMods.removeMod(event.detail.name);
             dispatch('updateMods');
         } catch (error) {
             console.error("Failed to delete mod:", error);
@@ -69,85 +58,55 @@
             alert(`Failed to install mod: ${error}`);
         }
     }
-
-    function handleModrinthInstalled() {
-        dispatch('updateMods');
-        if (modrinthUpdatesRef?.checkUpdates) {
-            modrinthUpdatesRef.checkUpdates();
-        }
-    }
 </script>
 
 <SettingsContainer
         title="Select version"
         on:hideSettings={() => dispatch('hide')}
 >
-    <Tabs
-            tabs={["Version", "Mods"]}
-            bind:activeTab={activeTab}
-            slot="tabs"
+    <SelectSetting
+            title="Build"
+            items={[
+                { value: -1, text: "Latest" },
+                ...versionState.builds.map(e => ({
+                    value: e.buildId,
+                    text: `${e.lbVersion} git-${e.commitId.substring(0, 7)} - ${e.date}`
+                }))
+            ]}
+            bind:value={options.version.buildId}
+            on:change={() => dispatch('updateData')}
     />
-
-    {#if activeTab === "Version"}
-        <SelectSetting
-                title="Build"
-                items={[
-                    { value: -1, text: "Latest" },
-                    ...versionState.builds.map(e => ({
-                        value: e.buildId,
-                        text: `${e.lbVersion} git-${e.commitId.substring(0, 7)} - ${e.date}`
-                    }))
-                ]}
-                bind:value={options.version.buildId}
-                on:change={() => dispatch('updateData')}
-        />
-        <ToggleSetting
-                title="Show nightly builds"
-                bind:value={options.launcher.showNightlyBuilds}
-                disabled={false}
-                on:change={() => dispatch('updateData')}
-        />
-        <SettingWrapper title="Recommended mods">
-            {#each versionState.recommendedMods as mod}
-                <ToggleSetting
-                        title={mod.name}
-                        bind:value={mod.enabled}
-                        disabled={mod.required}
-                        on:change={() => dispatch('updateModStates')}
-                />
-            {/each}
-        </SettingWrapper>
-    {:else if activeTab === "Mods"}
-        <SettingWrapper title={`Custom mods - ${versionState.currentBuild?.subsystem ? `${versionState.currentBuild.subsystem.charAt(0).toUpperCase()}${versionState.currentBuild.subsystem.slice(1)}` : ''} ${versionState.currentBuild?.mcVersion}`}>
-            <div slot="title-element">
-                <IconButtonSetting
-                        text="Install"
-                        icon="icon-plus"
-                        on:click={installMod}
-                />
-            </div>
-            {#each versionState.customMods as mod}
-                <CustomModSetting
-                        title={mod.name}
-                        bind:value={mod.enabled}
-                        on:change={() => dispatch('updateModStates')}
-                        on:delete={deleteMod}
-                />
-            {/each}
-        </SettingWrapper>
-        <ModrinthSearch
-            mcVersion={versionState.currentBuild?.mcVersion || ""}
-            loader={versionState.currentBuild?.subsystem || "fabric"}
-            branch={versionState.currentBuild?.branch || ""}
-            on:installed={handleModrinthInstalled}
-        />
-        <ModrinthUpdates
-            bind:this={modrinthUpdatesRef}
-            mcVersion={versionState.currentBuild?.mcVersion || ""}
-            loader={versionState.currentBuild?.subsystem || "fabric"}
-            branch={versionState.currentBuild?.branch || ""}
-            on:updated={() => dispatch('updateMods')}
-            on:removed={() => dispatch('updateMods')}
-        />
-    {/if}
+    <ToggleSetting
+            title="Show nightly builds"
+            bind:value={options.launcher.showNightlyBuilds}
+            disabled={false}
+            on:change={() => dispatch('updateData')}
+    />
+    <SettingWrapper title="Recommended mods">
+        {#each versionState.recommendedMods as mod}
+            <ToggleSetting
+                    title={mod.name}
+                    bind:value={mod.enabled}
+                    disabled={mod.required}
+                    on:change={() => dispatch('updateModStates')}
+            />
+        {/each}
+    </SettingWrapper>
+    <SettingWrapper title={`Additional mods - ${versionState.currentBuild?.subsystem ? `${versionState.currentBuild.subsystem.charAt(0).toUpperCase()}${versionState.currentBuild.subsystem.slice(1)}` : ''} ${versionState.currentBuild?.mcVersion}`}>
+        <div slot="title-element">
+            <IconButtonSetting
+                    text="Install"
+                    icon="icon-plus"
+                    on:click={installMod}
+            />
+        </div>
+        {#each versionState.customMods as mod}
+            <CustomModSetting
+                    title={mod.name}
+                    bind:value={mod.enabled}
+                    on:change={() => dispatch('updateModStates')}
+                    on:delete={deleteMod}
+            />
+        {/each}
+    </SettingWrapper>
 </SettingsContainer>

@@ -19,6 +19,7 @@
 
 use std::{collections::HashMap, path::Path};
 
+use crate::app::modrinth::ModrinthMod;
 use crate::minecraft::java::DistributionSelection;
 use crate::{auth::ClientAccount, minecraft::auth::MinecraftAccount};
 use anyhow::Result;
@@ -87,8 +88,6 @@ pub(crate) struct LauncherOptions {
     pub keep_launcher_open: bool,
     #[serde(rename = "sessionToken", default = "random_token")]
     pub session_token: String,
-    #[serde(rename = "autoUpdateMods", default)]
-    pub auto_update_mods: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -99,12 +98,15 @@ pub(crate) struct PremiumOptions {
     pub skip_advertisement: bool,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub(crate) struct BranchOptions {
     #[serde(rename = "modStates", default)]
     pub mod_states: HashMap<String, bool>,
     #[serde(rename = "customModStates", default)]
     pub custom_mod_states: HashMap<String, bool>,
+    /// By Minecraft version.
+    #[serde(rename = "modrinthMods", default)]
+    pub modrinth_mods: HashMap<String, Vec<ModrinthMod>>,
 }
 
 impl Options {
@@ -154,8 +156,7 @@ impl Default for LauncherOptions {
             show_nightly_builds: false,
             keep_launcher_open: false,
             concurrent_downloads: 10,
-            session_token: random_token(),
-            auto_update_mods: false,
+            session_token: random_token()
         }
     }
 }

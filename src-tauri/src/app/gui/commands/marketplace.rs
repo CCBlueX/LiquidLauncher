@@ -54,7 +54,11 @@ fn select(builds: &[Build], build_id: i32) -> Option<&Build> {
     }
 }
 
-async fn selected_build(client: &Client, options: &Options, state: &AppState) -> Result<Build> {
+pub(crate) async fn selected_build(
+    client: &Client,
+    options: &Options,
+    state: &AppState,
+) -> Result<Build> {
     if let Some(build) = cached_build(options, state) {
         return Ok(build);
     }

@@ -19,7 +19,6 @@
 
 use anyhow::anyhow;
 use backon::{ExponentialBuilder, Retryable};
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::{
     sync::{Arc, Mutex},
@@ -31,12 +30,12 @@ use tauri::{Emitter, Window};
 use tokio::fs;
 use tracing::{error, info, warn};
 use uuid::Uuid;
-use serde_json;
 
 use super::marketplace::data_directory;
 use crate::app::client_api::{BlogPost, Build, Changelog, Client, PaginatedResponse};
-use crate::app::client_api::{LoaderMod, ModSource};
+use crate::app::client_api::LoaderMod;
 use crate::app::marketplace;
+use crate::app::modrinth::{self, CustomMod};
 use crate::app::options::Options;
 use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     auth::MinecraftAccount,
@@ -104,50 +103,45 @@ pub(crate) async fn request_mods(
     Ok(mods)
 }
 
+pub(crate) fn custom_mods_dir(branch: &str, mc_version: &str) -> PathBuf {
+    LAUNCHER_DIRECTORY
+        .data_dir()
+        .join("custom_mods")
+        .join(format!("{}-{}", branch, mc_version))
+}
+
+/// The mods from Modrinth and from files. Without `check` it reads the options and the disk alone
+/// and returns at once.
 #[tauri::command]
 pub(crate) async fn get_custom_mods(
+    options: Options,
     branch: &str,
     mc_version: &str,
-) -> Result<Vec<LoaderMod>, String> {
-    let data = LAUNCHER_DIRECTORY.data_dir();
-    let mod_cache_path = data
-        .join("custom_mods")
-        .join(format!("{}-{}", branch, mc_version));
+    subsystem: &str,
+    check: bool,
+) -> Result<Vec<CustomMod>, String> {
+    let branch_options = options
+        .version_options
+        .options
+        .get(branch)
+        .cloned()
+        .unwrap_or_default();
+    let installed = branch_options
+        .modrinth_mods
+        .get(mc_version)
+        .map(Vec::as_slice)
+        .unwrap_or_default();
 
-    if !mod_cache_path.exists() {
-        return Ok(vec![]);
-    }
-
-    let mut mods = vec![];
-    let mut mods_read = fs::read_dir(&mod_cache_path)
-        .await
-        .map_err(|e| format!("unable to read custom mods: {:?}", e))?;
-
-    while let Some(entry) = mods_read
-        .next_entry()
-        .await
-        .map_err(|e| format!("unable to read custom mods: {:?}", e))?
-    {
-        let file_type = entry
-            .file_type()
-            .await
-            .map_err(|e| format!("unable to read custom mods: {:?}", e))?;
-        let file_name = entry.file_name().to_str().unwrap().to_string();
-
-        if file_type.is_file() && file_name.ends_with(".jar") {
-            // todo: pull name from JAR manifest
-            let file_name_without_extension = file_name.replace(".jar", "");
-
-            mods.push(LoaderMod {
-                required: false,
-                enabled: true,
-                name: file_name_without_extension,
-                source: ModSource::Local { file_name },
-            });
-        }
-    }
-
-    Ok(mods)
+    modrinth::custom_mods(
+        &custom_mods_dir(branch, mc_version),
+        installed,
+        &branch_options.custom_mod_states,
+        mc_version,
+        subsystem,
+        check,
+    )
+    .await
+    .map_err(|e| format!("unable to read custom mods: {:?}", e))
 }
 
 #[tauri::command]
@@ -195,60 +189,9 @@ pub(crate) async fn delete_custom_mod(
     let mod_path = mod_cache_path.join(mod_name);
 
     if mod_path.exists() {
-        fs::remove_file(&mod_path)
+        fs::remove_file(mod_path)
             .await
             .map_err(|e| format!("unable to delete custom mod: {:?}", e))?;
-    }
-
-    // Remove Modrinth metadata entry for this mod
-    let metadata_path = mod_cache_path.join(".modrinth_meta.json");
-    if metadata_path.exists() {
-        match fs::read_to_string(&metadata_path).await {
-            Ok(content) => {
-                match serde_json::from_str::<HashMap<String, serde_json::Value>>(&content) {
-                    Ok(mut metadata) => {
-                        let filename_without_ext = mod_name.replace(".jar", "");
-                        let mut found = false;
-                        metadata.retain(|_key, value| {
-                            if let Some(file) = value.get("filename").and_then(|f| f.as_str()) {
-                                if file == mod_name || file.replace(".jar", "") == filename_without_ext {
-                                    found = true;
-                                    return false;
-                                }
-                            }
-                            true
-                        });
-                        
-                        if found {
-                            if metadata.is_empty() {
-                                // Remove metadata file if empty
-                                if let Err(e) = fs::remove_file(&metadata_path).await {
-                                    warn!("Failed to remove empty Modrinth metadata file: {:?}", e);
-                                }
-                            } else {
-                                // Save updated metadata
-                                match serde_json::to_string(&metadata) {
-                                    Ok(json) => {
-                                        if let Err(e) = fs::write(&metadata_path, json).await {
-                                            warn!("Failed to update Modrinth metadata file: {:?}", e);
-                                        }
-                                    }
-                                    Err(e) => {
-                                        warn!("Failed to serialize Modrinth metadata: {:?}", e);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        warn!("Failed to parse Modrinth metadata file: {:?}", e);
-                    }
-                }
-            }
-            Err(e) => {
-                warn!("Failed to read Modrinth metadata file: {:?}", e);
-            }
-        }
     }
 
     Ok(())
