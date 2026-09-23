@@ -249,18 +249,6 @@ impl Client {
         )
     }
 
-    /// Request a list of released versions or mixed with development builds
-    pub async fn builds(&self, release: bool) -> Result<Vec<Build>> {
-        self.request_from_endpoint(API_V1, &if release {
-            // Only includes released builds
-            format!("version/builds/{}/release", CLIENT_BRANCH)
-        } else {
-            // Includes development builds
-            format!("version/builds/{}", CLIENT_BRANCH)
-        })
-        .await
-    }
-
     /// A page of builds, newest first: releases, or every build with `nightly`. `query` searches
     /// commit messages and ids.
     pub async fn build_page(

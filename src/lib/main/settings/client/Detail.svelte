@@ -8,6 +8,7 @@
     import SmallButtonSetting from "../../../settings/SmallButtonSetting.svelte";
     import RippleLoader from "../../../common/RippleLoader.svelte";
     import ItemRow from "./ItemRow.svelte";
+    import Message from "./Message.svelte";
     import { count, itemTypes, neededByLine, removeQuestion, versionTag } from "./copy.js";
 
     export let client;
@@ -131,15 +132,13 @@
         </SettingWrapper>
     {/if}
 {:else if error}
-    <div class="center">
-        <div class="strong">Could not reach the marketplace.</div>
-        <div class="note">{error}</div>
+    <Message title="Could not reach the marketplace." note={error}>
         <SmallButtonSetting text="Try again" on:click={load} />
-    </div>
+    </Message>
 {:else}
-    <div class="center">
+    <Message>
         <RippleLoader size={80} />
-    </div>
+    </Message>
 {/if}
 
 <style>
@@ -180,7 +179,7 @@
         font-size: 16px;
     }
 
-    .meta, .summary, .note, .muted {
+    .meta, .summary, .muted {
         font-size: 12px;
         color: rgba(255, 255, 255, .5);
     }
@@ -216,21 +215,7 @@
         white-space: nowrap;
     }
 
-    .tag.strong, .strong {
+    .tag.strong {
         color: white;
-    }
-
-    .center {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        row-gap: 5px;
-        padding: 20px 0;
-        text-align: center;
-    }
-
-    .note {
-        line-height: 15px;
-        word-break: break-word;
     }
 </style>

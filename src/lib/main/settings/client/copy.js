@@ -1,7 +1,7 @@
 // Words for the states the backend computes.
 
 export function count(n, one, many) {
-    return `${n} ${n === 1 ? one : many}`;
+    return `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
 }
 
 export function names(list) {
@@ -9,6 +9,10 @@ export function names(list) {
         return list.join("");
     }
     return `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
+}
+
+export function capitalize(text) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 export const itemTypes = {
@@ -39,6 +43,37 @@ export function browseLine(item, liquidbounce) {
             return `Not for ${liquidbounce} · ${downloads}`;
         default:
             return item.date ? `${item.date} · ${downloads}` : downloads;
+    }
+}
+
+export function modLine(tracked) {
+    return {
+        label: tracked.version,
+        status: tracked.update ? { tone: "strong", text: `${tracked.update} available` } : null
+    };
+}
+
+export function hitState(state) {
+    switch (state.kind) {
+        case "included":
+            return { tone: "strong", text: "Included" };
+        case "installed":
+            return { tone: "strong", text: "Installed" };
+        default:
+            return null;
+    }
+}
+
+export const selectedLine = { tone: "strong", text: "Selected" };
+
+export function selectionLine(selection) {
+    switch (selection?.kind) {
+        case "latest":
+            return selection.release ? "Latest release" : "Latest nightly";
+        case "pinned":
+            return `${selection.date} · ${selection.commit}`;
+        default:
+            return null;
     }
 }
 

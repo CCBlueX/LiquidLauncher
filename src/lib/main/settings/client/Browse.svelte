@@ -2,11 +2,11 @@
     import { createEventDispatcher, onDestroy } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
     import SettingWrapper from "../../../settings/SettingWrapper.svelte";
-    import IconButtonSetting from "../../../settings/IconButtonSetting.svelte";
     import SmallButtonSetting from "../../../settings/SmallButtonSetting.svelte";
     import RippleLoader from "../../../common/RippleLoader.svelte";
-    import TextSetting from "../../../settings/TextSetting.svelte";
     import ItemRow from "./ItemRow.svelte";
+    import Message from "./Message.svelte";
+    import SearchHeader from "./SearchHeader.svelte";
     import Tone from "./Tone.svelte";
     import { browseLine, itemTypes } from "./copy.js";
 
@@ -66,12 +66,7 @@
     load();
 </script>
 
-<div class="stack">
-    <div class="back">
-        <IconButtonSetting text="Back" icon="icon-prev" on:click={() => dispatch("back")} />
-    </div>
-    <TextSetting placeholder="Search {plural}" bind:value={query} on:keydown={e => e.key === "Escape" && (query = "")} />
-</div>
+<SearchHeader placeholder="Search {plural}" bind:query on:back />
 
 <SettingWrapper {title} unbounded>
     <svelte:fragment slot="title-element">
@@ -80,15 +75,13 @@
         {/if}
     </svelte:fragment>
     {#if error}
-        <div class="center">
-            <div class="strong">Could not reach the marketplace.</div>
-            <div class="note">{error}</div>
+        <Message title="Could not reach the marketplace." note={error}>
             <SmallButtonSetting text="Try again" on:click={() => load()} />
-        </div>
+        </Message>
     {:else if !result}
-        <div class="center">
+        <Message>
             <RippleLoader size={80} />
-        </div>
+        </Message>
     {:else}
         {#each result.items as item (item.id)}
             <ItemRow name={item.name} description={item.summary} dim={item.fit?.kind === "noVersion"} on:open={() => dispatch("open", item.id)}>
@@ -106,61 +99,20 @@
                 </svelte:fragment>
             </ItemRow>
         {:else}
-            <div class="center">
-                {#if query.trim()}
-                    <div class="strong">No {plural} match “{query.trim()}”.</div>
-                {:else}
-                    <div class="strong">No {plural} published yet.</div>
-                {/if}
-                {#if query}
-                    <div class="clear">
-                        <IconButtonSetting text="Clear search" icon="icon-button-close" on:click={() => query = ""} />
-                    </div>
-                {/if}
-            </div>
+            <Message
+                    title={query.trim() ? `No ${plural} match “${query.trim()}”.` : `No ${plural} published yet.`}
+                    clearable={!!query}
+                    on:clear={() => query = ""}
+            />
         {/each}
     {/if}
 </SettingWrapper>
 
 <style>
-    .stack {
-        display: flex;
-        flex-direction: column;
-        row-gap: 10px;
-    }
-
-    .back, .clear {
-        display: flex;
-    }
-
     .aside {
         font-size: 12px;
         line-height: 17px;
         color: rgba(255, 255, 255, .5);
-    }
-
-    .center {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        row-gap: 5px;
-        padding: 20px 0;
-        text-align: center;
-    }
-
-    .strong {
-        color: white;
-    }
-
-    .note {
-        font-size: 12px;
-        line-height: 15px;
-        color: rgba(255, 255, 255, .5);
-        word-break: break-word;
-    }
-
-    .clear {
-        margin-top: 5px;
     }
 
     .state {

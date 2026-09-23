@@ -5,40 +5,45 @@
     import SettingsContainer from "../../settings/SettingsContainer.svelte";
     import Tabs from "../../settings/tab/Tabs.svelte";
     import MinecraftSettings from "./MinecraftSettings.svelte";
-    import MarketplaceSettings from "./MarketplaceSettings.svelte";
+    import ClientSettings from "./ClientSettings.svelte";
 
     export let client;
     export let options;
-    let activeSettingsTab = "General";
+    export let versionState;
+    export let activeTab = "General";
 
     const dispatch = createEventDispatcher();
 </script>
 
 <SettingsContainer
         title="Settings"
-        fill={activeSettingsTab === "Marketplace"}
+        fill={activeTab === "Client"}
         on:hideSettings={() => dispatch('hide')}
 >
     <Tabs
-            tabs={["General", "Minecraft", "Marketplace", "Premium"]}
-            bind:activeTab={activeSettingsTab}
+            tabs={["General", "Minecraft", "Client", "Premium"]}
+            bind:activeTab
             slot="tabs"
     />
 
-    {#if activeSettingsTab === "General"}
+    {#if activeTab === "General"}
         <GeneralSettings
                 bind:options
         />
-    {:else if activeSettingsTab === "Minecraft"}
+    {:else if activeTab === "Minecraft"}
         <MinecraftSettings
                 bind:options
         />
-    {:else if activeSettingsTab === "Marketplace"}
-        <MarketplaceSettings
+    {:else if activeTab === "Client"}
+        <ClientSettings
                 {client}
-                {options}
+                bind:options
+                {versionState}
+                on:updateData
+                on:updateModStates
+                on:updateMods
         />
-    {:else if activeSettingsTab === "Premium"}
+    {:else if activeTab === "Premium"}
         <PremiumSettings
                 {client}
                 bind:options

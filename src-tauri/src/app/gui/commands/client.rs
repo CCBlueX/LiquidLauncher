@@ -31,7 +31,7 @@ use tokio::fs;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
-use super::marketplace::data_directory;
+use super::marketplace::{data_directory, resolve_build};
 use crate::app::builds::{self, BuildPage};
 use crate::app::client_api::{BlogPost, Build, Changelog, Client, PaginatedResponse};
 use crate::app::client_api::LoaderMod;
@@ -46,17 +46,35 @@ use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     progress::ProgressUpdate,
 }, HTTP_CLIENT, LAUNCHER_DIRECTORY};
 
+/// The build selected to launch, or `None` when the chosen one is gone.
 #[tauri::command]
-pub(crate) async fn request_builds(client: Client, release: bool) -> Result<Vec<Build>, String> {
-    let builds = (|| async { client.builds(release).await })
-        .retry(ExponentialBuilder::default())
-        .notify(|err, dur| {
-            warn!("Failed to request builds. Retrying in {:?}. Error: {}", dur, err);
-        })
-        .await
-        .map_err(|e| format!("unable to request builds: {:?}", e))?;
+pub(crate) async fn request_build(
+    client: Client,
+    options: Options,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<Option<Build>, String> {
+    let chosen = options.version_options.build_id != -1;
+    let is_gone = |error: &anyhow::Error| {
+        chosen
+            && error
+                .downcast_ref::<reqwest::Error>()
+                .and_then(reqwest::Error::status)
+                == Some(reqwest::StatusCode::NOT_FOUND)
+    };
 
-    Ok(builds)
+    let build = (|| async { resolve_build(&client, &options, &app_state).await })
+        .retry(ExponentialBuilder::default())
+        .when(|error| !is_gone(error))
+        .notify(|err, dur| {
+            warn!("Failed to request the build. Retrying in {:?}. Error: {}", dur, err);
+        })
+        .await;
+
+    match build {
+        Ok(build) => Ok(Some(build)),
+        Err(error) if is_gone(&error) => Ok(None),
+        Err(error) => Err(format!("unable to request the build: {:?}", error)),
+    }
 }
 
 /// A page of the builds to choose from, releases or all of them as the options show them.

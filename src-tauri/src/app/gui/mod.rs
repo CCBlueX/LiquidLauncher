@@ -62,7 +62,7 @@ pub fn gui_main() {
             sys_memory,
             get_options,
             store_options,
-            request_builds,
+            request_build,
             request_build_page,
             request_mods,
             run_client,
