@@ -140,7 +140,7 @@ pub struct Detail {
     author: String,
     downloads: u32,
     summary: String,
-    preview: Option<String>,
+    screenshots: Vec<Screenshot>,
     /// Removing is offered, otherwise installing.
     subscribed: bool,
     can_install: bool,
@@ -552,7 +552,7 @@ pub async fn detail(
         author: item.author,
         downloads: item.downloads,
         summary: summary(&item.description),
-        preview: preview(&item.description),
+        screenshots: screenshots(&item.description),
         subscribed: listed && !queued.removing(item.id),
         can_install,
         versions,
@@ -632,14 +632,43 @@ fn summary(description: &str) -> String {
     String::new()
 }
 
-/// The first image of a markdown description.
-fn preview(description: &str) -> Option<String> {
+#[derive(Serialize, Debug, PartialEq, Eq)]
+pub struct Screenshot {
+    url: String,
+    caption: String,
+}
+
+/// The images of a markdown description, with their alternative texts as captions.
+fn screenshots(description: &str) -> Vec<Screenshot> {
     static IMAGE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r#"!\[[^\]]*\]\(\s*<?(https?://[^)\s>]+)|<img[^>]*\ssrc="(https?://[^"]+)""#)
-            .unwrap()
+        Regex::new(r#"!\[([^\]]*)\]\(\s*<?(https?://[^)\s>]+)|<img[^>]*>"#).unwrap()
     });
-    let captures = IMAGE.captures(description)?;
-    Some(captures.get(1).or(captures.get(2))?.as_str().to_owned())
+    static SRC: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r#"\ssrc="(https?://[^"]+)""#).unwrap());
+    static ALT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"\salt="([^"]*)""#).unwrap());
+
+    IMAGE
+        .captures_iter(description)
+        .filter_map(|image| {
+            let (url, caption) = match image.get(2) {
+                Some(url) => (url.as_str(), &image[1]),
+                None => {
+                    let tag = &image[0];
+                    let alt = ALT.captures(tag);
+                    let url = SRC.captures(tag)?.get(1)?.as_str();
+                    (
+                        url,
+                        alt.and_then(|alt| alt.get(1))
+                            .map_or("", |alt| alt.as_str()),
+                    )
+                }
+            };
+            Some(Screenshot {
+                url: url.to_owned(),
+                caption: caption.to_owned(),
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -687,8 +716,26 @@ mod tests {
             "Modules that LiquidBounce does not ship. They show up in the ClickGUI under their own Extras category."
         );
         assert_eq!(
-            preview(extras).as_deref(),
-            Some("https://ccbluex-api-public.s3.de.io.cloud.ovh.net/marketplace/screenshots/781/LzCa1tNKl1LT.png")
+            screenshots(extras),
+            [Screenshot {
+                url: "https://ccbluex-api-public.s3.de.io.cloud.ovh.net/marketplace/screenshots/781/LzCa1tNKl1LT.png".to_owned(),
+                caption: "Extras in the ClickGUI".to_owned(),
+            }]
+        );
+        assert_eq!(
+            screenshots(
+                r#"<p><img alt="HUD" src="https://example.com/hud.png"/> <img src="http://example.com/a.png"></p>"#
+            ),
+            [
+                Screenshot {
+                    url: "https://example.com/hud.png".to_owned(),
+                    caption: "HUD".to_owned()
+                },
+                Screenshot {
+                    url: "http://example.com/a.png".to_owned(),
+                    caption: String::new()
+                },
+            ]
         );
 
         let heading = "# ScriptAPI\r\n\r\nThe `JavaScript` Script API,\r\npackaged as an *add-on*.";
@@ -696,6 +743,6 @@ mod tests {
             summary(heading),
             "The JavaScript Script API, packaged as an add-on."
         );
-        assert_eq!(preview(heading), None);
+        assert!(screenshots(heading).is_empty());
     }
 }

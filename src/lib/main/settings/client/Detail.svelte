@@ -8,6 +8,7 @@
     import RippleLoader from "../../../common/RippleLoader.svelte";
     import ItemRow from "./ItemRow.svelte";
     import Message from "./Message.svelte";
+    import Screenshots from "./Screenshots.svelte";
     import { count, itemTypes, neededByLine, removeQuestion } from "./copy.js";
 
     export let client;
@@ -19,7 +20,6 @@
     let detail = null;
     let error = null;
     let busy = false;
-    let previewFailed = false;
 
     async function load() {
         error = null;
@@ -75,11 +75,6 @@
         <IconButtonSetting text="Back" icon="icon-prev" on:click={() => dispatch("back")} />
     </div>
     {#if detail}
-        {#if detail.preview && !previewFailed}
-            <div class="preview">
-                <img src={detail.preview} alt={detail.name} loading="lazy" on:error={() => previewFailed = true}>
-            </div>
-        {/if}
         <div class="head">
             <div>
                 <div class="name">{detail.name}</div>
@@ -104,6 +99,12 @@
                 disabled={busy || !detail.canInstall}
                 on:click={install}
         />
+    {/if}
+
+    {#if detail.screenshots.length > 0}
+        <SettingWrapper title="Screenshots" unbounded>
+            <Screenshots screenshots={detail.screenshots} />
+        </SettingWrapper>
     {/if}
 
     {#if detail.versions.length > 0}
@@ -147,21 +148,6 @@
 
     .row-start {
         display: flex;
-    }
-
-    .preview {
-        height: 84px;
-        border-radius: 6px;
-        overflow: hidden;
-        background-color: rgba(0, 0, 0, .26);
-    }
-
-    .preview img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: center top;
-        display: block;
     }
 
     .head {
