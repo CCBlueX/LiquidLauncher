@@ -19,18 +19,21 @@
 
 //! The build that launches, and the builds to choose from as the Client tab lists them.
 
+use std::sync::Mutex;
+
 use anyhow::{Context, Result};
 use chrono::Local;
 use serde::Serialize;
 
 use crate::app::client_api::{Build, Client};
-use crate::app::marketplace::view::short_date;
+use crate::app::options::Options;
+use crate::utils::short_date;
 
 const PAGE_SIZE: u32 = 20;
 
 /// The build that launches: the newest for "Latest" (`-1`), a release unless `nightly`, or the
 /// chosen one.
-pub async fn resolve(client: &Client, build_id: i32, nightly: bool) -> Result<Build> {
+async fn fetch(client: &Client, build_id: i32, nightly: bool) -> Result<Build> {
     match u32::try_from(build_id) {
         Ok(build_id) => client.build(build_id).await,
         Err(_) => client
@@ -43,17 +46,63 @@ pub async fn resolve(client: &Client, build_id: i32, nightly: bool) -> Result<Bu
     }
 }
 
-/// A build as resolved for a choice of build and whether nightly builds are shown.
-pub struct Resolved {
-    pub build_id: i32,
-    pub nightly: bool,
-    pub build: Build,
+/// The build that launches, as fetched last for a choice of build and nightly builds.
+pub struct SelectedBuild {
+    build_id: i32,
+    nightly: bool,
+    build: Build,
 }
 
-impl Resolved {
+impl SelectedBuild {
     /// A chosen build does not change with the nightly builds shown, "Latest" does.
-    pub fn is_for(&self, build_id: i32, nightly: bool) -> bool {
+    fn is_for(&self, build_id: i32, nightly: bool) -> bool {
         self.build_id == build_id && (build_id != -1 || self.nightly == nightly)
+    }
+}
+
+pub type KeptBuild = Mutex<Option<SelectedBuild>>;
+
+/// The build that launches as kept from last time, if it is for the same choice.
+pub(crate) fn kept(options: &Options, kept: &KeptBuild) -> Option<Build> {
+    let kept = kept.lock().ok()?;
+    kept.as_ref()
+        .filter(|kept| {
+            kept.is_for(
+                options.version_options.build_id,
+                options.launcher_options.show_nightly_builds,
+            )
+        })
+        .map(|kept| kept.build.clone())
+}
+
+/// Fetches the build that launches and keeps it for the views that follow.
+pub(crate) async fn fetch_selected(
+    client: &Client,
+    options: &Options,
+    kept: &KeptBuild,
+) -> Result<Build> {
+    let build_id = options.version_options.build_id;
+    let nightly = options.launcher_options.show_nightly_builds;
+    let build = fetch(client, build_id, nightly).await?;
+    if let Ok(mut kept) = kept.lock() {
+        *kept = Some(SelectedBuild {
+            build_id,
+            nightly,
+            build: build.clone(),
+        });
+    }
+    Ok(build)
+}
+
+/// The build that launches, as kept or fetched.
+pub(crate) async fn selected(
+    client: &Client,
+    options: &Options,
+    kept: &KeptBuild,
+) -> Result<Build> {
+    match self::kept(options, kept) {
+        Some(build) => Ok(build),
+        None => fetch_selected(client, options, kept).await,
     }
 }
 
@@ -189,7 +238,7 @@ mod tests {
             Selection::Pinned { commit, .. } if commit == "adfddc0"
         ));
 
-        let latest = Resolved {
+        let latest = SelectedBuild {
             build_id: -1,
             nightly: true,
             build: build.clone(),
@@ -198,7 +247,7 @@ mod tests {
         assert!(!latest.is_for(-1, false));
         assert!(!latest.is_for(17371, true));
 
-        let pinned = Resolved {
+        let pinned = SelectedBuild {
             build_id: 17371,
             nightly: true,
             build,

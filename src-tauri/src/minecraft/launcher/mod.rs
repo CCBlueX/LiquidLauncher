@@ -33,7 +33,7 @@ use tokio::time::sleep;
 use tracing::*;
 
 use crate::app::client_api::{Client, LaunchManifest};
-use crate::app::marketplace;
+use crate::app::marketplace::{self, GameDir};
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
 use crate::minecraft::java::{DistributionSelection, JavaRuntime};
@@ -324,7 +324,7 @@ pub async fn launch<D: Send + Sync>(
 
     if !launching_parameter.keep_launcher_open {
         // The launcher quits with the game, before run_client could apply these.
-        marketplace::game_exited(data_dir, &manifest.build.branch).await;
+        marketplace::game_exited(&GameDir::new(data_dir, &manifest.build.branch)).await;
         // Hide launcher window
         exit(0);
     }

@@ -156,7 +156,7 @@ async fn newest_version(
 }
 
 /// The newest version of a project for the game, as it is installed.
-pub async fn resolve(project_id: &str, minecraft: &str, loader: &str) -> Result<ModrinthMod> {
+pub async fn newest(project_id: &str, minecraft: &str, loader: &str) -> Result<ModrinthMod> {
     let (project, version) = tokio::try_join!(
         get::<Project>(format!("{API}/project/{project_id}")),
         newest_version(project_id, minecraft, loader),

@@ -20,13 +20,14 @@
 mod checksum;
 mod download;
 mod extract;
+mod format;
 #[cfg(windows)]
 mod hosts;
 mod macros;
 mod maven;
 mod sys;
 
-pub use {checksum::*, download::*, extract::*, maven::*, sys::*};
+pub use {checksum::*, download::*, extract::*, format::*, maven::*, sys::*};
 
 #[cfg(windows)]
 pub use hosts::*;

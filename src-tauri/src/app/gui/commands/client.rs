@@ -31,12 +31,11 @@ use tokio::fs;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
-use super::marketplace::{data_directory, resolve_build};
+use super::{failed, search_query};
 use crate::app::builds::{self, BuildPage};
 use crate::app::client_api::{BlogPost, Build, Changelog, Client, PaginatedResponse};
 use crate::app::client_api::LoaderMod;
-use crate::app::marketplace;
-use crate::app::marketplace::view::describe;
+use crate::app::marketplace::{self, GameDir};
 use crate::app::modrinth::{self, CustomMod};
 use crate::app::options::Options;
 use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
@@ -62,7 +61,7 @@ pub(crate) async fn request_build(
                 == Some(reqwest::StatusCode::NOT_FOUND)
     };
 
-    let build = (|| async { resolve_build(&client, &options, &app_state).await })
+    let build = (|| async { builds::fetch_selected(&client, &options, &app_state.build).await })
         .retry(ExponentialBuilder::default())
         .when(|error| !is_gone(error))
         .notify(|err, dur| {
@@ -85,19 +84,15 @@ pub(crate) async fn request_build_page(
     query: Option<String>,
     page: u32,
 ) -> Result<BuildPage, String> {
-    let query = query
-        .as_deref()
-        .map(str::trim)
-        .filter(|query| !query.is_empty());
     builds::page(
         &client,
         page,
-        query,
+        search_query(&query),
         options.launcher_options.show_nightly_builds,
         options.version_options.build_id,
     )
     .await
-    .map_err(|e| format!("unable to request builds: {}", describe(&e)))
+    .map_err(failed("request builds"))
 }
 
 #[tauri::command]
@@ -298,7 +293,7 @@ pub(crate) async fn run_client(
 ) -> Result<(), String> {
     // A shared mutex for the window object.
     let shareable_window: ShareableWindow = Arc::new(Mutex::new(window));
-    let data = data_directory(&options);
+    let data = options.start_options.data_directory();
 
     let minecraft_account = options
         .start_options
@@ -414,7 +409,7 @@ pub(crate) async fn run_client(
                         .unwrap();
                     handle_stderr(&shareable_window, message.as_bytes()).unwrap();
                 };
-                marketplace::game_exited(&data, &branch).await;
+                marketplace::game_exited(&GameDir::new(data, branch)).await;
 
                 *copy_of_runner_instance
                     .lock()

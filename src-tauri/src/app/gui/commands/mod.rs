@@ -34,3 +34,15 @@ pub(crate) use system::*;
 pub(crate) use minecraft_installation::*;
 pub(crate) use updater::*;
 pub(crate) use modrinth::*;
+
+use crate::utils::error_line;
+
+/// Turns an error into the message the frontend shows: `unable to <action>: <error>`.
+fn failed(action: &str) -> impl FnOnce(anyhow::Error) -> String + '_ {
+    move |error| format!("unable to {action}: {}", error_line(&error))
+}
+
+/// A search query, or `None` when it is blank.
+fn search_query(query: &Option<String>) -> Option<&str> {
+    query.as_deref().map(str::trim).filter(|query| !query.is_empty())
+}

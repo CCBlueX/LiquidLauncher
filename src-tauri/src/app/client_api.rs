@@ -19,14 +19,13 @@
 
 use std::collections::BTreeMap;
 
-use crate::app::marketplace::MarketplaceItemType;
 use crate::auth::ClientAccount;
 use crate::minecraft::java::JavaDistribution;
 use crate::utils::get_maven_artifact_path;
 use crate::HTTP_CLIENT;
 use anyhow::{Error, Result};
 use chrono::{DateTime, NaiveDateTime, Utc};
-use reqwest::{IntoUrl, Url};
+use reqwest::Url;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, debug_span, error, info, warn};
@@ -160,95 +159,6 @@ impl Client {
         self.request_from_endpoint(API_V3, &format!("blog?page={}", page)).await
     }
 
-    /// Browse marketplace items of one type.
-    ///
-    /// The API leaves add-ons out of untyped listings, so LiquidBounce builds predating add-ons
-    /// never receive a type they cannot deserialize.
-    pub async fn marketplace_items(
-        &self,
-        limit: u32,
-        query: Option<&str>,
-        item_type: &str,
-    ) -> Result<PaginatedResponse<MarketplaceItem>> {
-        let mut url = Url::parse(&format!("{}/{}/marketplace", self.url, API_V3))?;
-        {
-            let mut pairs = url.query_pairs_mut();
-            pairs
-                .append_pair("limit", &limit.to_string())
-                .append_pair("branch", CLIENT_BRANCH)
-                .append_pair("type", item_type);
-            if let Some(query) = query {
-                pairs.append_pair("q", query);
-            }
-        }
-
-        self.request_url(url).await
-    }
-
-    pub async fn marketplace_item(&self, item_id: u32) -> Result<MarketplaceItem> {
-        self.request_from_endpoint(API_V3, &format!("marketplace/{}", item_id))
-            .await
-    }
-
-    /// The newest revisions of an item, whatever they are compatible with.
-    pub async fn marketplace_revisions(
-        &self,
-        item_id: u32,
-        limit: u32,
-    ) -> Result<PaginatedResponse<MarketplaceRevision>> {
-        self.request_from_endpoint(
-            API_V3,
-            &format!("marketplace/{}/revisions?limit={}", item_id, limit),
-        )
-        .await
-    }
-
-    pub async fn marketplace_revision(
-        &self,
-        item_id: u32,
-        revision_id: u32,
-    ) -> Result<MarketplaceRevision> {
-        self.request_from_endpoint(
-            API_V3,
-            &format!("marketplace/{}/revisions/{}", item_id, revision_id),
-        )
-        .await
-    }
-
-    /// The items an item needs installed beside it.
-    pub async fn marketplace_dependencies(&self, item_id: u32) -> Result<Vec<LinkedItem>> {
-        self.request_from_endpoint(API_V3, &format!("marketplace/{}/dependencies", item_id))
-            .await
-    }
-
-    /// The revisions that fit a build with the given versions, newest first.
-    pub async fn marketplace_compatible_revisions(
-        &self,
-        item_id: u32,
-        minecraft: &str,
-        liquidbounce: &str,
-        page: u32,
-    ) -> Result<PaginatedResponse<MarketplaceRevision>> {
-        let mut url = Url::parse(&format!(
-            "{}/{}/marketplace/{}/revisions",
-            self.url, API_V3, item_id
-        ))?;
-        url.query_pairs_mut()
-            .append_pair("minecraft", minecraft)
-            .append_pair("liquidbounce", liquidbounce)
-            .append_pair("page", &page.to_string())
-            .append_pair("limit", "50");
-
-        self.request_url(url).await
-    }
-
-    pub fn marketplace_download_url(&self, item_id: u32, revision_id: u32) -> String {
-        format!(
-            "{}/{}/marketplace/{}/revisions/{}/download",
-            self.url, API_V3, item_id, revision_id
-        )
-    }
-
     /// A page of builds, newest first: releases, or every build with `nightly`. `query` searches
     /// commit messages and ids.
     pub async fn build_page(
@@ -258,22 +168,12 @@ impl Client {
         query: Option<&str>,
         nightly: bool,
     ) -> Result<PaginatedResponse<Build>> {
-        let mut url = Url::parse(&format!(
-            "{}/{}/version/{}/builds",
-            self.url, API_V3, CLIENT_BRANCH
-        ))?;
-        {
-            let mut pairs = url.query_pairs_mut();
-            pairs
-                .append_pair("page", &page.to_string())
-                .append_pair("limit", &limit.to_string())
-                .append_pair("nightly", &nightly.to_string());
-            if let Some(query) = query {
-                pairs.append_pair("q", query);
-            }
-        }
+        let (page, limit, nightly) = (page.to_string(), limit.to_string(), nightly.to_string());
+        let mut params = vec![("page", page.as_str()), ("limit", &limit), ("nightly", &nightly)];
+        params.extend(query.map(|query| ("q", query)));
 
-        self.request_url(url).await
+        self.request(API_V3, &format!("version/{}/builds", CLIENT_BRANCH), &params)
+            .await
     }
 
     pub async fn build(&self, build_id: u32) -> Result<Build> {
@@ -322,11 +222,17 @@ impl Client {
 
     /// Request JSON formatted data from launcher API
     pub async fn request_from_endpoint<T: DeserializeOwned>(&self, api_version: &str, endpoint: &str) -> Result<T> {
-        self.request_url(format!("{}/{}/{}", self.url, api_version, endpoint))
-            .await
+        self.request(api_version, endpoint, &[]).await
     }
 
-    async fn request_url<T: DeserializeOwned>(&self, url: impl IntoUrl) -> Result<T> {
+    /// Request JSON formatted data from launcher API, with query parameters
+    pub async fn request<T: DeserializeOwned>(
+        &self,
+        api_version: &str,
+        endpoint: &str,
+        query: &[(&str, &str)],
+    ) -> Result<T> {
+        let url = Url::parse_with_params(&format!("{}/{}/{}", self.url, api_version, endpoint), query)?;
         Ok(HTTP_CLIENT
             .get(url)
             .header("X-Session-Token", &self.session_token)
@@ -351,41 +257,6 @@ impl Client {
             .json::<T>()
             .await?)
     }
-}
-
-/// A marketplace item as served by the API.
-#[derive(Deserialize, Debug, Clone)]
-pub struct MarketplaceItem {
-    pub id: u32,
-    pub name: String,
-    #[serde(rename = "type")]
-    pub item_type: MarketplaceItemType,
-    pub description: String,
-    #[serde(default)]
-    pub author: String,
-    #[serde(default)]
-    pub downloads: u32,
-    pub updated_at: Option<NaiveDateTime>,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct LinkedItem {
-    pub item: MarketplaceItem,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct MarketplaceRevision {
-    pub id: u32,
-    pub version: String,
-    pub created_at: Option<NaiveDateTime>,
-    /// The LiquidBounce versions of the builds it fits; `None` when none does.
-    pub liquidbounce: Option<LiquidBounceRange>,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct LiquidBounceRange {
-    pub min: String,
-    pub max: String,
 }
 
 #[derive(Serialize, Deserialize)]

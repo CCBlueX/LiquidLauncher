@@ -17,71 +17,23 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::path::PathBuf;
-
-use anyhow::{Context, Result};
+use anyhow::Context;
 use tauri::State;
 
-use crate::app::builds::{self, Resolved};
-use crate::app::client_api::{Build, Client};
+use super::{failed, search_query};
+use crate::app::builds;
+use crate::app::client_api::Client;
 use crate::app::client_api_target::CLIENT_BRANCH;
 use crate::app::gui::AppState;
 use crate::app::marketplace::view::{self, Browse, Detail, Library, Remote, Selected};
-use crate::app::marketplace::{self, MarketplaceItemType, SubscribedItem};
+use crate::app::marketplace::{self, api, GameDir, ItemType, SubscribedItem};
 use crate::app::options::Options;
-use crate::LAUNCHER_DIRECTORY;
+use crate::utils::error_line;
 
 /// Takes the options from the frontend, like `run_client`: Settings stores them only once it
 /// closes, so the stored ones may point at another data directory.
-pub(crate) fn data_directory(options: &Options) -> PathBuf {
-    match options.start_options.custom_data_path.as_str() {
-        "" => LAUNCHER_DIRECTORY.data_dir().to_path_buf(),
-        path => PathBuf::from(path),
-    }
-}
-
-/// The build selected to launch, if it was resolved for the same choice.
-fn cached_build(options: &Options, state: &AppState) -> Option<Build> {
-    let resolved = state.build.lock().ok()?;
-    resolved
-        .as_ref()
-        .filter(|resolved| {
-            resolved.is_for(
-                options.version_options.build_id,
-                options.launcher_options.show_nightly_builds,
-            )
-        })
-        .map(|resolved| resolved.build.clone())
-}
-
-/// Resolves the build selected to launch and keeps it for the views that follow.
-pub(crate) async fn resolve_build(
-    client: &Client,
-    options: &Options,
-    state: &AppState,
-) -> Result<Build> {
-    let build_id = options.version_options.build_id;
-    let nightly = options.launcher_options.show_nightly_builds;
-    let build = builds::resolve(client, build_id, nightly).await?;
-    if let Ok(mut resolved) = state.build.lock() {
-        *resolved = Some(Resolved {
-            build_id,
-            nightly,
-            build: build.clone(),
-        });
-    }
-    Ok(build)
-}
-
-pub(crate) async fn selected_build(
-    client: &Client,
-    options: &Options,
-    state: &AppState,
-) -> Result<Build> {
-    match cached_build(options, state) {
-        Some(build) => Ok(build),
-        None => resolve_build(client, options, state).await,
-    }
+fn game_dir(options: &Options) -> GameDir {
+    GameDir::new(options.start_options.data_directory(), CLIENT_BRANCH)
 }
 
 /// The installed add-ons, themes and scripts. Without `check` it reads the disk alone and returns at
@@ -93,62 +45,42 @@ pub(crate) async fn get_marketplace_library(
     check: bool,
     app_state: State<'_, AppState>,
 ) -> Result<Library, String> {
-    let data = data_directory(&options);
     let (build, remote) = if check {
-        match selected_build(&client, &options, &app_state).await {
+        match builds::selected(&client, &options, &app_state.build).await {
             Ok(build) => (Some(build), Remote::Check(&client)),
             Err(error) => {
-                let error = format!(
-                    "unable to check the marketplace: {}",
-                    view::describe(&error)
-                );
+                let error = format!("unable to check the marketplace: {}", error_line(&error));
                 (None, Remote::Failed(error))
             }
         }
     } else {
-        (cached_build(&options, &app_state), Remote::Skip)
+        (builds::kept(&options, &app_state.build), Remote::Skip)
     };
 
     let selected = Selected {
         build: build.as_ref(),
         latest: options.version_options.build_id == -1,
     };
-    let library = view::library(&data, CLIENT_BRANCH, &selected, remote).await;
-
-    library.map_err(|e| {
-        format!(
-            "unable to read marketplace subscriptions: {}",
-            view::describe(&e)
-        )
-    })
+    view::library(&game_dir(&options), &selected, remote)
+        .await
+        .map_err(failed("read marketplace subscriptions"))
 }
 
 #[tauri::command]
 pub(crate) async fn browse_marketplace(
     client: Client,
     options: Options,
-    item_type: MarketplaceItemType,
+    item_type: ItemType,
     query: Option<String>,
     app_state: State<'_, AppState>,
 ) -> Result<Browse, String> {
     async {
-        let build = selected_build(&client, &options, &app_state).await?;
-        let query = query
-            .as_deref()
-            .map(str::trim)
-            .filter(|query| !query.is_empty());
-        view::browse(
-            &client,
-            &data_directory(&options),
-            CLIENT_BRANCH,
-            &build,
-            item_type,
-            query,
-        )
-        .await
+        let build = builds::selected(&client, &options, &app_state.build).await?;
+        let game = game_dir(&options);
+        view::browse(&client, &game, &build, item_type, search_query(&query)).await
     }
     .await
-    .map_err(|e| format!("unable to browse marketplace: {}", view::describe(&e)))
+    .map_err(failed("browse marketplace"))
 }
 
 #[tauri::command]
@@ -159,18 +91,11 @@ pub(crate) async fn get_marketplace_item(
     app_state: State<'_, AppState>,
 ) -> Result<Detail, String> {
     async {
-        let build = selected_build(&client, &options, &app_state).await?;
-        view::detail(
-            &client,
-            &data_directory(&options),
-            CLIENT_BRANCH,
-            &build,
-            item_id,
-        )
-        .await
+        let build = builds::selected(&client, &options, &app_state.build).await?;
+        view::detail(&client, &game_dir(&options), &build, item_id).await
     }
     .await
-    .map_err(|e| format!("unable to load marketplace item: {}", view::describe(&e)))
+    .map_err(failed("load marketplace item"))
 }
 
 /// Installs a theme or script at once, and an add-on in the revision that fits the selected build.
@@ -181,7 +106,7 @@ pub(crate) async fn install_marketplace_item(
     options: Options,
     item_id: u32,
     name: String,
-    item_type: MarketplaceItemType,
+    item_type: ItemType,
     app_state: State<'_, AppState>,
 ) -> Result<(), String> {
     let item = SubscribedItem {
@@ -193,31 +118,23 @@ pub(crate) async fn install_marketplace_item(
     async {
         let revision = if marketplace::game_running() {
             None
-        } else if item_type == MarketplaceItemType::Addon {
-            let build = selected_build(&client, &options, &app_state).await?;
-            Some(view::install_target(&client, &build, &item).await?)
+        } else if item_type == ItemType::Addon {
+            let build = builds::selected(&client, &options, &app_state.build).await?;
+            Some(marketplace::install_target(&client, &build, &item).await?)
         } else {
-            let newest = client.marketplace_revisions(item_id, 1).await?;
-            let newest = newest.items.first().context("Nothing is published yet")?;
-            Some(newest.id)
+            let newest = api::revisions(&client, item_id, 1).await?;
+            Some(newest.first().context("Nothing is published yet")?.id)
         };
 
-        marketplace::add(
-            &client,
-            &data_directory(&options),
-            CLIENT_BRANCH,
-            item,
-            revision,
-        )
-        .await
+        marketplace::add(&client, &game_dir(&options), item, revision).await
     }
     .await
-    .map_err(|e| format!("unable to install marketplace item: {}", view::describe(&e)))
+    .map_err(failed("install marketplace item"))
 }
 
 #[tauri::command]
 pub(crate) async fn remove_marketplace_item(options: Options, item_id: u32) -> Result<(), String> {
-    marketplace::remove(&data_directory(&options), CLIENT_BRANCH, item_id)
+    marketplace::remove(&game_dir(&options), item_id)
         .await
-        .map_err(|e| format!("unable to remove marketplace item: {}", view::describe(&e)))
+        .map_err(failed("remove marketplace item"))
 }

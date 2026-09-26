@@ -22,7 +22,7 @@ use std::sync::{Arc, Mutex};
 use commands::*;
 use tauri::Window;
 
-use crate::app::builds::Resolved;
+use crate::app::builds::KeptBuild;
 
 pub type ShareableWindow = Arc<Mutex<Window>>;
 
@@ -32,8 +32,8 @@ pub struct RunnerInstance {
 
 pub struct AppState {
     pub runner_instance: Arc<Mutex<Option<RunnerInstance>>>,
-    /// The build that launches, as last resolved.
-    pub build: Mutex<Option<Resolved>>,
+    /// The build that launches, as fetched last.
+    pub build: KeptBuild,
 }
 
 impl AppState {

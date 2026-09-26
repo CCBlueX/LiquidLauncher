@@ -20,23 +20,21 @@
 //! What the launcher shows about add-ons, themes and scripts, for the build selected to launch.
 
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
 use std::sync::LazyLock;
 
 use anyhow::{bail, Result};
-use chrono::{Datelike, NaiveDateTime, Utc};
 use futures::future::join_all;
 use regex::Regex;
 use serde::Serialize;
 use tracing::warn;
 
-use super::{
-    compatible_revisions, display_version, no_version, pending, range_label, read_installed,
-    read_subscriptions, revisions, supports_addons, Installed, MarketplaceItemType, Pending,
-    SubscribedItem,
-};
+use super::api::{self, Revision};
+use super::install;
+use super::revisions::{display_version, range_label, supports_addons};
+use super::{queued, subscriptions, GameDir, ItemType, Queued, SubscribedItem};
 use crate::app::builds::Selection;
-use crate::app::client_api::{Build, Client, MarketplaceItem, MarketplaceRevision};
+use crate::app::client_api::{Build, Client};
+use crate::utils::{error_line, short_date};
 
 const LISTED: u32 = 50;
 const VERSIONS: u32 = 5;
@@ -138,7 +136,7 @@ pub struct Detail {
     id: u32,
     name: String,
     #[serde(rename = "type")]
-    item_type: MarketplaceItemType,
+    item_type: ItemType,
     author: String,
     downloads: u32,
     summary: String,
@@ -155,7 +153,7 @@ pub struct Detail {
 pub struct NeededBy {
     name: String,
     #[serde(rename = "type")]
-    item_type: MarketplaceItemType,
+    item_type: ItemType,
     author: String,
 }
 
@@ -167,28 +165,28 @@ struct Checked {
     version: Option<String>,
 }
 
-/// Whether an add-on has a revision for the build, and the version of the installed one.
-async fn check_addon(
+/// Asks the marketplace about an add-on or script. Themes are not asked.
+async fn check(
     client: &Client,
     build: &Build,
-    supports: bool,
-    item_id: u32,
+    item: &SubscribedItem,
     installed: Option<u32>,
-) -> Result<Checked> {
-    if !supports {
-        let version = installed_version(client, item_id, installed, None).await;
-        return Ok(Checked {
-            fits: false,
-            version,
-        });
-    }
+) -> Option<Result<Checked>> {
+    let fitting = match item.item_type {
+        ItemType::Addon if supports_addons(build) => {
+            match api::revisions_for(client, item.id, build).await {
+                Ok(fitting) => Some(fitting),
+                Err(error) => return Some(Err(error)),
+            }
+        }
+        ItemType::Addon => Some(vec![]),
+        ItemType::Script => None,
+        _ => return None,
+    };
 
-    let compatible = compatible_revisions(client, build, item_id).await?;
-    let version = installed_version(client, item_id, installed, &compatible).await;
-    Ok(Checked {
-        fits: !compatible.is_empty(),
-        version,
-    })
+    let fits = fitting.as_ref().is_none_or(|fitting| !fitting.is_empty());
+    let version = installed_version(client, item.id, installed, fitting.iter().flatten()).await;
+    Some(Ok(Checked { fits, version }))
 }
 
 /// The version of the installed revision, from the revisions fetched already or the marketplace.
@@ -197,7 +195,7 @@ async fn installed_version<'a>(
     client: &Client,
     item_id: u32,
     installed: Option<u32>,
-    fetched: impl IntoIterator<Item = &'a MarketplaceRevision>,
+    fetched: impl IntoIterator<Item = &'a Revision>,
 ) -> Option<String> {
     let installed = installed?;
     if let Some(revision) = fetched
@@ -207,43 +205,11 @@ async fn installed_version<'a>(
         return Some(revision.version.clone());
     }
 
-    client
-        .marketplace_revision(item_id, installed)
+    api::revision(client, item_id, installed)
         .await
         .inspect_err(|error| warn!("Failed to look up revision {installed}: {:?}", error))
         .ok()
         .map(|revision| revision.version)
-}
-
-/// The revision installing an add-on for the build takes.
-pub async fn install_target(client: &Client, build: &Build, item: &SubscribedItem) -> Result<u32> {
-    let (compatible, newest) = revisions(client, build, item.id).await?;
-    if let Some(target) = compatible.first() {
-        return Ok(target.id);
-    }
-    if newest.is_none() {
-        bail!("{} has nothing published yet.", item.name);
-    }
-    bail!("{}", no_version(&item.name, &build.lb_version))
-}
-
-/// What is known about one item without asking the marketplace.
-struct Facts {
-    installed: Option<Installed>,
-    removing: bool,
-}
-
-impl Facts {
-    async fn read(data: &Path, branch: &str, item: &SubscribedItem, pending: &Pending) -> Self {
-        Facts {
-            installed: read_installed(data, branch, item).await,
-            removing: pending.removing.contains(&item.id),
-        }
-    }
-
-    fn installed_revision(&self) -> Option<u32> {
-        self.installed.as_ref().map(|installed| installed.revision)
-    }
 }
 
 /// The build's LiquidBounce version for an add-on that has nothing for the build. `fits` is `None`
@@ -270,67 +236,57 @@ fn tag(
         })
 }
 
-pub fn short_date(date: NaiveDateTime) -> String {
-    if date.year() == Utc::now().year() {
-        date.format("%b %-d").to_string()
-    } else {
-        date.format("%b %-d, %Y").to_string()
-    }
-}
-
-/// The error as one line, without the request URL.
-pub fn describe(error: &anyhow::Error) -> String {
-    static URL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r" for url \([^)]*\)").unwrap());
-    URL.replace_all(&format!("{error:#}"), "").into_owned()
-}
-
 /// Add-ons, themes and scripts subscribed, with anything still waiting for the game to exit.
-async fn library_items(
-    data: &Path,
-    branch: &str,
-    pending: &Pending,
-) -> Result<Vec<SubscribedItem>> {
-    let mut items = read_subscriptions(data, branch).await?;
-    for queued in &pending.subscribing {
-        if !items.iter().any(|item| item.id == queued.id) {
-            items.push(queued.clone());
+async fn library_items(game: &GameDir, queued: &Queued) -> Result<Vec<SubscribedItem>> {
+    let mut items = subscriptions::read(game).await?;
+    for adding in queued.adding() {
+        if !items.iter().any(|item| item.id == adding.id) {
+            items.push(adding.clone());
         }
     }
     items.retain(|item| {
         matches!(
             item.item_type,
-            MarketplaceItemType::Addon | MarketplaceItemType::Theme | MarketplaceItemType::Script
+            ItemType::Addon | ItemType::Theme | ItemType::Script
         )
     });
     Ok(items)
 }
 
-fn is_installable(item_type: MarketplaceItemType) -> bool {
-    matches!(
-        item_type,
-        MarketplaceItemType::Addon | MarketplaceItemType::Script
-    )
+fn is_installable(item_type: ItemType) -> bool {
+    matches!(item_type, ItemType::Addon | ItemType::Script)
 }
 
 /// The add-ons and scripts each add-on and script of `items` needs beside it, by item id.
-async fn needs(
-    client: &Client,
-    items: &[SubscribedItem],
-) -> Result<HashMap<u32, Vec<MarketplaceItem>>> {
+async fn needs(client: &Client, items: &[SubscribedItem]) -> Result<HashMap<u32, Vec<u32>>> {
     let needs = items
         .iter()
         .filter(|item| is_installable(item.item_type))
         .map(|item| async {
-            let needed = client
-                .marketplace_dependencies(item.id)
+            let needed = api::dependencies(client, item.id)
                 .await?
                 .into_iter()
-                .map(|linked| linked.item)
                 .filter(|needed| is_installable(needed.item_type))
+                .map(|needed| needed.id)
                 .collect();
             anyhow::Ok((item.id, needed))
         });
     join_all(needs).await.into_iter().collect()
+}
+
+/// The items of `items` that stay and need `item_id`.
+fn dependents<'a>(
+    items: &'a [SubscribedItem],
+    needs: &'a HashMap<u32, Vec<u32>>,
+    queued: &'a Queued,
+    item_id: u32,
+) -> impl Iterator<Item = &'a SubscribedItem> {
+    items.iter().filter(move |other| {
+        !queued.removing(other.id)
+            && needs
+                .get(&other.id)
+                .is_some_and(|needed| needed.contains(&item_id))
+    })
 }
 
 /// Whether and how the library asks the marketplace.
@@ -349,43 +305,33 @@ pub struct Selected<'a> {
 }
 
 pub async fn library(
-    data: &Path,
-    branch: &str,
+    game: &GameDir,
     selected: &Selected<'_>,
     remote: Remote<'_>,
 ) -> Result<Library> {
     let build = selected.build;
-    let pending = pending();
-    let items = library_items(data, branch, &pending).await?;
-    let supports = build.is_none_or(supports_addons);
-    let liquidbounce = build.map_or("", |build| &build.lb_version);
+    let queued = queued();
+    let items = library_items(game, &queued).await?;
+    let client = match remote {
+        Remote::Check(client) => Some(client),
+        _ => None,
+    };
 
     let checks = items.iter().map(|item| async {
-        let facts = Facts::read(data, branch, item, &pending).await;
-        let Remote::Check(client) = remote else {
-            return (facts, None);
-        };
-        let Some(build) = build else {
-            return (facts, None);
-        };
-
-        let installed = facts.installed_revision();
-        let checked = match item.item_type {
-            MarketplaceItemType::Addon => {
-                check_addon(client, build, supports, item.id, installed).await
+        let installed = install::installed(game, item).await;
+        let checked = match (client, build) {
+            (Some(client), Some(build)) => {
+                let revision = installed.as_ref().map(|installed| installed.revision);
+                check(client, build, item, revision).await
             }
-            MarketplaceItemType::Script => Ok(Checked {
-                fits: true,
-                version: installed_version(client, item.id, installed, None).await,
-            }),
-            _ => return (facts, None),
+            _ => None,
         };
-        (facts, Some(checked))
+        (installed, checked)
     });
     let (checked, needs) = tokio::join!(join_all(checks), async {
-        match remote {
-            Remote::Check(client) => Some(needs(client, &items).await),
-            _ => None,
+        match client {
+            Some(client) => Some(needs(client, &items).await),
+            None => None,
         }
     });
 
@@ -393,23 +339,24 @@ pub async fn library(
         Remote::Failed(error) => Some(error.clone()),
         _ => None,
     };
+    let mut failed = |error: anyhow::Error| {
+        offline.get_or_insert_with(|| {
+            format!("unable to check the marketplace: {}", error_line(&error))
+        });
+    };
+
     let needs = match needs {
         Some(Ok(needs)) => needs,
         Some(Err(error)) => {
             warn!("Failed to look up marketplace dependencies: {:?}", error);
-            offline.get_or_insert_with(|| {
-                format!("unable to check the marketplace: {}", describe(&error))
-            });
+            failed(error);
             HashMap::new()
         }
         None => HashMap::new(),
     };
-    let kept: HashSet<_> = items
-        .iter()
-        .map(|item| item.id)
-        .filter(|id| !pending.removing.contains(id))
-        .collect();
 
+    let supports = build.is_none_or(supports_addons);
+    let liquidbounce = build.map_or("", |build| &build.lb_version);
     let mut library = Library {
         minecraft: build.map(|build| build.mc_version.clone()),
         liquidbounce: build.map(|build| build.lb_version.clone()),
@@ -420,7 +367,7 @@ pub async fn library(
         scripts: vec![],
     };
 
-    for (item, (facts, checked)) in items.iter().zip(checked) {
+    for (item, (installed, checked)) in items.iter().zip(checked) {
         let checked = match checked {
             Some(Ok(checked)) => Some(checked),
             Some(Err(error)) => {
@@ -428,49 +375,38 @@ pub async fn library(
                     "Failed to check marketplace item '{}': {:?}",
                     item.name, error
                 );
-                offline.get_or_insert_with(|| {
-                    format!("unable to check the marketplace: {}", describe(&error))
-                });
+                failed(error);
                 None
             }
             None => None,
         };
 
-        let needed_by = items
-            .iter()
-            .filter(|other| kept.contains(&other.id))
-            .filter(|other| {
-                needs
-                    .get(&other.id)
-                    .is_some_and(|needed| needed.iter().any(|needed| needed.id == item.id))
-            })
-            .map(|other| other.name.clone())
-            .collect();
-
         let fits = checked.as_ref().map(|checked| checked.fits);
         let version = match checked {
             Some(checked) => checked.version,
-            None => facts.installed.and_then(|installed| installed.version),
+            None => installed.and_then(|installed| installed.version),
         };
         let row = LibraryItem {
             id: item.id,
             name: item.name.clone(),
             version: version.map(|version| display_version(&version)),
-            not_for: (item.item_type == MarketplaceItemType::Addon)
+            not_for: (item.item_type == ItemType::Addon)
                 .then(|| not_for(supports, fits, liquidbounce))
                 .flatten(),
-            removed: facts.removing,
-            needed_by,
+            removed: queued.removing(item.id),
+            needed_by: dependents(&items, &needs, &queued, item.id)
+                .map(|other| other.name.clone())
+                .collect(),
         };
         match item.item_type {
-            MarketplaceItemType::Addon => library.addons.push(row),
-            MarketplaceItemType::Script => library.scripts.push(row),
+            ItemType::Addon => library.addons.push(row),
+            ItemType::Script => library.scripts.push(row),
             _ => library.themes.push(row),
         }
     }
 
     if !matches!(remote, Remote::Skip) {
-        let changes = pending.subscribing.len() + pending.removing.len();
+        let changes = queued.len();
         library.notice = match offline {
             Some(error) => Notice::Offline { error },
             None if changes > 0 => Notice::Restart { changes },
@@ -482,39 +418,38 @@ pub async fn library(
 
 pub async fn browse(
     client: &Client,
-    data: &Path,
-    branch: &str,
+    game: &GameDir,
     build: &Build,
-    item_type: MarketplaceItemType,
+    item_type: ItemType,
     query: Option<&str>,
 ) -> Result<Browse> {
     let type_name = match item_type {
-        MarketplaceItemType::Addon => "Addon",
-        MarketplaceItemType::Theme => "Theme",
-        MarketplaceItemType::Script => "Script",
+        ItemType::Addon => "Addon",
+        ItemType::Theme => "Theme",
+        ItemType::Script => "Script",
         other => bail!("{other:?} is not listed here"),
     };
-    let listed = client.marketplace_items(LISTED, query, type_name).await?;
+    let listed = api::items(client, type_name, query, LISTED).await?;
 
-    let pending = pending();
-    let subscribed: HashSet<_> = library_items(data, branch, &pending)
+    let queued = queued();
+    let subscribed: HashSet<_> = library_items(game, &queued)
         .await?
         .iter()
         .map(|item| item.id)
-        .filter(|id| !pending.removing.contains(id))
+        .filter(|id| !queued.removing(*id))
         .collect();
     let supports = supports_addons(build);
 
-    let fits = listed.items.iter().map(|item| async {
-        if item.item_type != MarketplaceItemType::Addon {
+    let fits = listed.iter().map(|item| async {
+        if item.item_type != ItemType::Addon {
             return None;
         }
         if !supports {
             return Some(BrowseFit::NoVersion);
         }
 
-        Some(match compatible_revisions(client, build, item.id).await {
-            Ok(compatible) => match compatible.first() {
+        Some(match api::revisions_for(client, item.id, build).await {
+            Ok(fitting) => match fitting.first() {
                 Some(target) => BrowseFit::Fits {
                     version: display_version(&target.version),
                     liquidbounce: target.liquidbounce.as_ref().map(range_label),
@@ -530,7 +465,6 @@ pub async fn browse(
     let fits = join_all(fits).await;
 
     let items = listed
-        .items
         .into_iter()
         .zip(fits)
         .map(|(item, fit)| BrowseItem {
@@ -553,41 +487,41 @@ pub async fn browse(
 
 pub async fn detail(
     client: &Client,
-    data: &Path,
-    branch: &str,
+    game: &GameDir,
     build: &Build,
     item_id: u32,
 ) -> Result<Detail> {
     let (item, revisions) = tokio::try_join!(
-        client.marketplace_item(item_id),
-        client.marketplace_revisions(item_id, VERSIONS),
+        api::item(client, item_id),
+        api::revisions(client, item_id, VERSIONS),
     )?;
-    let revisions = revisions.items;
     let is_addon = match item.item_type {
-        MarketplaceItemType::Addon => true,
-        MarketplaceItemType::Theme | MarketplaceItemType::Script => false,
+        ItemType::Addon => true,
+        ItemType::Theme | ItemType::Script => false,
         other => bail!("{other:?} is not shown here"),
     };
     // Theme versions are builds, so their dates name them.
-    let is_theme = item.item_type == MarketplaceItemType::Theme;
+    let is_theme = item.item_type == ItemType::Theme;
 
-    let pending = pending();
+    let queued = queued();
     let subscribed_item = SubscribedItem {
         name: item.name.clone(),
         id: item.id,
         item_type: item.item_type,
     };
-    let items = library_items(data, branch, &pending).await?;
+    let items = library_items(game, &queued).await?;
     let listed = items.iter().any(|subscribed| subscribed.id == item.id);
-    let needed_by = needed_by(client, &items, &pending, item.id).await;
-    let facts = Facts::read(data, branch, &subscribed_item, &pending).await;
-    let installed = facts.installed_revision().filter(|_| listed);
+    let needed_by = needed_by(client, &items, &queued, item.id).await;
+    let installed = install::installed(game, &subscribed_item)
+        .await
+        .map(|installed| installed.revision)
+        .filter(|_| listed);
 
     let fitting: Option<HashSet<_>> = if !is_addon {
         None
     } else if supports_addons(build) {
-        let compatible = compatible_revisions(client, build, item.id).await?;
-        Some(compatible.iter().map(|revision| revision.id).collect())
+        let fitting = api::revisions_for(client, item.id, build).await?;
+        Some(fitting.iter().map(|revision| revision.id).collect())
     } else {
         Some(HashSet::new())
     };
@@ -619,7 +553,7 @@ pub async fn detail(
         downloads: item.downloads,
         summary: summary(&item.description),
         preview: preview(&item.description),
-        subscribed: listed && !facts.removing,
+        subscribed: listed && !queued.removing(item.id),
         can_install,
         versions,
         needed_by,
@@ -631,12 +565,12 @@ pub async fn detail(
 async fn needed_by(
     client: &Client,
     items: &[SubscribedItem],
-    pending: &Pending,
+    queued: &Queued,
     item_id: u32,
 ) -> Vec<NeededBy> {
     let others: Vec<_> = items
         .iter()
-        .filter(|other| other.id != item_id && !pending.removing.contains(&other.id))
+        .filter(|other| other.id != item_id && !queued.removing(other.id))
         .cloned()
         .collect();
     let needs = match needs(client, &others).await {
@@ -647,25 +581,22 @@ async fn needed_by(
         }
     };
 
-    let dependents = others.into_iter().filter(|other| {
-        needs
-            .get(&other.id)
-            .is_some_and(|needed| needed.iter().any(|needed| needed.id == item_id))
-    });
-    join_all(dependents.map(|other| async move {
-        let author = match client.marketplace_item(other.id).await {
-            Ok(dependent) => dependent.author,
-            Err(error) => {
-                warn!("Failed to look up '{}': {:?}", other.name, error);
-                String::new()
+    join_all(
+        dependents(&others, &needs, queued, item_id).map(|other| async move {
+            let author = match api::item(client, other.id).await {
+                Ok(dependent) => dependent.author,
+                Err(error) => {
+                    warn!("Failed to look up '{}': {:?}", other.name, error);
+                    String::new()
+                }
+            };
+            NeededBy {
+                name: other.name.clone(),
+                item_type: other.item_type,
+                author,
             }
-        };
-        NeededBy {
-            name: other.name,
-            item_type: other.item_type,
-            author,
-        }
-    }))
+        }),
+    )
     .await
 }
 
@@ -766,42 +697,5 @@ mod tests {
             "The JavaScript Script API, packaged as an add-on."
         );
         assert_eq!(preview(heading), None);
-    }
-
-    #[test]
-    fn leaves_the_url_out_of_errors() {
-        let error = anyhow::anyhow!(
-            "error sending request for url (http://127.0.0.1:1/api/v3/marketplace?page=1)"
-        )
-        .context("unable to browse marketplace");
-        assert_eq!(
-            describe(&error),
-            "unable to browse marketplace: error sending request"
-        );
-    }
-
-    #[test]
-    fn reads_what_an_item_needs() {
-        // The shape of GET /api/v3/marketplace/{id}/dependencies.
-        let linked: Vec<crate::app::client_api::LinkedItem> =
-            serde_json::from_value(serde_json::json!([{
-                "item": {
-                    "id": 771,
-                    "uid": "d560440229a5a1d5",
-                    "type": "Addon",
-                    "name": "ScriptAPI",
-                    "branch": "nextgen",
-                    "description": "The JavaScript Script API for LiquidBounce.",
-                    "thumbnail_pid": null,
-                    "featured": false,
-                    "created_at": "2026-09-17T10:00:00",
-                    "status": "Active"
-                },
-                "author": "1zun4",
-                "live_revision": { "id": 4323, "item_id": 771, "version": "v1.0.0" }
-            }]))
-            .unwrap();
-        assert_eq!(linked[0].item.id, 771);
-        assert_eq!(linked[0].item.item_type, MarketplaceItemType::Addon);
     }
 }

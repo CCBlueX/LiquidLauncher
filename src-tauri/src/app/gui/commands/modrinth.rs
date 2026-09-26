@@ -20,10 +20,10 @@
 use tauri::State;
 use tracing::warn;
 
-use super::marketplace::selected_build;
+use super::{failed, search_query};
+use crate::app::builds;
 use crate::app::client_api::Client;
 use crate::app::gui::AppState;
-use crate::app::marketplace::view::describe;
 use crate::app::modrinth::{self, Held, ModrinthMod, SearchHit};
 use crate::app::options::Options;
 use crate::minecraft::prelauncher;
@@ -37,11 +37,8 @@ pub(crate) async fn modrinth_search(
     app_state: State<'_, AppState>,
 ) -> Result<Vec<SearchHit>, String> {
     async {
-        let build = selected_build(&client, &options, &app_state).await?;
-        let query = query
-            .as_deref()
-            .map(str::trim)
-            .filter(|query| !query.is_empty());
+        let build = builds::selected(&client, &options, &app_state.build).await?;
+        let query = search_query(&query);
         // A file the user added counts as installed once Modrinth knows it.
         let files = async {
             let dir = prelauncher::custom_mods_directory(
@@ -93,7 +90,7 @@ pub(crate) async fn modrinth_search(
         ))
     }
     .await
-    .map_err(|e| format!("unable to search Modrinth: {}", describe(&e)))
+    .map_err(failed("search Modrinth"))
 }
 
 /// The newest version of a project for the selected build, to install or to update to.
@@ -105,9 +102,9 @@ pub(crate) async fn modrinth_install(
     app_state: State<'_, AppState>,
 ) -> Result<ModrinthMod, String> {
     async {
-        let build = selected_build(&client, &options, &app_state).await?;
-        modrinth::resolve(&project_id, &build.mc_version, &build.subsystem).await
+        let build = builds::selected(&client, &options, &app_state.build).await?;
+        modrinth::newest(&project_id, &build.mc_version, &build.subsystem).await
     }
     .await
-    .map_err(|e| format!("unable to install from Modrinth: {}", describe(&e)))
+    .map_err(failed("install from Modrinth"))
 }
