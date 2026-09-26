@@ -39,7 +39,7 @@ use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     launcher::{LauncherData, StartParameter},
     prelauncher,
     progress::ProgressUpdate,
-}, HTTP_CLIENT, LAUNCHER_DIRECTORY};
+}, HTTP_CLIENT};
 
 #[tauri::command]
 pub(crate) async fn request_builds(client: Client, release: bool) -> Result<Vec<Build>, String> {
@@ -95,13 +95,15 @@ pub(crate) async fn request_mods(
 
 #[tauri::command]
 pub(crate) async fn get_custom_mods(
+    options: Options,
     branch: &str,
     mc_version: &str,
 ) -> Result<Vec<LoaderMod>, String> {
-    let data = LAUNCHER_DIRECTORY.data_dir();
-    let mod_cache_path = data
-        .join("custom_mods")
-        .join(format!("{}-{}", branch, mc_version));
+    let mod_cache_path = prelauncher::custom_mods_directory(
+        &options.start_options.data_directory(),
+        branch,
+        mc_version,
+    );
 
     if !mod_cache_path.exists() {
         return Ok(vec![]);
@@ -141,14 +143,16 @@ pub(crate) async fn get_custom_mods(
 
 #[tauri::command]
 pub(crate) async fn install_custom_mod(
+    options: Options,
     branch: &str,
     mc_version: &str,
     path: PathBuf,
 ) -> Result<(), String> {
-    let data = LAUNCHER_DIRECTORY.data_dir();
-    let mod_cache_path = data
-        .join("custom_mods")
-        .join(format!("{}-{}", branch, mc_version));
+    let mod_cache_path = prelauncher::custom_mods_directory(
+        &options.start_options.data_directory(),
+        branch,
+        mc_version,
+    );
 
     if !mod_cache_path.exists() {
         fs::create_dir_all(&mod_cache_path).await.unwrap();
@@ -168,14 +172,16 @@ pub(crate) async fn install_custom_mod(
 
 #[tauri::command]
 pub(crate) async fn delete_custom_mod(
+    options: Options,
     branch: &str,
     mc_version: &str,
     mod_name: &str,
 ) -> Result<(), String> {
-    let data = LAUNCHER_DIRECTORY.data_dir();
-    let mod_cache_path = data
-        .join("custom_mods")
-        .join(format!("{}-{}", branch, mc_version));
+    let mod_cache_path = prelauncher::custom_mods_directory(
+        &options.start_options.data_directory(),
+        branch,
+        mc_version,
+    );
 
     if !mod_cache_path.exists() {
         return Ok(());
