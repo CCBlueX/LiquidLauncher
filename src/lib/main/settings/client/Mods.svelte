@@ -88,6 +88,11 @@
         dispatch("updateMods");
     }
 
+    // Recommended mods load from a Maven repository, as `group:name:version`.
+    function recommendedLine(mod) {
+        return [mod.source.artifact?.split(":")[2], "Recommended"].filter(Boolean).join(" · ");
+    }
+
     function modKey(mod) {
         return `${mod.source.type}:${mod.name}`;
     }
@@ -106,20 +111,19 @@
                     disabled={mod.required}
                     removable={false}
                     on:change={() => dispatch("updateModStates")}
-            />
+            >
+                <svelte:fragment slot="line">{recommendedLine(mod)}</svelte:fragment>
+            </ModSetting>
         {/each}
         {#each versionState.customMods as mod (modKey(mod))}
             <ModSetting
                     title={mod.title}
                     bind:value={mod.enabled}
-                    lined={!!mod.modrinth}
                     on:change={() => dispatch("updateModStates")}
                     on:delete={() => remove(mod)}
             >
                 <svelte:fragment slot="line">
-                    {#if mod.modrinth}
-                        {mod.modrinth.version}{#if mod.modrinth.update}{" · "}<span class="strong">{mod.modrinth.update} available</span>{/if}
-                    {/if}
+                    {mod.version ?? "Unknown version"}{#if mod.modrinth?.update}{" · "}<span class="strong">{mod.modrinth.update} available</span>{/if}
                 </svelte:fragment>
                 <svelte:fragment slot="side">
                     {#if mod.modrinth?.update}

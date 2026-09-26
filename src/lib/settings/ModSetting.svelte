@@ -7,7 +7,6 @@
     export let disabled = false;
     /** Offers deleting the mod on hover. */
     export let removable = true;
-    export let lined = false;
 
     const dispatch = createEventDispatcher();
 </script>
@@ -15,9 +14,7 @@
 <div class="mod-setting">
     <div>
         <ToggleSetting bind:value={value} {title} {disabled} on:change />
-        {#if lined}
-            <div class="line"><slot name="line" /></div>
-        {/if}
+        <div class="line"><slot name="line" /></div>
     </div>
     <div class="side">
         {#if removable}

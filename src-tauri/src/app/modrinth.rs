@@ -24,6 +24,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+use async_zip::tokio::read::fs::ZipFileReader;
 use futures::future::join_all;
 use reqwest::{IntoUrl, Url};
 use serde::de::DeserializeOwned;
@@ -255,6 +256,8 @@ pub struct CustomMod {
     #[serde(flatten)]
     loader_mod: LoaderMod,
     title: String,
+    /// From Modrinth, or from a file's `fabric.mod.json`.
+    version: Option<String>,
     /// For a mod from Modrinth, and a file Modrinth knows.
     modrinth: Option<Tracked>,
 }
@@ -263,7 +266,6 @@ pub struct CustomMod {
 #[serde(rename_all = "camelCase")]
 pub struct Tracked {
     project_id: String,
-    version: String,
     /// The newer version Modrinth has, once it was asked.
     update: Option<String>,
 }
@@ -291,27 +293,40 @@ pub async fn custom_mods(
         .map(|installed| CustomMod {
             loader_mod: installed.loader_mod(enabled(&installed.slug)),
             title: installed.title.clone(),
+            version: Some(installed.version.clone()),
             modrinth: Some(Tracked {
                 project_id: installed.project_id.clone(),
-                version: installed.version.clone(),
                 update: None,
             }),
         })
         .collect();
 
     let files = jars(dir).await?;
-    mods.extend(files.iter().map(|file_name| {
+    let described = join_all(
+        files
+            .iter()
+            .map(|file_name| fabric_mod(dir.join(file_name))),
+    )
+    .await;
+    mods.extend(files.iter().zip(described).map(|(file_name, described)| {
         let name = file_name.trim_end_matches(".jar").to_owned();
+        let version = described
+            .as_ref()
+            .map(|described| described.version.clone());
+        let title = described
+            .and_then(|described| described.name)
+            .unwrap_or_else(|| name.clone());
         CustomMod {
             loader_mod: LoaderMod {
                 required: false,
                 enabled: enabled(&name),
-                name: name.clone(),
+                name,
                 source: ModSource::Local {
                     file_name: file_name.clone(),
                 },
             },
-            title: name,
+            title,
+            version,
             modrinth: None,
         }
     }));
@@ -337,8 +352,9 @@ pub async fn custom_mods(
             Ok(known) => {
                 let files = &mut mods[installed.len()..];
                 for (row, known) in files.iter_mut().zip(known) {
-                    if let Some((title, tracked)) = known {
+                    if let Some((title, version, tracked)) = known {
                         row.title = title;
+                        row.version = Some(version);
                         row.modrinth = Some(tracked);
                     }
                 }
@@ -348,6 +364,31 @@ pub async fn custom_mods(
     }
 
     Ok(mods)
+}
+
+#[derive(Deserialize)]
+struct FabricMod {
+    name: Option<String>,
+    version: String,
+}
+
+/// What a jar's `fabric.mod.json` says about it, if it has one.
+async fn fabric_mod(jar: PathBuf) -> Option<FabricMod> {
+    let zip = ZipFileReader::new(jar).await.ok()?;
+    let index = zip.file().entries().iter().position(|entry| {
+        entry
+            .filename()
+            .as_str()
+            .is_ok_and(|name| name == "fabric.mod.json")
+    })?;
+    let mut json = String::new();
+    zip.reader_with_entry(index)
+        .await
+        .ok()?
+        .read_to_string_checked(&mut json)
+        .await
+        .ok()?;
+    serde_json::from_str(&json).ok()
 }
 
 /// The jars in `dir`, by name.
@@ -418,7 +459,7 @@ async fn identify(
     files: &[String],
     minecraft: &str,
     loader: &str,
-) -> Result<Vec<Option<(String, Tracked)>>> {
+) -> Result<Vec<Option<(String, String, Tracked)>>> {
     let versions = versions(dir, files).await?;
     let ids: Vec<_> = versions
         .iter()
@@ -447,9 +488,9 @@ async fn identify(
             .flatten();
         Some((
             project.title.clone(),
+            version.version_number.clone(),
             Tracked {
                 project_id: project.id.clone(),
-                version: version.version_number.clone(),
                 update,
             },
         ))
@@ -566,9 +607,23 @@ mod tests {
         ));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        for name in ["keystrokes-1.4.0.jar", "Zoom.jar", "notes.txt"] {
+        for name in ["keystrokes-1.4.0.jar", "notes.txt"] {
             std::fs::write(dir.join(name), b"").unwrap();
         }
+        let mut zoom = async_zip::base::write::ZipFileWriter::with_tokio(
+            tokio::fs::File::create(dir.join("Zoom.jar")).await.unwrap(),
+        );
+        let entry = async_zip::ZipEntryBuilder::new(
+            "fabric.mod.json".to_owned().into(),
+            async_zip::Compression::Deflate,
+        );
+        zoom.write_entry_whole(
+            entry,
+            br#"{ "id": "zoomify", "name": "Zoomify", "version": "2.16.3" }"#,
+        )
+        .await
+        .unwrap();
+        zoom.close().await.unwrap();
 
         let installed = [ModrinthMod {
             project_id: "NNAgCjsB".to_owned(),
@@ -584,16 +639,20 @@ mod tests {
 
         let rows: Vec<_> = mods
             .iter()
-            .map(|row| (row.title.as_str(), row.loader_mod.enabled))
+            .map(|row| {
+                let version = row.version.as_deref();
+                (row.title.as_str(), version, row.loader_mod.enabled)
+            })
             .collect();
         assert_eq!(
             rows,
             [
-                ("Entity Culling", true),
-                ("keystrokes-1.4.0", false),
-                ("Zoom", true)
+                ("Entity Culling", Some("1.11.1"), true),
+                ("keystrokes-1.4.0", None, false),
+                ("Zoomify", Some("2.16.3"), true)
             ]
         );
+        assert_eq!(mods[2].loader_mod.name, "Zoom");
         assert!(mods[0].modrinth.as_ref().unwrap().update.is_none());
 
         std::fs::remove_dir_all(&dir).unwrap();
