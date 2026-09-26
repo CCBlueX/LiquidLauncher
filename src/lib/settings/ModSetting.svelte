@@ -4,28 +4,33 @@
 
     export let value;
     export let title;
+    export let disabled = false;
+    /** Offers deleting the mod on hover. */
+    export let removable = true;
     export let lined = false;
 
     const dispatch = createEventDispatcher();
 </script>
 
-<div class="custom-mod-setting">
+<div class="mod-setting">
     <div>
-        <ToggleSetting bind:value={value} {title} disabled={false} on:change />
+        <ToggleSetting bind:value={value} {title} {disabled} on:change />
         {#if lined}
             <div class="line"><slot name="line" /></div>
         {/if}
     </div>
     <div class="side">
-        <button class="button-delete" on:click={() => dispatch("delete", { name: title })}>
-            <img src="img/icon/icon-button-close.svg" alt="delete" title="Remove mod">
-        </button>
+        {#if removable}
+            <button class="button-delete" on:click={() => dispatch("delete", { name: title })}>
+                <img src="img/icon/icon-button-close.svg" alt="delete" title="Remove mod">
+            </button>
+        {/if}
         <slot name="side" />
     </div>
 </div>
 
 <style>
-    .custom-mod-setting {
+    .mod-setting {
         display: grid;
         grid-template-columns: minmax(0, 1fr) max-content;
         gap: 5px;
@@ -60,7 +65,7 @@
         transition: ease opacity .2s;
     }
 
-    .custom-mod-setting:hover .button-delete {
+    .mod-setting:hover .button-delete {
         opacity: 1;
     }
 

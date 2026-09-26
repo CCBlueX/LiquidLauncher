@@ -150,7 +150,7 @@
 {:else if view.name === "builds"}
     <Builds {client} {options} on:back={() => show({ name: "list" })} on:select={e => selectBuild(e.detail)} on:updateData />
 {:else if view.name === "modrinth"}
-    <Modrinth {client} {options} {versionState} on:back={() => show({ name: "list" })} on:updateMods on:updateModStates />
+    <Modrinth {client} {options} {versionState} on:back={() => show({ name: "list" })} on:updateMods />
 {:else if view.name === "browse"}
     <Browse
             {client}

@@ -28,7 +28,7 @@ use crate::app::modrinth::{self, Held, ModrinthMod, SearchHit};
 use crate::app::options::Options;
 use crate::minecraft::prelauncher;
 
-/// Modrinth mods for the selected build, each with what installing it would do.
+/// Modrinth mods for the selected build that it does not come with, and whether each is installed.
 #[tauri::command]
 pub(crate) async fn modrinth_search(
     client: Client,
@@ -53,28 +53,17 @@ pub(crate) async fn modrinth_search(
                     .unwrap_or_default(),
             )
         };
-        let (hits, manifest, mut recommended, mut installed) = tokio::try_join!(
+        let (hits, manifest, recommended, mut installed) = tokio::try_join!(
             modrinth::search(query, &build.mc_version, &build.subsystem),
             client.fetch_launch_manifest(build.build_id),
             client.fetch_mods(&build.mc_version, &build.subsystem),
             files,
         )?;
 
-        let branch = options
-            .version_options
-            .options
-            .get(&build.branch)
-            .cloned()
-            .unwrap_or_default();
-        for recommended in &mut recommended {
-            if let Some(enabled) = branch.mod_states.get(&recommended.name) {
-                recommended.enabled = *enabled;
-            }
-        }
+        let branch = options.version_options.options.get(&build.branch);
         installed.extend(
             branch
-                .modrinth_mods
-                .get(&build.mc_version)
+                .and_then(|branch| branch.modrinth_mods.get(&build.mc_version))
                 .into_iter()
                 .flatten()
                 .map(|installed| installed.project_id.clone()),

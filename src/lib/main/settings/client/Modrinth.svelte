@@ -14,7 +14,6 @@
 
     const dispatch = createEventDispatcher();
     const build = versionState.currentBuild;
-    const states = { included: "Included", installed: "Installed" };
 
     let view;
     let query = "";
@@ -25,15 +24,9 @@
     async function install(hit) {
         busy = new Set(busy).add(hit.projectId);
         try {
-            if (hit.state.kind === "recommended") {
-                const recommended = versionState.recommendedMods.find(mod => mod.name === hit.state.name);
-                recommended.enabled = true;
-                dispatch("updateModStates");
-            } else {
-                const entry = await invoke("modrinth_install", { client, options, projectId: hit.projectId });
-                await track(options, build, entry);
-                dispatch("updateMods");
-            }
+            const entry = await invoke("modrinth_install", { client, options, projectId: hit.projectId });
+            await track(options, build, entry);
+            dispatch("updateMods");
         } catch (e) {
             console.error("Failed to install:", e);
             alert(`${e}`);
@@ -57,10 +50,10 @@
     <svelte:fragment slot="aside">{capitalize(build.subsystem)} {build.mcVersion}</svelte:fragment>
 
     {#each hits as hit (hit.projectId)}
-        <ItemRow name={hit.title} description={hit.description} openable={false} status={states[hit.state.kind]}>
+        <ItemRow name={hit.title} description={hit.description} openable={false} status={hit.installed ? "Installed" : null}>
             by {hit.author} &middot; {count(hit.downloads, "download", "downloads")}
             <svelte:fragment slot="side">
-                {#if !states[hit.state.kind]}
+                {#if !hit.installed}
                     <ButtonSetting
                             small
                             text={busy.has(hit.projectId) ? "Installing" : "Install"}

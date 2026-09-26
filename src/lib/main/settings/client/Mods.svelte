@@ -2,9 +2,8 @@
     import { createEventDispatcher } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
     import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
-    import ToggleSetting from "../../../settings/ToggleSetting.svelte";
     import SettingWrapper from "../../../settings/SettingWrapper.svelte";
-    import CustomModSetting from "../../../settings/CustomModSetting.svelte";
+    import ModSetting from "../../../settings/ModSetting.svelte";
     import IconButtonSetting from "../../../settings/IconButtonSetting.svelte";
     import ButtonSetting from "../../../settings/ButtonSetting.svelte";
     import { capitalize } from "./copy.js";
@@ -94,25 +93,23 @@
     }
 </script>
 
-<SettingWrapper title="Recommended mods" unbounded>
-    {#each versionState.recommendedMods as mod}
-        <ToggleSetting
-                title={mod.name}
-                bind:value={mod.enabled}
-                disabled={mod.required}
-                on:change={() => dispatch("updateModStates")}
-        />
-    {/each}
-</SettingWrapper>
-
 {#if build}
-    <SettingWrapper title="Additional mods - {capitalize(build.subsystem)} {build.mcVersion}" unbounded>
+    <SettingWrapper title="Mods - {capitalize(build.subsystem)} {build.mcVersion}" unbounded>
         <div slot="title-element" class="actions">
             <IconButtonSetting text="Add file" icon="icon-plus" on:click={addFile} />
             <IconButtonSetting text="Browse" icon="icon-plus" on:click={() => dispatch("browse")} />
         </div>
+        {#each versionState.recommendedMods as mod}
+            <ModSetting
+                    title={mod.name}
+                    bind:value={mod.enabled}
+                    disabled={mod.required}
+                    removable={false}
+                    on:change={() => dispatch("updateModStates")}
+            />
+        {/each}
         {#each versionState.customMods as mod (modKey(mod))}
-            <CustomModSetting
+            <ModSetting
                     title={mod.title}
                     bind:value={mod.enabled}
                     lined={!!mod.modrinth}
@@ -134,9 +131,7 @@
                         />
                     {/if}
                 </svelte:fragment>
-            </CustomModSetting>
-        {:else}
-            <div class="empty">No additional mods yet.</div>
+            </ModSetting>
         {/each}
     </SettingWrapper>
 {/if}
@@ -149,10 +144,5 @@
 
     .strong {
         color: white;
-    }
-
-    .empty {
-        font-size: 12px;
-        color: rgba(255, 255, 255, .5);
     }
 </style>

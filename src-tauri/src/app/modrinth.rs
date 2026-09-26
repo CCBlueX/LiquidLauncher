@@ -190,23 +190,10 @@ fn loader_name(loader: &str) -> String {
 pub struct Held<'a> {
     /// The mods of the build's launch manifest.
     pub launched: &'a [LoaderMod],
-    /// The recommended mods, turned on or off as the options have them.
+    /// The recommended mods, which the mods list shows already.
     pub recommended: &'a [LoaderMod],
     /// The projects installed from Modrinth or from files Modrinth knows.
     pub installed: &'a HashSet<String>,
-}
-
-#[derive(Serialize, Debug, PartialEq, Eq)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum HitState {
-    /// The build launches it.
-    Included,
-    Installed,
-    /// A recommended mod that is turned off. Installing turns it on.
-    Recommended {
-        name: String,
-    },
-    Available,
 }
 
 #[derive(Serialize)]
@@ -217,13 +204,16 @@ pub struct SearchHit {
     description: String,
     author: String,
     downloads: u64,
-    state: HitState,
+    installed: bool,
 }
 
+/// The hits the game does not come with, and whether each is installed. The build's own mods and
+/// the recommended ones are left out, the mods list has them already.
 pub fn tell(hits: Vec<Hit>, held: &Held) -> Vec<SearchHit> {
     hits.into_iter()
+        .filter(|hit| !comes_with_game(hit, held))
         .map(|hit| SearchHit {
-            state: state(&hit, held),
+            installed: held.installed.contains(&hit.project_id),
             project_id: hit.project_id,
             title: hit.title,
             description: hit.description,
@@ -242,33 +232,20 @@ fn artifact(loader_mod: &LoaderMod) -> Option<(&str, &str)> {
     Some((parts.next()?, parts.next()?))
 }
 
-fn state(hit: &Hit, held: &Held) -> HitState {
+fn comes_with_game(hit: &Hit, held: &Held) -> bool {
     // Modrinth's Maven takes a project by id or slug; other repositories name Fabric Kotlin like
     // its slug does.
     let is_hit = |name: &str| name == hit.project_id || name.eq_ignore_ascii_case(&hit.slug);
 
-    if held
-        .launched
+    held.launched
         .iter()
         .filter_map(artifact)
         .any(|(_, name)| is_hit(name))
-    {
-        return HitState::Included;
-    }
-    if held.installed.contains(&hit.project_id) {
-        return HitState::Installed;
-    }
-
-    let recommended = held.recommended.iter().find(|recommended| {
-        artifact(recommended).is_some_and(|(group, name)| group == GROUP && is_hit(name))
-    });
-    match recommended {
-        Some(recommended) if recommended.required || recommended.enabled => HitState::Installed,
-        Some(recommended) => HitState::Recommended {
-            name: recommended.name.clone(),
-        },
-        None => HitState::Available,
-    }
+        || held
+            .recommended
+            .iter()
+            .filter_map(artifact)
+            .any(|(group, name)| group == GROUP && is_hit(name))
 }
 
 /// A mod added to the game, from a file or from Modrinth. Launching takes it as a [LoaderMod].
@@ -508,7 +485,7 @@ mod tests {
     }
 
     #[test]
-    fn tells_what_the_game_holds() {
+    fn leaves_out_what_the_game_comes_with() {
         // Build 16941 launches these, the recommended mods for 26.2 name their projects so.
         let launched = [
             loader_mod("Fabric API", "maven.modrinth:fabric-api:0.153.0+26.2", true),
@@ -540,7 +517,7 @@ mod tests {
             installed: &installed,
         };
 
-        let states: Vec<_> = [
+        let hits = vec![
             hit("P7dR8mSH", "fabric-api"),
             hit("Ha28R6CL", "fabric-language-kotlin"),
             hit("AANobbMI", "sodium"),
@@ -549,23 +526,17 @@ mod tests {
             hit("NNAgCjsB", "entityculling"),
             hit("fQEb0iXm", "krypton"),
             hit("baritone", "baritone"),
-        ]
-        .iter()
-        .map(|hit| state(hit, &held))
-        .collect();
+        ];
+        let told: Vec<_> = tell(hits, &held)
+            .into_iter()
+            .map(|hit| (hit.project_id, hit.installed))
+            .collect();
         assert_eq!(
-            states,
+            told,
             [
-                HitState::Included,
-                HitState::Included,
-                HitState::Installed,
-                HitState::Installed,
-                HitState::Recommended {
-                    name: "Iris".to_owned()
-                },
-                HitState::Installed,
-                HitState::Available,
-                HitState::Available,
+                ("NNAgCjsB".to_owned(), true),
+                ("fQEb0iXm".to_owned(), false),
+                ("baritone".to_owned(), false),
             ]
         );
     }
