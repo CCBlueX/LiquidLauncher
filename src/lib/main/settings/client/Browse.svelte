@@ -4,7 +4,7 @@
     import ButtonSetting from "../../../settings/ButtonSetting.svelte";
     import ItemRow from "./ItemRow.svelte";
     import Message from "./Message.svelte";
-    import SearchView from "./SearchView.svelte";
+    import ListView from "./ListView.svelte";
     import { browseLine, itemTypes } from "./copy.js";
 
     export let client;
@@ -18,7 +18,7 @@
     let view;
     let busy = null;
 
-    const search = query => invoke("browse_marketplace", { client, options, itemType: type, query });
+    const request = query => invoke("browse_marketplace", { client, options, itemType: type, query });
 
     async function install(item) {
         busy = item.id;
@@ -33,13 +33,13 @@
     }
 </script>
 
-<SearchView
+<ListView
         bind:this={view}
         bind:query
         placeholder="Search {plural}"
         {title}
         failure="Could not reach the marketplace."
-        {search}
+        {request}
         on:back
         let:result
 >
@@ -74,4 +74,4 @@
                 on:clear={() => query = ""}
         />
     {/each}
-</SearchView>
+</ListView>

@@ -4,7 +4,7 @@
     import ButtonSetting from "../../../settings/ButtonSetting.svelte";
     import ItemRow from "./ItemRow.svelte";
     import Message from "./Message.svelte";
-    import SearchView from "./SearchView.svelte";
+    import ListView from "./ListView.svelte";
     import { capitalize, count } from "./copy.js";
     import { track } from "./modrinth.js";
 
@@ -20,7 +20,7 @@
     let query = "";
     let busy = new Set();
 
-    const search = query => invoke("modrinth_search", { client, options, query });
+    const request = query => invoke("modrinth_search", { client, options, query });
 
     async function install(hit) {
         busy = new Set(busy).add(hit.projectId);
@@ -44,13 +44,13 @@
     }
 </script>
 
-<SearchView
+<ListView
         bind:this={view}
         bind:query
         placeholder="Search Modrinth mods"
         title="Modrinth"
         failure="Could not reach Modrinth."
-        {search}
+        {request}
         on:back
         let:result={hits}
 >
@@ -75,4 +75,4 @@
             <Message title="No mods match “{query.trim()}”." clearable on:clear={() => query = ""} />
         {/if}
     {/each}
-</SearchView>
+</ListView>

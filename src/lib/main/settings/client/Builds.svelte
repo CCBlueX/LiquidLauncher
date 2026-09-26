@@ -4,8 +4,7 @@
     import ButtonSetting from "../../../settings/ButtonSetting.svelte";
     import ToggleSetting from "../../../settings/ToggleSetting.svelte";
     import ItemRow from "./ItemRow.svelte";
-    import Message from "./Message.svelte";
-    import SearchView from "./SearchView.svelte";
+    import ListView from "./ListView.svelte";
     import { count } from "./copy.js";
 
     export let client;
@@ -14,17 +13,16 @@
     const dispatch = createEventDispatcher();
 
     let view;
-    let query = "";
     let result = null;
     let loadingMore = false;
 
-    const search = query => invoke("request_build_page", { client, options, query, page: 1 });
+    const request = () => invoke("request_build_page", { client, options, page: 1 });
 
     async function more() {
         const shown = result;
         loadingMore = true;
         try {
-            const page = await invoke("request_build_page", { client, options, query, page: shown.page + 1 });
+            const page = await invoke("request_build_page", { client, options, page: shown.page + 1 });
             if (result === shown) result = { ...page, builds: [...shown.builds, ...page.builds] };
         } catch (e) {
             console.error("Failed to request builds:", e);
@@ -40,14 +38,12 @@
     }
 </script>
 
-<SearchView
+<ListView
         bind:this={view}
-        bind:query
         bind:result
-        placeholder="Search builds"
         title="Builds"
         failure="Could not reach the LiquidBounce API."
-        {search}
+        {request}
         on:back
 >
     <ToggleSetting
@@ -73,17 +69,13 @@
         >
             {build.date} &middot; {build.commit}
         </ItemRow>
-    {:else}
-        {#if query.trim()}
-            <Message title="No builds match “{query.trim()}”." clearable on:clear={() => query = ""} />
-        {/if}
     {/each}
     {#if result.page < result.pages}
         <div class="more">
             <ButtonSetting small text={loadingMore ? "Loading" : "Show more"} disabled={loadingMore} on:click={more} />
         </div>
     {/if}
-</SearchView>
+</ListView>
 
 <style>
     .more {

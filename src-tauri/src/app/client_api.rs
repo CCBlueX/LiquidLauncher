@@ -159,20 +159,16 @@ impl Client {
         self.request_from_endpoint(API_V3, &format!("blog?page={}", page)).await
     }
 
-    /// A page of builds, newest first: releases, or every build with `nightly`. `query` searches
-    /// commit messages and ids.
+    /// A page of builds, newest first: releases, or every build with `nightly`.
     pub async fn build_page(
         &self,
         page: u32,
         limit: u32,
-        query: Option<&str>,
         nightly: bool,
     ) -> Result<PaginatedResponse<Build>> {
+        let endpoint = format!("version/{}/builds", CLIENT_BRANCH);
         let (page, limit, nightly) = (page.to_string(), limit.to_string(), nightly.to_string());
-        let mut params = vec![("page", page.as_str()), ("limit", &limit), ("nightly", &nightly)];
-        params.extend(query.map(|query| ("q", query)));
-
-        self.request(API_V3, &format!("version/{}/builds", CLIENT_BRANCH), &params)
+        self.request(API_V3, &endpoint, &[("page", &page), ("limit", &limit), ("nightly", &nightly)])
             .await
     }
 

@@ -37,7 +37,7 @@ async fn fetch(client: &Client, build_id: i32, nightly: bool) -> Result<Build> {
     match u32::try_from(build_id) {
         Ok(build_id) => client.build(build_id).await,
         Err(_) => client
-            .build_page(1, 1, None, nightly)
+            .build_page(1, 1, nightly)
             .await?
             .items
             .into_iter()
@@ -161,14 +161,8 @@ pub struct BuildPage {
 }
 
 /// One page of the builds, newest first. `selected` is the chosen build id, `-1` for the latest.
-pub async fn page(
-    client: &Client,
-    page: u32,
-    query: Option<&str>,
-    nightly: bool,
-    selected: i32,
-) -> Result<BuildPage> {
-    let response = client.build_page(page, PAGE_SIZE, query, nightly).await?;
+pub async fn page(client: &Client, page: u32, nightly: bool, selected: i32) -> Result<BuildPage> {
+    let response = client.build_page(page, PAGE_SIZE, nightly).await?;
     let builds = response
         .items
         .iter()

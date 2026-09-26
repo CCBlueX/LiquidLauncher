@@ -31,7 +31,7 @@ use tokio::fs;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
-use super::{failed, search_query};
+use super::failed;
 use crate::app::builds::{self, BuildPage};
 use crate::app::client_api::{BlogPost, Build, Changelog, Client, PaginatedResponse};
 use crate::app::client_api::LoaderMod;
@@ -81,13 +81,11 @@ pub(crate) async fn request_build(
 pub(crate) async fn request_build_page(
     client: Client,
     options: Options,
-    query: Option<String>,
     page: u32,
 ) -> Result<BuildPage, String> {
     builds::page(
         &client,
         page,
-        search_query(&query),
         options.launcher_options.show_nightly_builds,
         options.version_options.build_id,
     )

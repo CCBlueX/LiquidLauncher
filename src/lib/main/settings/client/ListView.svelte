@@ -7,38 +7,39 @@
     import RippleLoader from "../../../common/RippleLoader.svelte";
     import Message from "./Message.svelte";
 
-    export let placeholder;
     export let title;
-    /** What the error says when `search` fails. */
+    /** What the error says when `request` fails. */
     export let failure;
-    /** Searches for a query; searching again after typing waits for a pause. */
-    export let search;
+    /** Requests the list, for `query` with a search. Typing requests it again after a pause. */
+    export let request;
+    /** Adds a search field. */
+    export let placeholder = null;
     export let query = "";
     export let result = null;
 
     const dispatch = createEventDispatcher();
 
     let error = null;
-    let request = 0;
+    let latest = 0;
     let timer;
 
-    /** Searches again. `quiet` keeps the result shown until the new one is in. */
+    /** Requests again. `quiet` keeps the result shown until the new one is in. */
     export async function load(quiet = false) {
-        const current = ++request;
+        const current = ++latest;
         if (!quiet) {
             result = null;
             error = null;
         }
 
         try {
-            const found = await search(query);
-            if (current === request) {
+            const found = await request(query);
+            if (current === latest) {
                 result = found;
                 error = null;
             }
         } catch (e) {
             console.error(`${failure}`, e);
-            if (current === request) error = `${e}`;
+            if (current === latest) error = `${e}`;
         }
     }
 
@@ -57,7 +58,9 @@
     <div class="back">
         <IconButtonSetting text="Back" icon="icon-prev" on:click={() => dispatch("back")} />
     </div>
-    <TextSetting {placeholder} bind:value={query} on:keydown={e => e.key === "Escape" && (query = "")} />
+    {#if placeholder}
+        <TextSetting {placeholder} bind:value={query} on:keydown={e => e.key === "Escape" && (query = "")} />
+    {/if}
     <slot name="controls" />
 </div>
 
