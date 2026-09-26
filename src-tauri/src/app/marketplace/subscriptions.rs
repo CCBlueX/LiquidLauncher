@@ -157,7 +157,8 @@ mod tests {
 
     #[tokio::test]
     async fn concurrent_edits_all_land() {
-        let game = GameDir::new(scratch("concurrent"), "nextgen");
+        let data = scratch("concurrent");
+        let game = GameDir::new(&data, "nextgen");
         let subscribed: Vec<_> = (1..=8)
             .map(|id| json!({ "name": format!("Theme {id}"), "id": id, "type": "Theme" }))
             .collect();
@@ -174,12 +175,13 @@ mod tests {
             .unwrap();
         assert!(read(&game).await.unwrap().is_empty());
 
-        std::fs::remove_dir_all(game.data()).unwrap();
+        std::fs::remove_dir_all(&data).unwrap();
     }
 
     #[tokio::test]
     async fn edits_keep_unknown_types_fields_and_entries() {
-        let game = GameDir::new(scratch("subscriptions"), "nextgen");
+        let data = scratch("subscriptions");
+        let game = GameDir::new(&data, "nextgen");
 
         let history = json!({ "name": "history", "value": [1, 2] });
         let script = json!({
@@ -233,6 +235,6 @@ mod tests {
             ]
         );
 
-        std::fs::remove_dir_all(game.data()).unwrap();
+        std::fs::remove_dir_all(&data).unwrap();
     }
 }

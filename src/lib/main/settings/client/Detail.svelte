@@ -5,11 +5,10 @@
     import SettingWrapper from "../../../settings/SettingWrapper.svelte";
     import IconButtonSetting from "../../../settings/IconButtonSetting.svelte";
     import ButtonSetting from "../../../settings/ButtonSetting.svelte";
-    import SmallButtonSetting from "../../../settings/SmallButtonSetting.svelte";
     import RippleLoader from "../../../common/RippleLoader.svelte";
     import ItemRow from "./ItemRow.svelte";
     import Message from "./Message.svelte";
-    import { count, itemTypes, neededByLine, removeQuestion, versionTag } from "./copy.js";
+    import { count, itemTypes, neededByLine, removeQuestion } from "./copy.js";
 
     export let client;
     export let options;
@@ -102,7 +101,6 @@
     {#if !detail.subscribed}
         <ButtonSetting
                 text={busy ? "Installing" : "Install"}
-                color="#4677FF"
                 disabled={busy || !detail.canInstall}
                 on:click={install}
         />
@@ -111,13 +109,12 @@
     {#if detail.versions.length > 0}
         <SettingWrapper title="Versions" unbounded>
             <div class="versions">
-                {#each detail.versions as version}
-                    {@const tag = versionTag(version.tag)}
-                    <span class="version" class:dim={tag?.dim}>{version.label}</span>
-                    <span class="muted">{version.liquidbounce ?? ""}</span>
-                    <span class="muted">{version.date ?? ""}</span>
-                    <span class="tag" class:strong={tag?.strong}>
-                        {tag?.text ?? ""}
+                {#each detail.versions as { label, liquidbounce, date, tag }}
+                    <span class="version" class:dim={tag?.kind === "notFor"}>{label}</span>
+                    <span class="muted">{liquidbounce ?? ""}</span>
+                    <span class="muted">{date ?? ""}</span>
+                    <span class="tag" class:strong={tag?.kind === "installed"}>
+                        {#if tag?.kind === "installed"}Installed{:else if tag?.kind === "notFor"}Not for {tag.liquidbounce}{/if}
                     </span>
                 {/each}
             </div>
@@ -133,7 +130,7 @@
     {/if}
 {:else if error}
     <Message title="Could not reach the marketplace." note={error}>
-        <SmallButtonSetting text="Try again" on:click={load} />
+        <ButtonSetting small text="Try again" on:click={load} />
     </Message>
 {:else}
     <Message>

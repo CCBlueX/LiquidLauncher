@@ -30,7 +30,7 @@ mod subscriptions;
 pub mod view;
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex, MutexGuard};
 
 use anyhow::Result;
@@ -73,10 +73,6 @@ impl GameDir {
             data: data.into(),
             branch: branch.into(),
         }
-    }
-
-    fn data(&self) -> &Path {
-        &self.data
     }
 
     fn mods(&self) -> PathBuf {

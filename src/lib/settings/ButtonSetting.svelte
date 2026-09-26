@@ -2,13 +2,15 @@
     import { createEventDispatcher } from "svelte";
 
     export let text;
-    export let color;
+    export let color = "#4677FF";
     export let disabled = false;
+    /** Sized like the news "Read more" button, to sit inside a row. */
+    export let small = false;
 
     const dispatch = createEventDispatcher();
 </script>
 
-<button {disabled} class="button" type="button" on:click={e => dispatch("click", e)} style="background-color: {color};">{text}</button>
+<button {disabled} class="button" class:small type="button" on:click={e => dispatch("click", e)} style="background-color: {color};">{text}</button>
 
 <style>
     .button {
@@ -21,6 +23,14 @@
         cursor: pointer;
         border: none;
         font-weight: 600;
+    }
+
+    .button.small {
+        font-size: 12px;
+        font-weight: normal;
+        border-radius: 4px;
+        height: 30px;
+        padding: 0 10px;
     }
 
     .button:hover {

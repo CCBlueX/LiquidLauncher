@@ -6,6 +6,8 @@
     export let removable = false;
     export let dim = false;
     export let openable = true;
+    /** Shown in place of an action, like "Installed". */
+    export let status = null;
 
     const dispatch = createEventDispatcher();
 </script>
@@ -24,6 +26,9 @@
                     on:click={() => dispatch("remove")}>
                 <img src="img/icon/icon-button-close.svg" alt="">
             </button>
+        {/if}
+        {#if status}
+            <span class="status">{status}</span>
         {/if}
         <slot name="side" />
     </div>
@@ -103,6 +108,12 @@
         gap: 10px;
         position: relative;
         z-index: 1;
+    }
+
+    .status {
+        font-size: 12px;
+        color: white;
+        white-space: nowrap;
     }
 
     .remove {
