@@ -122,6 +122,7 @@
                 subsystem: versionState.currentBuild.subsystem
             }),
             invoke("get_custom_mods", {
+                options,
                 branch: versionState.currentBuild.branch,
                 mcVersion: versionState.currentBuild.mcVersion
             })
@@ -321,6 +322,8 @@
             on:hide={async () => {
                 settingsShown = false;
                 await options.store();
+                // The data location may have changed, which has its own custom mods
+                await updateMods();
             }}
     />
 {/if}

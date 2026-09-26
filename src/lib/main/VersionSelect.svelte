@@ -22,6 +22,7 @@
     async function deleteMod(event) {
         try {
             await invoke("delete_custom_mod", {
+                options,
                 branch: versionState.currentBuild.branch,
                 mcVersion: versionState.currentBuild.mcVersion,
                 modName: `${event.detail.name}.jar`
@@ -45,6 +46,7 @@
             if (selected) {
                 for (const file of selected) {
                     await invoke("install_custom_mod", {
+                        options,
                         branch: versionState.currentBuild.branch,
                         mcVersion: versionState.currentBuild.mcVersion,
                         path: file

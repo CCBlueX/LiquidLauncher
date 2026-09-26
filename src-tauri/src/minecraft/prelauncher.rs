@@ -17,7 +17,7 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
 use async_zip::base::read::mem::ZipFileReader;
@@ -192,6 +192,11 @@ pub(crate) async fn clear_mods(data: &Path, manifest: &LaunchManifest) -> Result
     Ok(())
 }
 
+/// Where the custom mods of a branch and Minecraft version are kept.
+pub fn custom_mods_directory(data: &Path, branch: &str, mc_version: &str) -> PathBuf {
+    data.join("custom_mods").join(format!("{}-{}", branch, mc_version))
+}
+
 pub async fn retrieve_and_copy_mods(
     data: &Path,
     manifest: &LaunchManifest,
@@ -201,10 +206,8 @@ pub async fn retrieve_and_copy_mods(
     launcher_data: &LauncherData<ShareableWindow>,
 ) -> Result<()> {
     let mod_cache_path = data.join("mod_cache");
-    let mod_custom_path = data.join("custom_mods").join(format!(
-        "{}-{}",
-        manifest.build.branch, manifest.build.mc_version
-    ));
+    let mod_custom_path =
+        custom_mods_directory(data, &manifest.build.branch, &manifest.build.mc_version);
     let mods_path = data
         .join("gameDir")
         .join(&manifest.build.branch)
