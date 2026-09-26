@@ -41,13 +41,7 @@ pub(crate) async fn store_options(options: Options) -> Result<(), String> {
 
 #[tauri::command]
 pub(crate) async fn clear_data(options: Options) -> Result<(), String> {
-    let data_directory = if !options.start_options.custom_data_path.is_empty() {
-        Some(options.start_options.custom_data_path)
-    } else {
-        None
-    }
-        .map(|x| x.into())
-        .unwrap_or_else(|| LAUNCHER_DIRECTORY.data_dir().to_path_buf());
+    let data_directory = options.start_options.data_directory();
 
     [
         "assets",

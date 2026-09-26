@@ -20,13 +20,13 @@
 use tauri::State;
 use tracing::warn;
 
-use super::client::custom_mods_dir;
 use super::marketplace::selected_build;
 use crate::app::client_api::Client;
 use crate::app::gui::AppState;
 use crate::app::marketplace::view::describe;
 use crate::app::modrinth::{self, Held, ModrinthMod, SearchHit};
 use crate::app::options::Options;
+use crate::minecraft::prelauncher;
 
 /// Modrinth mods for the selected build, each with what installing it would do.
 #[tauri::command]
@@ -44,7 +44,11 @@ pub(crate) async fn modrinth_search(
             .filter(|query| !query.is_empty());
         // A file the user added counts as installed once Modrinth knows it.
         let files = async {
-            let dir = custom_mods_dir(&build.branch, &build.mc_version);
+            let dir = prelauncher::custom_mods_directory(
+                &options.start_options.data_directory(),
+                &build.branch,
+                &build.mc_version,
+            );
             anyhow::Ok(
                 modrinth::file_projects(&dir)
                     .await

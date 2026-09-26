@@ -44,7 +44,7 @@ use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     launcher::{LauncherData, StartParameter},
     prelauncher,
     progress::ProgressUpdate,
-}, HTTP_CLIENT, LAUNCHER_DIRECTORY};
+}, HTTP_CLIENT};
 
 /// The build selected to launch, or `None` when the chosen one is gone.
 #[tauri::command]
@@ -139,13 +139,6 @@ pub(crate) async fn request_mods(
     Ok(mods)
 }
 
-pub(crate) fn custom_mods_dir(branch: &str, mc_version: &str) -> PathBuf {
-    LAUNCHER_DIRECTORY
-        .data_dir()
-        .join("custom_mods")
-        .join(format!("{}-{}", branch, mc_version))
-}
-
 /// The mods from Modrinth and from files. Without `check` it reads the options and the disk alone
 /// and returns at once.
 #[tauri::command]
@@ -169,7 +162,11 @@ pub(crate) async fn get_custom_mods(
         .unwrap_or_default();
 
     modrinth::custom_mods(
-        &custom_mods_dir(branch, mc_version),
+        &prelauncher::custom_mods_directory(
+            &options.start_options.data_directory(),
+            branch,
+            mc_version,
+        ),
         installed,
         &branch_options.custom_mod_states,
         mc_version,
@@ -182,14 +179,16 @@ pub(crate) async fn get_custom_mods(
 
 #[tauri::command]
 pub(crate) async fn install_custom_mod(
+    options: Options,
     branch: &str,
     mc_version: &str,
     path: PathBuf,
 ) -> Result<(), String> {
-    let data = LAUNCHER_DIRECTORY.data_dir();
-    let mod_cache_path = data
-        .join("custom_mods")
-        .join(format!("{}-{}", branch, mc_version));
+    let mod_cache_path = prelauncher::custom_mods_directory(
+        &options.start_options.data_directory(),
+        branch,
+        mc_version,
+    );
 
     if !mod_cache_path.exists() {
         fs::create_dir_all(&mod_cache_path).await.unwrap();
@@ -209,14 +208,16 @@ pub(crate) async fn install_custom_mod(
 
 #[tauri::command]
 pub(crate) async fn delete_custom_mod(
+    options: Options,
     branch: &str,
     mc_version: &str,
     mod_name: &str,
 ) -> Result<(), String> {
-    let data = LAUNCHER_DIRECTORY.data_dir();
-    let mod_cache_path = data
-        .join("custom_mods")
-        .join(format!("{}-{}", branch, mc_version));
+    let mod_cache_path = prelauncher::custom_mods_directory(
+        &options.start_options.data_directory(),
+        branch,
+        mc_version,
+    );
 
     if !mod_cache_path.exists() {
         return Ok(());

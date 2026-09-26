@@ -128,6 +128,7 @@
             if (selected) {
                 for (const file of selected) {
                     await invoke("install_custom_mod", {
+                        options,
                         branch: build.branch,
                         mcVersion: build.mcVersion,
                         path: file
@@ -144,6 +145,7 @@
 
     function deleteFile(fileName) {
         return invoke("delete_custom_mod", {
+            options,
             branch: build.branch,
             mcVersion: build.mcVersion,
             modName: fileName

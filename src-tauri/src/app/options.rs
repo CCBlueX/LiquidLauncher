@@ -17,10 +17,14 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use crate::app::modrinth::ModrinthMod;
 use crate::minecraft::java::DistributionSelection;
+use crate::LAUNCHER_DIRECTORY;
 use crate::{auth::ClientAccount, minecraft::auth::MinecraftAccount};
 use anyhow::Result;
 use rand::distr::{Alphanumeric, SampleString};
@@ -124,6 +128,16 @@ impl Options {
         // store the options in the file
         fs::write(app_data.join("options.json"), serde_json::to_string(&self)?).await?;
         Ok(())
+    }
+}
+
+impl StartOptions {
+    /// The custom data path if one is set, otherwise the launcher's data directory.
+    pub fn data_directory(&self) -> PathBuf {
+        match self.custom_data_path.as_str() {
+            "" => LAUNCHER_DIRECTORY.data_dir().to_path_buf(),
+            path => PathBuf::from(path),
+        }
     }
 }
 
