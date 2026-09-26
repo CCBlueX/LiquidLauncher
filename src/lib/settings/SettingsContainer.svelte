@@ -3,6 +3,7 @@
     import { createEventDispatcher } from "svelte";
 
     export let title;
+    export let fill = false;
 
     const dispatch = createEventDispatcher();
 
@@ -11,7 +12,7 @@
     }
 </script>
 
-<div class="container" in:fly={{ y: -10, duration: 200 }} out:fly={{ y: -10, duration: 200 }}>
+<div class="container" class:fill in:fly={{ y: -10, duration: 200 }} out:fly={{ y: -10, duration: 200 }}>
     <div class="header">
         <div class="title">{title}</div>
         <button class="button-hide" on:click={handleHideClick}>
@@ -43,6 +44,10 @@
         display: flex;
         flex-direction: column;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .container.fill {
+        height: calc(100% - 100px);
     }
 
     .header {

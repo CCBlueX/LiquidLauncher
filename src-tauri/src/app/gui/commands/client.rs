@@ -31,8 +31,12 @@ use tokio::fs;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
+use super::failed;
+use crate::app::builds::{self, BuildPage};
 use crate::app::client_api::{BlogPost, Build, Changelog, Client, PaginatedResponse};
-use crate::app::client_api::{LoaderMod, ModSource};
+use crate::app::client_api::LoaderMod;
+use crate::app::marketplace::{self, GameDir};
+use crate::app::modrinth::{self, CustomMod};
 use crate::app::options::Options;
 use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     auth::MinecraftAccount,
@@ -41,17 +45,52 @@ use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     progress::ProgressUpdate,
 }, HTTP_CLIENT};
 
+/// The build selected to launch, or `None` when the chosen one is gone.
 #[tauri::command]
-pub(crate) async fn request_builds(client: Client, release: bool) -> Result<Vec<Build>, String> {
-    let builds = (|| async { client.builds(release).await })
-        .retry(ExponentialBuilder::default())
-        .notify(|err, dur| {
-            warn!("Failed to request builds. Retrying in {:?}. Error: {}", dur, err);
-        })
-        .await
-        .map_err(|e| format!("unable to request builds: {:?}", e))?;
+pub(crate) async fn request_build(
+    client: Client,
+    options: Options,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<Option<Build>, String> {
+    let chosen = options.version_options.build_id != -1;
+    let is_gone = |error: &anyhow::Error| {
+        chosen
+            && error
+                .downcast_ref::<reqwest::Error>()
+                .and_then(reqwest::Error::status)
+                == Some(reqwest::StatusCode::NOT_FOUND)
+    };
 
-    Ok(builds)
+    let build = (|| async { builds::fetch_selected(&client, &options, &app_state.build).await })
+        .retry(ExponentialBuilder::default())
+        .when(|error| !is_gone(error))
+        .notify(|err, dur| {
+            warn!("Failed to request the build. Retrying in {:?}. Error: {}", dur, err);
+        })
+        .await;
+
+    match build {
+        Ok(build) => Ok(Some(build)),
+        Err(error) if is_gone(&error) => Ok(None),
+        Err(error) => Err(format!("unable to request the build: {:?}", error)),
+    }
+}
+
+/// A page of the builds to choose from, releases or all of them as the options show them.
+#[tauri::command]
+pub(crate) async fn request_build_page(
+    client: Client,
+    options: Options,
+    page: u32,
+) -> Result<BuildPage, String> {
+    builds::page(
+        &client,
+        page,
+        options.launcher_options.show_nightly_builds,
+        options.version_options.build_id,
+    )
+    .await
+    .map_err(failed("request builds"))
 }
 
 #[tauri::command]
@@ -93,52 +132,42 @@ pub(crate) async fn request_mods(
     Ok(mods)
 }
 
+/// The mods from Modrinth and from files. Without `check` it reads the options and the disk alone
+/// and returns at once.
 #[tauri::command]
 pub(crate) async fn get_custom_mods(
     options: Options,
     branch: &str,
     mc_version: &str,
-) -> Result<Vec<LoaderMod>, String> {
-    let mod_cache_path = prelauncher::custom_mods_directory(
-        &options.start_options.data_directory(),
-        branch,
+    subsystem: &str,
+    check: bool,
+) -> Result<Vec<CustomMod>, String> {
+    let branch_options = options
+        .version_options
+        .options
+        .get(branch)
+        .cloned()
+        .unwrap_or_default();
+    let installed = branch_options
+        .modrinth_mods
+        .get(mc_version)
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+
+    modrinth::custom_mods(
+        &prelauncher::custom_mods_directory(
+            &options.start_options.data_directory(),
+            branch,
+            mc_version,
+        ),
+        installed,
+        &branch_options.custom_mod_states,
         mc_version,
-    );
-
-    if !mod_cache_path.exists() {
-        return Ok(vec![]);
-    }
-
-    let mut mods = vec![];
-    let mut mods_read = fs::read_dir(&mod_cache_path)
-        .await
-        .map_err(|e| format!("unable to read custom mods: {:?}", e))?;
-
-    while let Some(entry) = mods_read
-        .next_entry()
-        .await
-        .map_err(|e| format!("unable to read custom mods: {:?}", e))?
-    {
-        let file_type = entry
-            .file_type()
-            .await
-            .map_err(|e| format!("unable to read custom mods: {:?}", e))?;
-        let file_name = entry.file_name().to_str().unwrap().to_string();
-
-        if file_type.is_file() && file_name.ends_with(".jar") {
-            // todo: pull name from JAR manifest
-            let file_name_without_extension = file_name.replace(".jar", "");
-
-            mods.push(LoaderMod {
-                required: false,
-                enabled: true,
-                name: file_name_without_extension,
-                source: ModSource::Local { file_name },
-            });
-        }
-    }
-
-    Ok(mods)
+        subsystem,
+        check,
+    )
+    .await
+    .map_err(|e| format!("unable to read custom mods: {:?}", e))
 }
 
 #[tauri::command]
@@ -262,6 +291,7 @@ pub(crate) async fn run_client(
 ) -> Result<(), String> {
     // A shared mutex for the window object.
     let shareable_window: ShareableWindow = Arc::new(Mutex::new(window));
+    let data = options.start_options.data_directory();
 
     let minecraft_account = options
         .start_options
@@ -318,6 +348,8 @@ pub(crate) async fn run_client(
     });
 
     let copy_of_runner_instance = runner_instance.clone();
+    let branch = launch_manifest.build.branch.clone();
+    marketplace::game_started();
 
     let parameters = StartParameter {
         java_distribution: options.start_options.java_distribution,
@@ -375,6 +407,7 @@ pub(crate) async fn run_client(
                         .unwrap();
                     handle_stderr(&shareable_window, message.as_bytes()).unwrap();
                 };
+                marketplace::game_exited(&GameDir::new(data, branch)).await;
 
                 *copy_of_runner_instance
                     .lock()

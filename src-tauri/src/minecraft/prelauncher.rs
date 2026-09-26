@@ -26,6 +26,7 @@ use tracing::*;
 
 use crate::app::client_api::{Client, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
 use crate::app::gui::ShareableWindow;
+use crate::app::marketplace;
 use crate::app::webview::open_download_page;
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
@@ -102,6 +103,14 @@ pub(crate) async fn launch(
         &launcher_data,
     )
     .await?;
+
+    // Add-ons are ordinary Fabric mods and belong in the directory clear_mods just emptied.
+    // A failure here must not stop the game from starting.
+    if let Err(error) =
+        marketplace::stage_addons(client, &data_directory, build, &launcher_data).await
+    {
+        warn!("Failed to stage marketplace add-ons: {:?}", error);
+    }
 
     launcher_data.progress_update(ProgressUpdate::set_label("Loading version profile..."));
     let manifest_url = match subsystem {

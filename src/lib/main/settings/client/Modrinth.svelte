@@ -1,0 +1,71 @@
+<script>
+    import { createEventDispatcher } from "svelte";
+    import { invoke } from "@tauri-apps/api/core";
+    import ButtonSetting from "../../../settings/ButtonSetting.svelte";
+    import ItemRow from "./ItemRow.svelte";
+    import Message from "./Message.svelte";
+    import ListView from "./ListView.svelte";
+    import { capitalize, count } from "./copy.js";
+    import { track } from "./modrinth.js";
+
+    export let client;
+    export let options;
+    export let versionState;
+
+    const dispatch = createEventDispatcher();
+    const build = versionState.currentBuild;
+
+    let view;
+    let query = "";
+    let busy = new Set();
+
+    const request = query => invoke("modrinth_search", { client, options, query });
+
+    async function install(hit) {
+        busy = new Set(busy).add(hit.projectId);
+        try {
+            const entry = await invoke("modrinth_install", { client, options, projectId: hit.projectId });
+            await track(options, build, entry);
+            dispatch("updateMods");
+        } catch (e) {
+            console.error("Failed to install:", e);
+            alert(`${e}`);
+        }
+        await view.load(true);
+        busy.delete(hit.projectId);
+        busy = busy;
+    }
+</script>
+
+<ListView
+        bind:this={view}
+        bind:query
+        placeholder="Search Modrinth mods"
+        title="Modrinth"
+        failure="Could not reach Modrinth."
+        {request}
+        on:back
+        let:result={hits}
+>
+    <svelte:fragment slot="aside">{capitalize(build.subsystem)} {build.mcVersion}</svelte:fragment>
+
+    {#each hits as hit (hit.projectId)}
+        <ItemRow name={hit.title} description={hit.description} openable={false} status={hit.installed ? "Installed" : null}>
+            by {hit.author} &middot; {count(hit.downloads, "download", "downloads")}
+            <svelte:fragment slot="side">
+                {#if !hit.installed}
+                    <ButtonSetting
+                            small
+                            text={busy.has(hit.projectId) ? "Installing" : "Install"}
+                            disabled={busy.has(hit.projectId)}
+                            on:click={() => install(hit)}
+                    />
+                {/if}
+            </svelte:fragment>
+        </ItemRow>
+    {:else}
+        {#if query.trim()}
+            <Message title="No mods match “{query.trim()}”." clearable on:clear={() => query = ""} />
+        {/if}
+    {/each}
+</ListView>

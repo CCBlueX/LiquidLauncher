@@ -20,13 +20,29 @@
 pub(crate) mod auth;
 pub(crate) mod client;
 pub(crate) mod data;
+pub(crate) mod marketplace;
 pub(crate) mod system;
 pub(crate) mod minecraft_installation;
 pub(crate) mod updater;
+pub(crate) mod modrinth;
 
 pub(crate) use auth::*;
 pub(crate) use client::*;
 pub(crate) use data::*;
+pub(crate) use marketplace::*;
 pub(crate) use system::*;
 pub(crate) use minecraft_installation::*;
 pub(crate) use updater::*;
+pub(crate) use modrinth::*;
+
+use crate::utils::error_line;
+
+/// Turns an error into the message the frontend shows: `unable to <action>: <error>`.
+fn failed(action: &str) -> impl FnOnce(anyhow::Error) -> String + '_ {
+    move |error| format!("unable to {action}: {}", error_line(&error))
+}
+
+/// A search query, or `None` when it is blank.
+fn search_query(query: &Option<String>) -> Option<&str> {
+    query.as_deref().map(str::trim).filter(|query| !query.is_empty())
+}

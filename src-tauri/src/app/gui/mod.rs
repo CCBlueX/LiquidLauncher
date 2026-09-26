@@ -22,6 +22,8 @@ use std::sync::{Arc, Mutex};
 use commands::*;
 use tauri::Window;
 
+use crate::app::builds::KeptBuild;
+
 pub type ShareableWindow = Arc<Mutex<Window>>;
 
 pub struct RunnerInstance {
@@ -30,12 +32,15 @@ pub struct RunnerInstance {
 
 pub struct AppState {
     pub runner_instance: Arc<Mutex<Option<RunnerInstance>>>,
+    /// The build that launches, as fetched last.
+    pub build: KeptBuild,
 }
 
 impl AppState {
     pub fn new() -> Self {
         Self {
             runner_instance: Arc::new(Mutex::new(None)),
+            build: Mutex::new(None),
         }
     }
 }
@@ -57,7 +62,8 @@ pub fn gui_main() {
             sys_memory,
             get_options,
             store_options,
-            request_builds,
+            request_build,
+            request_build_page,
             request_mods,
             run_client,
             login_offline,
@@ -77,7 +83,14 @@ pub fn gui_main() {
             install_custom_mod,
             delete_custom_mod,
             get_minecraft_installation,
-            check_for_updates
+            check_for_updates,
+            get_marketplace_library,
+            browse_marketplace,
+            get_marketplace_item,
+            install_marketplace_item,
+            remove_marketplace_item,
+            modrinth_search,
+            modrinth_install
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

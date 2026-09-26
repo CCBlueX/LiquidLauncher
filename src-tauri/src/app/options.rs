@@ -22,6 +22,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::app::modrinth::ModrinthMod;
 use crate::minecraft::java::DistributionSelection;
 use crate::LAUNCHER_DIRECTORY;
 use crate::{auth::ClientAccount, minecraft::auth::MinecraftAccount};
@@ -101,12 +102,15 @@ pub(crate) struct PremiumOptions {
     pub skip_advertisement: bool,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub(crate) struct BranchOptions {
     #[serde(rename = "modStates", default)]
     pub mod_states: HashMap<String, bool>,
     #[serde(rename = "customModStates", default)]
     pub custom_mod_states: HashMap<String, bool>,
+    /// By Minecraft version.
+    #[serde(rename = "modrinthMods", default)]
+    pub modrinth_mods: HashMap<String, Vec<ModrinthMod>>,
 }
 
 impl Options {

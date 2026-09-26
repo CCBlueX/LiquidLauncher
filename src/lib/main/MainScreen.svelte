@@ -11,7 +11,6 @@
     import VersionWarning from "./VersionWarning.svelte";
     import ClientLog from "./log/ClientLog.svelte";
     import Settings from "./settings/Settings.svelte";
-    import VersionSelect from "./VersionSelect.svelte";
     import FirstRunWarning from "./FirstRunWarning.svelte";
     import {onMount} from "svelte";
 
@@ -23,14 +22,13 @@
 
     let logShown = false;
     let settingsShown = false;
-    let versionSelectShown = false;
+    let settingsTab = "General";
     let launchVersionWarningShown = false;
     let firstRunWarningShown = false;
     let launchVersionWarningCountdown = 0;
     let log = [];
 
     let versionState = {
-        builds: [],
         currentBuild: null,
         recommendedMods: [],
         customMods: []
@@ -69,78 +67,88 @@
         options.store();
     }
 
+    let buildRequest = 0;
+
     async function updateData() {
-        let newBuilds;
+        const current = ++buildRequest;
+        let build;
         try {
-            newBuilds = await invoke("request_builds", {
-                client,
-                release: !options.launcher.showNightlyBuilds
-            });
+            build = await invoke("request_build", { client, options });
         } catch (e) {
-            console.error("Failed to request builds:", e);
+            console.error("Failed to request the build:", e);
             error = {
                 message: "Failed to establish connection with LiquidBounce API",
                 error: e
             };
             return;
         }
+        if (current !== buildRequest) return;
 
-        newBuilds.forEach(build => {
-            const date = new Date(build.date);
-            build.date = date.toLocaleString();
-            build.dateDay = date.toLocaleDateString();
-        });
-
-        versionState.builds = newBuilds;
-        const buildId = options.version.buildId;
-
-        if (buildId !== -1 && !versionState.builds.find(build => build.buildId === buildId)) {
+        // The chosen build is gone.
+        if (!build) {
             options.version.buildId = -1;
             await options.store();
+            return updateData();
         }
-
-        const activeBuild = buildId === -1 ? versionState.builds[0] :
-            versionState.builds.find(build => build.buildId === buildId);
-        if (!activeBuild) return;
 
         const changelog = await invoke("fetch_changelog", {
             client,
-            buildId: activeBuild.buildId
+            buildId: build.buildId
         });
+        if (current !== buildRequest) return;
 
-        versionState.currentBuild = { ...activeBuild, changelog: changelog.changelog };
+        versionState.currentBuild = {
+            ...build,
+            dateDay: new Date(build.date).toLocaleDateString(),
+            changelog: changelog.changelog
+        };
         await updateMods();
     }
 
+    // The Client tab asks Modrinth about the custom mods once they are read from disk.
+    $: clientTabShown = settingsShown && settingsTab === "Client";
+    $: if (clientTabShown) updateMods();
+
+    let modsRequest = 0;
+
     async function updateMods() {
-        if (!versionState.currentBuild) return;
+        const build = versionState.currentBuild;
+        if (!build) return;
+
+        const current = ++modsRequest;
+        const customMods = check => invoke("get_custom_mods", {
+            options,
+            branch: build.branch,
+            mcVersion: build.mcVersion,
+            subsystem: build.subsystem,
+            check
+        });
 
         const [newRecommendedMods, newCustomMods] = await Promise.all([
             invoke("request_mods", {
                 client,
-                mcVersion: versionState.currentBuild.mcVersion,
-                subsystem: versionState.currentBuild.subsystem
+                mcVersion: build.mcVersion,
+                subsystem: build.subsystem
             }),
-            invoke("get_custom_mods", {
-                options,
-                branch: versionState.currentBuild.branch,
-                mcVersion: versionState.currentBuild.mcVersion
-            })
+            customMods(false)
         ]);
+        if (current !== modsRequest) return;
 
-        const branchOptions = options.version.options[versionState.currentBuild.branch];
+        const branchOptions = options.version.options[build.branch];
 
         if (branchOptions) {
             newRecommendedMods.forEach(mod => {
                 mod.enabled = branchOptions.modStates[mod.name] ?? mod.enabled;
             });
-            newCustomMods.forEach(mod => {
-                mod.enabled = branchOptions.customModStates[mod.name] ?? mod.enabled;
-            });
         }
 
         versionState.recommendedMods = newRecommendedMods;
         versionState.customMods = newCustomMods;
+
+        if (clientTabShown) {
+            const checkedCustomMods = await customMods(true);
+            if (current === modsRequest) versionState.customMods = checkedCustomMods;
+        }
     }
 
     async function runClientWithWarning() {
@@ -236,6 +244,11 @@
         await invoke("terminate");
     }
 
+    function showSettings(tab) {
+        settingsTab = tab;
+        settingsShown = true;
+    }
+
     async function continueAfterFirstRun() {
         await hideFirstRunWarning();
         await runClient();
@@ -319,6 +332,11 @@
     <Settings
             {client}
             bind:options
+            bind:activeTab={settingsTab}
+            {versionState}
+            on:updateData={updateData}
+            on:updateModStates={updateModStates}
+            on:updateMods={updateMods}
             on:hide={async () => {
                 settingsShown = false;
                 await options.store();
@@ -328,28 +346,14 @@
     />
 {/if}
 
-{#if versionSelectShown}
-    <VersionSelect
-            bind:options
-            {versionState}
-            on:updateData={updateData}
-            on:updateModStates={updateModStates}
-            on:updateMods={updateMods}
-            on:hide={async () => {
-            versionSelectShown = false;
-            await options.store();
-        }}
-    />
-{/if}
-
 <VerticalFlexWrapper
-        blur={settingsShown || versionSelectShown || logShown || launchVersionWarningShown || firstRunWarningShown}
+        blur={settingsShown || logShown || launchVersionWarningShown || firstRunWarningShown}
 >
     <MainHeader
             account={options.start.account}
             {running}
             {progressState}
-            on:showSettings={() => settingsShown = true}
+            on:showSettings={() => showSettings("General")}
     />
 
     <ContentWrapper>
@@ -366,7 +370,7 @@
                 lbVersion={versionState.currentBuild?.lbVersion || "Loading..."}
                 canLaunch={!!versionState.currentBuild}
                 {running}
-                on:showVersionSelect={() => versionSelectShown = true}
+                on:showVersionSelect={() => showSettings("Client")}
                 on:showClientLog={() => logShown = true}
                 on:launch={runClientWithWarning}
                 on:terminate={terminateClient}
