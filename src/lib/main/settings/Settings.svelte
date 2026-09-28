@@ -8,6 +8,7 @@
 
     export let client;
     export let options;
+    export let clientAccount;
     let activeSettingsTab = "General";
 
     const dispatch = createEventDispatcher();
@@ -35,6 +36,7 @@
         <PremiumSettings
                 {client}
                 bind:options
+                bind:clientAccount
         />
     {/if}
 </SettingsContainer>
