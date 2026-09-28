@@ -19,7 +19,7 @@
 
 use anyhow::anyhow;
 use backon::{ExponentialBuilder, Retryable};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::{
     sync::{Arc, Mutex},
     thread,
@@ -34,6 +34,7 @@ use uuid::Uuid;
 use crate::app::client_api::{BlogPost, Build, Changelog, Client, PaginatedResponse};
 use crate::app::client_api::{LoaderMod, ModSource};
 use crate::app::options::Options;
+use crate::auth::{shared, ClientAccount};
 use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     auth::MinecraftAccount,
     launcher::{LauncherData, StartParameter},
@@ -262,6 +263,7 @@ pub(crate) async fn run_client(
 ) -> Result<(), String> {
     // A shared mutex for the window object.
     let shareable_window: ShareableWindow = Arc::new(Mutex::new(window));
+    let data = options.start_options.data_directory();
 
     let minecraft_account = options
         .start_options
@@ -282,12 +284,6 @@ pub(crate) async fn run_client(
         }
     };
 
-    let client_account = options.premium_options.account;
-    let skip_advertisement = options.premium_options.skip_advertisement
-        && client_account
-        .as_ref()
-        .is_some_and(|x| x.get_user_information().is_some_and(|u| u.premium));
-
     // Random XUID
     let xuid = Uuid::new_v4().to_string();
 
@@ -300,6 +296,19 @@ pub(crate) async fn run_client(
     {
         return Err("client is already running".to_string());
     }
+
+    let client_account = if options.premium_options.skip_advertisement {
+        premium_account(&client, &data)
+            .await
+            .unwrap_or_else(|e| {
+                let message = format!("Failed to authenticate client account: {:?}", e);
+                let _ = handle_stderr(&shareable_window, message.as_bytes());
+                None
+            })
+    } else {
+        None
+    };
+    let skip_advertisement = client_account.is_some();
 
     info!("Loading launch manifest...");
     let launch_manifest = client.fetch_launch_manifest(build_id).await.map_err(|e| {
@@ -389,6 +398,15 @@ pub(crate) async fn run_client(
     });
 
     Ok(())
+}
+
+async fn premium_account(client: &Client, data: &Path) -> anyhow::Result<Option<ClientAccount>> {
+    let Some(account) = shared::read(data).await? else {
+        return Ok(None);
+    };
+    let account = shared::renew(data, account).await?;
+    let premium = client.fetch_user(&account).await?.premium;
+    Ok(premium.then_some(account))
 }
 
 #[tauri::command]

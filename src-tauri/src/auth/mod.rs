@@ -5,7 +5,7 @@ use oauth2::{
     basic::BasicClient, AccessToken, AuthUrl, AuthorizationCode, ClientId, CsrfToken,
     PkceCodeChallenge, RedirectUrl, RefreshToken, TokenResponse, TokenUrl,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tauri::Url;
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -13,7 +13,7 @@ use tokio::{
 };
 use tracing::debug;
 
-use crate::app::client_api::{Client, UserInformation};
+pub mod shared;
 
 const OAUTH_CLIENT_ID: &str = "J2hzqzCxch8hfOPRFNINOZV5Ma4X4BFdZpMjAVEW";
 const AUTH_URL: &str = "https://auth.liquidbounce.net/application/o/authorize/";
@@ -21,7 +21,7 @@ const TOKEN_URL: &str = "https://auth.liquidbounce.net/application/o/token/";
 
 static SUCCESS_HTML: &str = include_str!("../../static/success.html");
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct ClientAccount {
     #[serde(rename = "accessToken")]
     access_token: AccessToken,
@@ -29,8 +29,6 @@ pub struct ClientAccount {
     expires_at: u64, // SystemTime
     #[serde(rename = "refreshToken")]
     refresh_token: RefreshToken,
-    #[serde(flatten, default)]
-    user_information: Option<UserInformation>,
 }
 
 impl ClientAccount {
@@ -51,28 +49,6 @@ impl ClientAccount {
         }
 
         Ok(request.bearer_auth(self.access_token.secret()))
-    }
-
-    pub fn get_access_token(&self) -> &AccessToken {
-        &self.access_token
-    }
-
-    pub fn get_refresh_token(&self) -> &RefreshToken {
-        &self.refresh_token
-    }
-
-    pub fn get_expires_at(&self) -> u64 {
-        self.expires_at
-    }
-
-    pub async fn update_info(&mut self, client: &Client) -> Result<()> {
-        let user_information = client.fetch_user(self).await?;
-        self.user_information = Some(user_information.clone());
-        Ok(())
-    }
-
-    pub fn get_user_information(&self) -> Option<UserInformation> {
-        self.user_information.clone()
     }
 
     pub async fn renew(self) -> Result<ClientAccount> {
@@ -132,7 +108,6 @@ impl ClientAccountAuthenticator {
                 .refresh_token()
                 .context("Missing refresh token")?
                 .clone(),
-            user_information: None,
         })
     }
 
@@ -157,7 +132,6 @@ impl ClientAccountAuthenticator {
                 .refresh_token()
                 .context("Missing refresh token")?
                 .clone(),
-            user_information: None,
         })
     }
 

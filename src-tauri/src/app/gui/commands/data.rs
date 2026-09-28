@@ -17,15 +17,32 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use tracing::warn;
+
 use crate::{
     app::options::Options,
+    auth::shared,
     LAUNCHER_DIRECTORY
 };
 
 #[tauri::command]
 pub(crate) async fn get_options() -> Result<Options, String> {
     let config_dir = LAUNCHER_DIRECTORY.config_dir();
-    let options = Options::load(config_dir).await.unwrap_or_default();
+    let mut options = Options::load(config_dir).await.unwrap_or_default();
+
+    if let Some(account) = options.premium_options.account.take() {
+        let data = options.start_options.data_directory();
+        let moved = async {
+            if shared::read(&data).await?.is_none() {
+                shared::write(&data, Some(&account)).await?;
+            }
+            options.store(config_dir).await
+        };
+        if let Err(error) = moved.await {
+            warn!("Failed to move the client account to LiquidBounce: {:?}", error);
+        }
+    }
+
     Ok(options)
 }
 

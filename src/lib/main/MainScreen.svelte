@@ -20,6 +20,7 @@
     export let error;
 
     let running = false;
+    let clientAccount = null;
 
     let logShown = false;
     let settingsShown = false;
@@ -182,21 +183,15 @@
         }
     }
 
-    async function authenticate() {
-        if (options.premium.account) {
-            try {
-                progressState.text = "Authenticating client account...";
-                options.premium.account = await invoke("client_account_update", {
-                    client,
-                    account: options.premium.account
-                });
-            } catch (e) {
-                console.error("Failed to authenticate client account:", e);
-                log = [...log, `Failed to authenticate client account: ${e}`];
-                options.premium.account = null;
-            }
+    async function updateClientAccount() {
+        try {
+            clientAccount = await invoke("client_account", {client, options});
+        } catch (e) {
+            console.error("Failed to load client account:", e);
         }
+    }
 
+    async function authenticate() {
         progressState.text = "Refreshing minecraft session...";
         try {
             options.start.account = await invoke("refresh", {
@@ -281,6 +276,7 @@
 
     listen("client-exited", () => {
         running = false;
+        updateClientAccount();
     });
 
     listen("client-error", () => {
@@ -288,6 +284,7 @@
     });
 
     onMount(async () => {
+        updateClientAccount();
         await updateData();
     });
 </script>
@@ -319,6 +316,7 @@
     <Settings
             {client}
             bind:options
+            bind:clientAccount
             on:hide={async () => {
                 settingsShown = false;
                 await options.store();
