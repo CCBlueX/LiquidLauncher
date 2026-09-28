@@ -22,9 +22,11 @@ use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Window};
 use tracing::{debug, error, info};
 
-use crate::app::client_api::Client;
+use crate::app::client_api::{Client, UserInformation};
+use crate::app::gui::AppState;
+use crate::app::options::Options;
 use crate::{
-    auth::{ClientAccount, ClientAccountAuthenticator},
+    auth::{shared, ClientAccountAuthenticator},
     minecraft::auth::MinecraftAccount,
 };
 
@@ -66,33 +68,79 @@ pub(crate) async fn login_microsoft_webview(window: Window) -> Result<MinecraftA
 }
 
 #[tauri::command]
-pub(crate) async fn client_account_authenticate(client: Client) -> Result<ClientAccount, String> {
-    let mut account = ClientAccountAuthenticator::start_auth(|uri| {
+pub(crate) async fn client_account(
+    client: Client,
+    options: Options,
+) -> Result<Option<UserInformation>, String> {
+    let data = options.start_options.data_directory();
+    let Some(mut account) = shared::read(&data)
+        .await
+        .map_err(|e| format!("unable to read client account: {:?}", e))?
+    else {
+        return Ok(None);
+    };
+
+    if account.is_expired() {
+        account = shared::renew(&data, account)
+            .await
+            .map_err(|e| format!("unable to update access token: {:?}", e))?;
+    }
+
+    client
+        .fetch_user(&account)
+        .await
+        .map(Some)
+        .map_err(|e| format!("unable to fetch user information: {:?}", e))
+}
+
+#[tauri::command]
+pub(crate) async fn client_account_authenticate(
+    client: Client,
+    options: Options,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<UserInformation, String> {
+    ensure_client_stopped(&app_state)?;
+
+    let account = ClientAccountAuthenticator::start_auth(|uri| {
         let _ = tauri_plugin_opener::open_url(uri, None::<&str>);
     })
         .await
         .map_err(|e| format!("{}", e))?;
 
-    account
-        .update_info(&client)
+    let user = client
+        .fetch_user(&account)
         .await
         .map_err(|e| format!("unable to fetch user information: {:?}", e))?;
 
-    Ok(account)
+    shared::write(&options.start_options.data_directory(), Some(&account))
+        .await
+        .map_err(|e| format!("unable to store client account: {:?}", e))?;
+    Ok(user)
 }
 
 #[tauri::command]
-pub(crate) async fn client_account_update(client: Client, account: ClientAccount) -> Result<ClientAccount, String> {
-    let mut account = account
-        .renew()
-        .await
-        .map_err(|e| format!("unable to update access token: {:?}", e))?;
+pub(crate) async fn client_account_logout(
+    options: Options,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    ensure_client_stopped(&app_state)?;
 
-    account
-        .update_info(&client)
+    shared::write(&options.start_options.data_directory(), None)
         .await
-        .map_err(|e| format!("unable to fetch user information: {:?}", e))?;
-    Ok(account)
+        .map_err(|e| format!("unable to store client account: {:?}", e))
+}
+
+fn ensure_client_stopped(app_state: &AppState) -> Result<(), String> {
+    let running = app_state
+        .runner_instance
+        .lock()
+        .map_err(|e| format!("unable to lock runner instance: {:?}", e))?
+        .is_some();
+
+    if running {
+        return Err("close LiquidBounce first, it would overwrite the account when it exits".to_string());
+    }
+    Ok(())
 }
 
 #[tauri::command]
