@@ -9,6 +9,7 @@
 
     export let client;
     export let options;
+    export let clientAccount;
     export let versionState;
     export let activeTab = "General";
 
@@ -47,6 +48,7 @@
         <PremiumSettings
                 {client}
                 bind:options
+                bind:clientAccount
         />
     {/if}
 </SettingsContainer>

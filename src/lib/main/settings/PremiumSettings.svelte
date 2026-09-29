@@ -9,14 +9,14 @@
 
     export let client;
     export let options;
+    export let clientAccount;
 
     async function login() {
         try {
-            const account = await invoke("client_account_authenticate", {
-                client: client
+            clientAccount = await invoke("client_account_authenticate", {
+                client,
+                options
             });
-            options.premium.account = account;
-            await options.store();
         } catch (error) {
             console.error("Failed to authenticate client account:", error);
             alert(`Failed to authenticate client account: ${error}`);
@@ -24,22 +24,28 @@
     }
 
     async function logout() {
-        options.premium.account = null
+        try {
+            await invoke("client_account_logout", {options});
+            clientAccount = null;
+        } catch (error) {
+            console.error("Failed to log out of client account:", error);
+            alert(`Failed to log out of client account: ${error}`);
+        }
     }
 </script>
 
 <ToggleSetting
         title="Skip Advertisements"
-        disabled={!options.premium.account || !options.premium.account.premium}
+        disabled={!clientAccount || !clientAccount.premium}
         bind:value={options.premium.skipAdvertisement}
 />
 
-{#if options.premium.account}
+{#if clientAccount}
     <SettingWrapper title="Account Information">
-        <LiquidBounceAccount account={options.premium.account} />
+        <LiquidBounceAccount account={clientAccount} />
     </SettingWrapper>
 
-    {#if !options.premium.account.premium}
+    {#if !clientAccount.premium}
         <Description
                 description="There appears to be no premium associated with this account. Please link it on the account management page."
         />

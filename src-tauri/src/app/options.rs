@@ -96,7 +96,7 @@ pub(crate) struct LauncherOptions {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct PremiumOptions {
-    #[serde(rename = "account")]
+    #[serde(rename = "account", default, skip_serializing)]
     pub account: Option<ClientAccount>,
     #[serde(rename = "skipAdvertisement", default)]
     pub skip_advertisement: bool,
