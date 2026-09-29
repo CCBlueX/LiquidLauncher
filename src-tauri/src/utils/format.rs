@@ -17,10 +17,7 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::sync::LazyLock;
-
 use chrono::{Datelike, NaiveDateTime, Utc};
-use regex::Regex;
 
 /// `Sep 26`, with the year when it is not this one.
 pub fn short_date(date: NaiveDateTime) -> String {
@@ -44,12 +41,6 @@ pub fn count(n: u64, one: &str, many: &str) -> String {
     format!("{grouped} {}", if n == 1 { one } else { many })
 }
 
-/// The error and its causes as one line, without the request URL.
-pub fn error_line(error: &anyhow::Error) -> String {
-    static URL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r" for url \([^)]*\)").unwrap());
-    URL.replace_all(&format!("{error:#}"), "").into_owned()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -59,17 +50,5 @@ mod tests {
         assert_eq!(count(1, "download", "downloads"), "1 download");
         assert_eq!(count(0, "download", "downloads"), "0 downloads");
         assert_eq!(count(1234567, "download", "downloads"), "1,234,567 downloads");
-    }
-
-    #[test]
-    fn leaves_the_url_out_of_errors() {
-        let error = anyhow::anyhow!(
-            "error sending request for url (http://127.0.0.1:1/api/v3/marketplace?page=1)"
-        )
-        .context("unable to browse marketplace");
-        assert_eq!(
-            error_line(&error),
-            "unable to browse marketplace: error sending request"
-        );
     }
 }

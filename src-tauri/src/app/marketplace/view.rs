@@ -34,7 +34,7 @@ use super::revisions::{display_version, range_label, supports_addons};
 use super::{queued, subscriptions, GameDir, ItemType, Queued, SubscribedItem};
 use crate::app::builds;
 use crate::app::client_api::{Build, Client};
-use crate::utils::{count, error_line, short_date};
+use crate::utils::{count, short_date};
 
 const LISTED: u32 = 50;
 const VERSIONS: u32 = 5;
@@ -371,7 +371,7 @@ pub async fn library(
     };
     let mut failed = |error: anyhow::Error| {
         offline.get_or_insert_with(|| {
-            format!("Unable to check the marketplace: {}", error_line(&error))
+            format!("Unable to check the marketplace: {error:#}")
         });
     };
 

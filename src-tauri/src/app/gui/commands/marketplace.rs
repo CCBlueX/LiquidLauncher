@@ -28,7 +28,6 @@ use crate::app::gui::AppState;
 use crate::app::marketplace::view::{self, Browse, Detail, Library, Remote, Selected};
 use crate::app::marketplace::{self, api, GameDir, ItemType, SubscribedItem};
 use crate::app::options::Options;
-use crate::utils::error_line;
 
 /// Takes the options from the frontend, like `run_client`: Settings stores them only once it
 /// closes, so the stored ones may point at another data directory.
@@ -49,7 +48,7 @@ pub(crate) async fn get_marketplace_library(
         match builds::selected(&client, &options, &app_state.build).await {
             Ok(build) => (Some(build), Remote::Check(&client)),
             Err(error) => {
-                let error = format!("Unable to check the marketplace: {}", error_line(&error));
+                let error = format!("Unable to check the marketplace: {error:#}");
                 (None, Remote::Failed(error))
             }
         }
