@@ -25,6 +25,7 @@ use crate::utils::get_maven_artifact_path;
 use crate::HTTP_CLIENT;
 use anyhow::{Error, Result};
 use chrono::{DateTime, NaiveDateTime, Utc};
+use reqwest::Url;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, debug_span, error, info, warn};
@@ -158,16 +159,22 @@ impl Client {
         self.request_from_endpoint(API_V3, &format!("blog?page={}", page)).await
     }
 
-    /// Request a list of released versions or mixed with development builds
-    pub async fn builds(&self, release: bool) -> Result<Vec<Build>> {
-        self.request_from_endpoint(API_V1, &if release {
-            // Only includes released builds
-            format!("version/builds/{}/release", CLIENT_BRANCH)
-        } else {
-            // Includes development builds
-            format!("version/builds/{}", CLIENT_BRANCH)
-        })
-        .await
+    /// A page of builds, newest first: releases, or every build with `nightly`.
+    pub async fn build_page(
+        &self,
+        page: u32,
+        limit: u32,
+        nightly: bool,
+    ) -> Result<PaginatedResponse<Build>> {
+        let endpoint = format!("version/{}/builds", CLIENT_BRANCH);
+        let (page, limit, nightly) = (page.to_string(), limit.to_string(), nightly.to_string());
+        self.request(API_V3, &endpoint, &[("page", &page), ("limit", &limit), ("nightly", &nightly)])
+            .await
+    }
+
+    pub async fn build(&self, build_id: u32) -> Result<Build> {
+        self.request_from_endpoint(API_V3, &format!("version/build/{}", build_id))
+            .await
     }
 
     /// Request launch manifest of specific build
@@ -211,8 +218,19 @@ impl Client {
 
     /// Request JSON formatted data from launcher API
     pub async fn request_from_endpoint<T: DeserializeOwned>(&self, api_version: &str, endpoint: &str) -> Result<T> {
+        self.request(api_version, endpoint, &[]).await
+    }
+
+    /// Request JSON formatted data from launcher API, with query parameters
+    pub async fn request<T: DeserializeOwned>(
+        &self,
+        api_version: &str,
+        endpoint: &str,
+        query: &[(&str, &str)],
+    ) -> Result<T> {
+        let url = Url::parse_with_params(&format!("{}/{}/{}", self.url, api_version, endpoint), query)?;
         Ok(HTTP_CLIENT
-            .get(format!("{}/{}/{}", self.url, api_version, endpoint))
+            .get(url)
             .header("X-Session-Token", &self.session_token)
             .send()
             .await?

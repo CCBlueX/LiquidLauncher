@@ -1,12 +1,14 @@
 <script>
-    export let title;
+    export let title = null;
     export let placeholder;
     export let value;
 </script>
 
 <div class="text-setting">
-    <div class="title">{title}</div>
-    <input class="input" type="text" {placeholder} bind:value={value} />
+    {#if title}
+        <div class="title">{title}</div>
+    {/if}
+    <input class="input" type="text" {placeholder} aria-label={title ? undefined : placeholder} bind:value={value} on:keydown />
 </div>
 
 <style>
