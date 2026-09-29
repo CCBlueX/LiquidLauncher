@@ -1,13 +1,31 @@
+<script context="module">
+    // The options keep the mods installed from Modrinth by branch and Minecraft version.
+    function installed(options, build) {
+        const branch = options.version.options[build.branch] ??= { modStates: {}, customModStates: {} };
+        branch.modrinthMods ??= {};
+        return branch.modrinthMods[build.mcVersion] ??= [];
+    }
+
+    export function track(options, build, entry) {
+        const mods = installed(options, build);
+        const index = mods.findIndex(mod => mod.projectId === entry.projectId);
+        if (index === -1) {
+            mods.push(entry);
+        } else {
+            mods[index] = entry;
+        }
+        return options.store();
+    }
+</script>
+
 <script>
     import { createEventDispatcher } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
     import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
-    import SettingWrapper from "../../../settings/SettingWrapper.svelte";
-    import ModSetting from "../../../settings/ModSetting.svelte";
-    import IconButtonSetting from "../../../settings/IconButtonSetting.svelte";
-    import ButtonSetting from "../../../settings/ButtonSetting.svelte";
-    import { capitalize } from "./copy.js";
-    import { track, untrack } from "./modrinth.js";
+    import SettingWrapper from "../../../../settings/SettingWrapper.svelte";
+    import ModSetting from "../../../../settings/ModSetting.svelte";
+    import IconButtonSetting from "../../../../settings/IconButtonSetting.svelte";
+    import ButtonSetting from "../../../../settings/ButtonSetting.svelte";
 
     export let client;
     export let options;
@@ -60,7 +78,12 @@
             if (mod.source.type === "local") {
                 await deleteFile(mod.source.fileName);
             } else {
-                await untrack(options, build, mod.modrinth.projectId);
+                const mods = installed(options, build);
+                const index = mods.findIndex(entry => entry.projectId === mod.modrinth.projectId);
+                if (index !== -1) {
+                    mods.splice(index, 1);
+                }
+                await options.store();
             }
         } catch (e) {
             console.error("Failed to delete mod:", e);
@@ -99,7 +122,7 @@
 </script>
 
 {#if build}
-    <SettingWrapper title="Mods - {capitalize(build.subsystem)} {build.mcVersion}" unbounded>
+    <SettingWrapper title="Mods - {build.subsystem.charAt(0).toUpperCase()}{build.subsystem.slice(1)} {build.mcVersion}" unbounded>
         <div slot="title-element" class="actions">
             <IconButtonSetting text="Add file" icon="icon-plus" on:click={addFile} />
             <IconButtonSetting text="Browse" icon="icon-plus" on:click={() => dispatch("browse")} />

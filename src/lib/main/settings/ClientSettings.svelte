@@ -6,14 +6,14 @@
     import SettingWrapper from "../../settings/SettingWrapper.svelte";
     import IconButtonSetting from "../../settings/IconButtonSetting.svelte";
     import ButtonSetting from "../../settings/ButtonSetting.svelte";
-    import BuildCard from "./client/BuildCard.svelte";
-    import Mods from "./client/Mods.svelte";
-    import ItemRow from "./client/ItemRow.svelte";
+    import ItemRow from "../../settings/ItemRow.svelte";
+    import Message from "../../settings/Message.svelte";
+    import RippleLoader from "../../common/RippleLoader.svelte";
     import Builds from "./client/Builds.svelte";
-    import Browse from "./client/Browse.svelte";
-    import Detail from "./client/Detail.svelte";
-    import Modrinth from "./client/Modrinth.svelte";
-    import { itemTypes, removeQuestion, rowLine } from "./client/copy.js";
+    import Mods from "./client/mods/Mods.svelte";
+    import Modrinth from "./client/mods/Modrinth.svelte";
+    import Browse from "./client/marketplace/Browse.svelte";
+    import Detail from "./client/marketplace/Detail.svelte";
 
     export let client;
     export let options;
@@ -50,9 +50,8 @@
         show({ name: "list" });
     }
 
-    // The installed add-ons, themes and scripts, read from disk first and then checked with the
-    // marketplace.
-    const sections = { Addon: "addons", Theme: "themes", Script: "scripts" };
+    // The build that launches and the installed add-ons, themes and scripts, read from disk first and
+    // then checked with the marketplace.
     let library = null;
     let error = null;
     let busy = null;
@@ -94,7 +93,7 @@
     }
 
     async function remove(row) {
-        if (row.neededBy.length > 0 && !await confirm(removeQuestion(row.name, row.neededBy))) {
+        if (row.removeQuestion && !await confirm(row.removeQuestion)) {
             return;
         }
         await act(row, "remove_marketplace_item", {});
@@ -110,39 +109,65 @@
 <div class="anchor" bind:this={anchor}></div>
 
 {#if view.name === "list"}
-    <BuildCard {library} {error} on:open={() => show({ name: "builds" })} on:retry={load} />
+    {#if library}
+        {@const { notice } = library}
+        <SettingWrapper title="Build">
+            <ItemRow
+                    icon="img/icon/icon-version-lb.png"
+                    name={library.liquidbounce ? `LiquidBounce ${library.liquidbounce} · Minecraft ${library.minecraft}` : notice.error}
+                    description={library.selection}
+                    on:open={() => show({ name: "builds" })}
+            >
+                {#if library.liquidbounce}
+                    <span class="strong">{notice.error ?? notice.text ?? ""}</span>
+                {/if}
+                <svelte:fragment slot="side">
+                    {#if notice.kind === "checking"}
+                        <RippleLoader size={30} />
+                    {:else if notice.kind === "offline"}
+                        <ButtonSetting small text="Try again" on:click={load} />
+                    {/if}
+                </svelte:fragment>
+            </ItemRow>
+        </SettingWrapper>
+    {:else if error}
+        <SettingWrapper title="Build">
+            <Message title={error}>
+                <ButtonSetting small text="Try again" on:click={load} />
+            </Message>
+        </SettingWrapper>
+    {/if}
 
     <Mods {client} {options} {versionState} on:browse={() => show({ name: "modrinth" })} on:updateMods on:updateModStates />
 
     {#if library}
-        {#each Object.entries(sections) as [type, key] (type)}
-            {@const { title, plural } = itemTypes[type]}
-            <SettingWrapper {title} unbounded>
+        {#each library.sections as section (section.type)}
+            <SettingWrapper title={section.title} unbounded>
                 <div slot="title-element">
-                    <IconButtonSetting text="Browse" icon="icon-plus" on:click={() => show({ name: "browse", type })} />
+                    <IconButtonSetting text="Browse" icon="icon-plus" on:click={() => show({ name: "browse", section })} />
                 </div>
-                {#each library[key] as row (row.id)}
+                {#each section.items as row (row.id)}
                     <ItemRow
                             name={row.name}
                             removable={!row.removed && busy !== row.id}
-                            dim={row.removed || !!row.notFor}
+                            dim={row.removed || row.unfit}
                             on:open={() => show({ name: "detail", id: row.id, from: view })}
                             on:remove={() => remove(row)}
                     >
-                        {rowLine(row)}
+                        {row.line}
                         <svelte:fragment slot="side">
                             {#if row.removed}
                                 <ButtonSetting
                                         small
                                         text="Undo"
                                         disabled={busy === row.id}
-                                        on:click={() => act(row, "install_marketplace_item", { name: row.name, itemType: type })}
+                                        on:click={() => act(row, "install_marketplace_item", { name: row.name, itemType: section.type })}
                                 />
                             {/if}
                         </svelte:fragment>
                     </ItemRow>
                 {:else}
-                    <div class="empty">No {plural} yet.</div>
+                    <div class="empty">{section.empty}</div>
                 {/each}
             </SettingWrapper>
         {/each}
@@ -155,7 +180,8 @@
     <Browse
             {client}
             {options}
-            type={view.type}
+            type={view.section.type}
+            title={view.section.title}
             bind:query
             on:back={() => show({ name: "list" })}
             on:open={e => show({ name: "detail", id: e.detail, from: view })}
@@ -174,5 +200,11 @@
     .empty {
         font-size: 12px;
         color: rgba(255, 255, 255, .5);
+    }
+
+    .strong {
+        color: white;
+        white-space: normal;
+        word-break: break-word;
     }
 </style>

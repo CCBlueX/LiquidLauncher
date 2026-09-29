@@ -31,6 +31,19 @@ pub fn short_date(date: NaiveDateTime) -> String {
     }
 }
 
+/// `1,234 downloads`, or `1 download` with `one`.
+pub fn count(n: u64, one: &str, many: &str) -> String {
+    let digits = n.to_string();
+    let mut grouped = String::new();
+    for (i, digit) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i) % 3 == 0 {
+            grouped.push(',');
+        }
+        grouped.push(digit);
+    }
+    format!("{grouped} {}", if n == 1 { one } else { many })
+}
+
 /// The error and its causes as one line, without the request URL.
 pub fn error_line(error: &anyhow::Error) -> String {
     static URL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r" for url \([^)]*\)").unwrap());
@@ -40,6 +53,13 @@ pub fn error_line(error: &anyhow::Error) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn counts() {
+        assert_eq!(count(1, "download", "downloads"), "1 download");
+        assert_eq!(count(0, "download", "downloads"), "0 downloads");
+        assert_eq!(count(1234567, "download", "downloads"), "1,234,567 downloads");
+    }
 
     #[test]
     fn leaves_the_url_out_of_errors() {

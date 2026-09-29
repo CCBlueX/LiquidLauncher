@@ -37,9 +37,9 @@ pub(crate) use modrinth::*;
 
 use crate::utils::error_line;
 
-/// Turns an error into the message the frontend shows: `unable to <action>: <error>`.
+/// Turns an error into the message the frontend shows: `Unable to <action>: <error>`.
 fn failed(action: &str) -> impl FnOnce(anyhow::Error) -> String + '_ {
-    move |error| format!("unable to {action}: {}", error_line(&error))
+    move |error| format!("Unable to {action}: {}", error_line(&error))
 }
 
 /// A search query, or `None` when it is blank.

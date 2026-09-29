@@ -2,6 +2,8 @@
     import { createEventDispatcher } from "svelte";
 
     export let name;
+    /** An image before the name, like the build's. */
+    export let icon = null;
     export let description = null;
     export let removable = false;
     export let dim = false;
@@ -13,6 +15,9 @@
 </script>
 
 <div class="row" class:dim class:openable>
+    {#if icon}
+        <img class="icon" src={icon} alt="">
+    {/if}
     <button class="open" type="button" disabled={!openable} on:click={() => dispatch("open")}>
         <span class="name">{name}</span>
         {#if description}
@@ -40,8 +45,7 @@
 <style>
     .row {
         position: relative;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) max-content max-content;
+        display: flex;
         column-gap: 10px;
         align-items: center;
         margin: 0 -6px;
@@ -51,15 +55,17 @@
         transition: ease border-color .2s;
     }
 
-    .row:not(.openable) {
-        grid-template-columns: minmax(0, 1fr) max-content;
-    }
-
     .row.openable:hover, .row.openable:focus-within {
         border-color: #4677FF;
     }
 
+    .icon {
+        width: 30px;
+        height: 30px;
+    }
+
     .open {
+        flex: 1;
         display: grid;
         text-align: left;
         background: transparent;

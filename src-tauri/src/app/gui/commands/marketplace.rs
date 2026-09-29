@@ -49,7 +49,7 @@ pub(crate) async fn get_marketplace_library(
         match builds::selected(&client, &options, &app_state.build).await {
             Ok(build) => (Some(build), Remote::Check(&client)),
             Err(error) => {
-                let error = format!("unable to check the marketplace: {}", error_line(&error));
+                let error = format!("Unable to check the marketplace: {}", error_line(&error));
                 (None, Remote::Failed(error))
             }
         }
@@ -63,7 +63,7 @@ pub(crate) async fn get_marketplace_library(
     };
     view::library(&game_dir(&options), &selected, remote)
         .await
-        .map_err(failed("read marketplace subscriptions"))
+        .map_err(failed("read the marketplace subscriptions"))
 }
 
 #[tauri::command]
@@ -80,7 +80,7 @@ pub(crate) async fn browse_marketplace(
         view::browse(&client, &game, &build, item_type, search_query(&query)).await
     }
     .await
-    .map_err(failed("browse marketplace"))
+    .map_err(failed("browse the marketplace"))
 }
 
 #[tauri::command]
@@ -95,7 +95,7 @@ pub(crate) async fn get_marketplace_item(
         view::detail(&client, &game_dir(&options), &build, item_id).await
     }
     .await
-    .map_err(failed("load marketplace item"))
+    .map_err(failed("load the item"))
 }
 
 /// Installs a theme or script at once, and an add-on in the revision that fits the selected build.

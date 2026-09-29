@@ -1,6 +1,6 @@
 <script>
     import { createEventDispatcher } from "svelte";
-    import IconButtonSetting from "../../../settings/IconButtonSetting.svelte";
+    import IconButtonSetting from "./IconButtonSetting.svelte";
 
     export let title = null;
     export let note = null;

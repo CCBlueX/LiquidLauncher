@@ -24,7 +24,7 @@ use super::{failed, search_query};
 use crate::app::builds;
 use crate::app::client_api::Client;
 use crate::app::gui::AppState;
-use crate::app::modrinth::{self, Held, ModrinthMod, SearchHit};
+use crate::app::modrinth::{self, Held, ModrinthMod, Search};
 use crate::app::options::Options;
 use crate::minecraft::prelauncher;
 
@@ -35,7 +35,7 @@ pub(crate) async fn modrinth_search(
     options: Options,
     query: Option<String>,
     app_state: State<'_, AppState>,
-) -> Result<Vec<SearchHit>, String> {
+) -> Result<Search, String> {
     async {
         let build = builds::selected(&client, &options, &app_state.build).await?;
         let query = search_query(&query);
@@ -69,14 +69,15 @@ pub(crate) async fn modrinth_search(
                 .map(|installed| installed.project_id.clone()),
         );
 
-        anyhow::Ok(modrinth::tell(
+        let hits = modrinth::tell(
             hits,
             &Held {
                 launched: &manifest.mods,
                 recommended: &recommended,
                 installed: &installed,
             },
-        ))
+        );
+        anyhow::Ok(Search::new(hits, query, &build.mc_version, &build.subsystem))
     }
     .await
     .map_err(failed("search Modrinth"))

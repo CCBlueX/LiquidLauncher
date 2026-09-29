@@ -27,7 +27,7 @@ use serde::Serialize;
 
 use crate::app::client_api::{Build, Client};
 use crate::app::options::Options;
-use crate::utils::short_date;
+use crate::utils::{count, short_date};
 
 const PAGE_SIZE: u32 = 20;
 
@@ -106,32 +106,13 @@ pub(crate) async fn selected(
     }
 }
 
-/// How the build that launches was chosen.
-#[derive(Serialize, Debug, PartialEq, Eq)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum Selection {
-    /// Whatever is newest when launching, a release or a nightly build now.
-    Latest {
-        release: bool,
-    },
-    Pinned {
-        date: String,
-        commit: String,
-    },
-}
-
-impl Selection {
-    pub fn of(build: &Build, latest: bool) -> Self {
-        if latest {
-            Selection::Latest {
-                release: build.release,
-            }
-        } else {
-            Selection::Pinned {
-                date: date(build),
-                commit: short_commit(build),
-            }
-        }
+/// How the build that launches was chosen: `Latest release`, or when it was pinned
+/// `Sep 26 · adfddc0`.
+pub fn selection(build: &Build, latest: bool) -> String {
+    match (latest, build.release) {
+        (true, true) => "Latest release".to_owned(),
+        (true, false) => "Latest nightly".to_owned(),
+        (false, _) => line(build),
     }
 }
 
@@ -139,12 +120,12 @@ impl Selection {
 #[serde(rename_all = "camelCase")]
 pub struct BuildChoice {
     build_id: u32,
-    liquidbounce: String,
-    minecraft: String,
-    date: String,
+    /// `0.40.1 · Minecraft 26.3`
+    name: String,
     /// The first line of the commit message.
-    message: String,
-    commit: String,
+    description: String,
+    /// `Sep 26 · adfddc0`
+    line: String,
     selected: bool,
 }
 
@@ -156,8 +137,8 @@ pub struct BuildPage {
     builds: Vec<BuildChoice>,
     page: u32,
     pages: u32,
-    /// Builds across all pages.
-    total: u32,
+    /// Across all pages, `120 builds` or `40 releases`.
+    count: String,
 }
 
 /// One page of the builds, newest first. `selected` is the chosen build id, `-1` for the latest.
@@ -168,11 +149,9 @@ pub async fn page(client: &Client, page: u32, nightly: bool, selected: i32) -> R
         .iter()
         .map(|build| BuildChoice {
             build_id: build.build_id,
-            liquidbounce: build.lb_version.clone(),
-            minecraft: build.mc_version.clone(),
-            date: date(build),
-            message: build.message.lines().next().unwrap_or_default().to_owned(),
-            commit: short_commit(build),
+            name: format!("{} · Minecraft {}", build.lb_version, build.mc_version),
+            description: build.message.lines().next().unwrap_or_default().to_owned(),
+            line: line(build),
             selected: i64::from(build.build_id) == i64::from(selected),
         })
         .collect();
@@ -182,16 +161,19 @@ pub async fn page(client: &Client, page: u32, nightly: bool, selected: i32) -> R
         builds,
         page: response.pagination.current,
         pages: response.pagination.pages,
-        total: response.pagination.items,
+        count: if nightly {
+            count(response.pagination.items.into(), "build", "builds")
+        } else {
+            count(response.pagination.items.into(), "release", "releases")
+        },
     })
 }
 
-fn date(build: &Build) -> String {
-    short_date(build.date.with_timezone(&Local).naive_local())
-}
-
-fn short_commit(build: &Build) -> String {
-    build.commit_id.chars().take(7).collect()
+/// When the build was made and its commit, `Sep 26 · adfddc0`.
+fn line(build: &Build) -> String {
+    let date = short_date(build.date.with_timezone(&Local).naive_local());
+    let commit: String = build.commit_id.chars().take(7).collect();
+    format!("{date} · {commit}")
 }
 
 #[cfg(test)]
@@ -222,15 +204,9 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(short_commit(&build), "adfddc0");
-        assert_eq!(
-            Selection::of(&build, true),
-            Selection::Latest { release: false }
-        );
-        assert!(matches!(
-            Selection::of(&build, false),
-            Selection::Pinned { commit, .. } if commit == "adfddc0"
-        ));
+        assert!(line(&build).ends_with(" · adfddc0"));
+        assert_eq!(selection(&build, true), "Latest nightly");
+        assert_eq!(selection(&build, false), line(&build));
 
         let latest = SelectedBuild {
             build_id: -1,

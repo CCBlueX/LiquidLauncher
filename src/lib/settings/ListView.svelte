@@ -1,15 +1,13 @@
 <script>
     import { createEventDispatcher, onDestroy } from "svelte";
-    import SettingWrapper from "../../../settings/SettingWrapper.svelte";
-    import IconButtonSetting from "../../../settings/IconButtonSetting.svelte";
-    import TextSetting from "../../../settings/TextSetting.svelte";
-    import ButtonSetting from "../../../settings/ButtonSetting.svelte";
-    import RippleLoader from "../../../common/RippleLoader.svelte";
+    import SettingWrapper from "./SettingWrapper.svelte";
+    import IconButtonSetting from "./IconButtonSetting.svelte";
+    import TextSetting from "./TextSetting.svelte";
+    import ButtonSetting from "./ButtonSetting.svelte";
+    import RippleLoader from "../common/RippleLoader.svelte";
     import Message from "./Message.svelte";
 
     export let title;
-    /** What the error says when `request` fails. */
-    export let failure;
     /** Requests the list, for `query` with a search. Typing requests it again after a pause. */
     export let request;
     /** Adds a search field. */
@@ -38,7 +36,7 @@
                 error = null;
             }
         } catch (e) {
-            console.error(`${failure}`, e);
+            console.error(`Failed to load ${title}:`, e);
             if (current === latest) error = `${e}`;
         }
     }
@@ -67,7 +65,7 @@
 <SettingWrapper {title} unbounded>
     <span slot="title-element" class="aside"><slot name="aside" {result} /></span>
     {#if error}
-        <Message title={failure} note={error}>
+        <Message title={error}>
             <ButtonSetting small text="Try again" on:click={() => load()} />
         </Message>
     {:else if !result}

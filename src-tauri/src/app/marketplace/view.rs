@@ -32,9 +32,9 @@ use super::api::{self, Revision};
 use super::install;
 use super::revisions::{display_version, range_label, supports_addons};
 use super::{queued, subscriptions, GameDir, ItemType, Queued, SubscribedItem};
-use crate::app::builds::Selection;
+use crate::app::builds;
 use crate::app::client_api::{Build, Client};
-use crate::utils::{error_line, short_date};
+use crate::utils::{count, error_line, short_date};
 
 const LISTED: u32 = 50;
 const VERSIONS: u32 = 5;
@@ -50,7 +50,7 @@ pub enum Notice {
     },
     /// Edits made while the game runs wait for it to exit.
     Restart {
-        changes: usize,
+        text: String,
     },
 }
 
@@ -59,14 +59,25 @@ pub enum Notice {
 pub struct LibraryItem {
     id: u32,
     name: String,
-    /// What is installed. Only a theme's files name it, the rest waits for the marketplace.
-    version: Option<String>,
-    /// The build's LiquidBounce version, for an add-on that has nothing for it.
-    not_for: Option<String>,
+    /// The installed version, and `Not for v0.40.1` for an add-on that has nothing for the build.
+    line: String,
+    unfit: bool,
     /// Removed while the game runs, until it exits.
     removed: bool,
-    /// The installed items that stop working without it, once the marketplace was asked.
-    needed_by: Vec<String>,
+    /// Asked before removing an item that installed items need, once the marketplace was asked.
+    remove_question: Option<String>,
+}
+
+/// The items of one type, `Add-ons` for example.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Section {
+    #[serde(rename = "type")]
+    item_type: ItemType,
+    title: &'static str,
+    /// Shown without items.
+    empty: String,
+    items: Vec<LibraryItem>,
 }
 
 #[derive(Serialize)]
@@ -74,16 +85,14 @@ pub struct LibraryItem {
 pub struct Library {
     minecraft: Option<String>,
     liquidbounce: Option<String>,
-    selection: Option<Selection>,
+    /// How the build was chosen, see [builds::selection].
+    selection: Option<String>,
     notice: Notice,
-    addons: Vec<LibraryItem>,
-    themes: Vec<LibraryItem>,
-    scripts: Vec<LibraryItem>,
+    sections: Vec<Section>,
 }
 
-#[derive(Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum BrowseFit {
+/// Whether an add-on has a revision for the build.
+enum BrowseFit {
     Fits {
         version: String,
         liquidbounce: Option<String>,
@@ -99,9 +108,9 @@ pub struct BrowseItem {
     id: u32,
     name: String,
     summary: String,
-    downloads: u32,
-    date: Option<String>,
-    fit: Option<BrowseFit>,
+    /// The version that fits the build, or when it was updated, and its downloads.
+    line: String,
+    unfit: bool,
     subscribed: bool,
     /// LiquidBounce refuses an add-on that has no revision for the build as well.
     installable: bool,
@@ -110,15 +119,19 @@ pub struct BrowseItem {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Browse {
-    liquidbounce: String,
+    /// The LiquidBounce version add-ons are listed for.
+    aside: Option<String>,
+    /// Shown without items.
+    empty: String,
     items: Vec<BrowseItem>,
 }
 
 #[derive(Serialize, Debug, PartialEq, Eq)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum Tag {
-    Installed,
-    NotFor { liquidbounce: String },
+#[serde(rename_all = "camelCase")]
+pub struct Tag {
+    /// `Installed`, or `Not for v0.40.1` for a revision that does not fit the build.
+    text: String,
+    installed: bool,
 }
 
 #[derive(Serialize)]
@@ -137,13 +150,14 @@ pub struct Detail {
     name: String,
     #[serde(rename = "type")]
     item_type: ItemType,
-    author: String,
-    downloads: u32,
+    /// `Add-on by CCBlueX · 1,234 downloads`
+    meta: String,
     summary: String,
     screenshots: Vec<Screenshot>,
     /// Removing is offered, otherwise installing.
     subscribed: bool,
     can_install: bool,
+    remove_question: Option<String>,
     versions: Vec<VersionRow>,
     needed_by: Vec<NeededBy>,
 }
@@ -152,9 +166,8 @@ pub struct Detail {
 #[serde(rename_all = "camelCase")]
 pub struct NeededBy {
     name: String,
-    #[serde(rename = "type")]
-    item_type: ItemType,
-    author: String,
+    /// `Add-on by CCBlueX`
+    line: String,
 }
 
 /// What the marketplace tells about an installed add-on or script.
@@ -227,13 +240,30 @@ fn tag(
     liquidbounce: &str,
 ) -> Option<Tag> {
     if installed == Some(revision) {
-        return Some(Tag::Installed);
+        return Some(Tag {
+            text: "Installed".to_owned(),
+            installed: true,
+        });
     }
     fitting
         .filter(|fitting| !fitting.contains(&revision))
-        .map(|_| Tag::NotFor {
-            liquidbounce: display_version(liquidbounce),
+        .map(|_| Tag {
+            text: format!("Not for {}", display_version(liquidbounce)),
+            installed: false,
         })
+}
+
+/// `Remove Core? Extras stops working without it.`, when installed items need `name`.
+fn remove_question(name: &str, needed_by: &[&str]) -> Option<String> {
+    let (last, rest) = needed_by.split_last()?;
+    Some(if rest.is_empty() {
+        format!("Remove {name}? {last} stops working without it.")
+    } else {
+        format!(
+            "Remove {name}? {} and {last} stop working without it.",
+            rest.join(", ")
+        )
+    })
 }
 
 /// Add-ons, themes and scripts subscribed, with anything still waiting for the game to exit.
@@ -341,7 +371,7 @@ pub async fn library(
     };
     let mut failed = |error: anyhow::Error| {
         offline.get_or_insert_with(|| {
-            format!("unable to check the marketplace: {}", error_line(&error))
+            format!("Unable to check the marketplace: {}", error_line(&error))
         });
     };
 
@@ -360,11 +390,16 @@ pub async fn library(
     let mut library = Library {
         minecraft: build.map(|build| build.mc_version.clone()),
         liquidbounce: build.map(|build| build.lb_version.clone()),
-        selection: build.map(|build| Selection::of(build, selected.latest)),
+        selection: build.map(|build| builds::selection(build, selected.latest)),
         notice: Notice::Checking,
-        addons: vec![],
-        themes: vec![],
-        scripts: vec![],
+        sections: [ItemType::Addon, ItemType::Theme, ItemType::Script]
+            .map(|item_type| Section {
+                item_type,
+                title: item_type.title(),
+                empty: format!("No {} yet.", item_type.title().to_lowercase()),
+                items: vec![],
+            })
+            .into(),
     };
 
     for (item, (installed, checked)) in items.iter().zip(checked) {
@@ -386,30 +421,45 @@ pub async fn library(
             Some(checked) => checked.version,
             None => installed.and_then(|installed| installed.version),
         };
+        let not_for = (item.item_type == ItemType::Addon)
+            .then(|| not_for(supports, fits, liquidbounce))
+            .flatten();
+        let needed_by: Vec<_> = dependents(&items, &needs, &queued, item.id)
+            .map(|other| other.name.as_str())
+            .collect();
         let row = LibraryItem {
             id: item.id,
             name: item.name.clone(),
-            version: version.map(|version| display_version(&version)),
-            not_for: (item.item_type == ItemType::Addon)
-                .then(|| not_for(supports, fits, liquidbounce))
-                .flatten(),
+            line: [
+                version.map(|version| display_version(&version)),
+                not_for.as_ref().map(|not_for| format!("Not for {not_for}")),
+            ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+            .join(" · "),
+            unfit: not_for.is_some(),
             removed: queued.removing(item.id),
-            needed_by: dependents(&items, &needs, &queued, item.id)
-                .map(|other| other.name.clone())
-                .collect(),
+            remove_question: remove_question(&item.name, &needed_by),
         };
-        match item.item_type {
-            ItemType::Addon => library.addons.push(row),
-            ItemType::Script => library.scripts.push(row),
-            _ => library.themes.push(row),
-        }
+        let section = match item.item_type {
+            ItemType::Addon => 0,
+            ItemType::Theme => 1,
+            _ => 2,
+        };
+        library.sections[section].items.push(row);
     }
 
     if !matches!(remote, Remote::Skip) {
         let changes = queued.len();
         library.notice = match offline {
             Some(error) => Notice::Offline { error },
-            None if changes > 0 => Notice::Restart { changes },
+            None if changes > 0 => Notice::Restart {
+                text: format!(
+                    "Restart LiquidBounce to apply {}.",
+                    count(changes as u64, "change", "changes")
+                ),
+            },
             None => Notice::Idle,
         };
     }
@@ -429,6 +479,7 @@ pub async fn browse(
         ItemType::Script => "Script",
         other => bail!("{other:?} is not listed here"),
     };
+    let plural = item_type.title().to_lowercase();
     let listed = api::items(client, type_name, query, LISTED).await?;
 
     let queued = queued();
@@ -463,24 +514,47 @@ pub async fn browse(
         })
     });
     let fits = join_all(fits).await;
+    let liquidbounce = display_version(&build.lb_version);
 
     let items = listed
         .into_iter()
         .zip(fits)
-        .map(|(item, fit)| BrowseItem {
-            id: item.id,
-            subscribed: subscribed.contains(&item.id),
-            installable: !matches!(fit, Some(BrowseFit::NoVersion)),
-            summary: summary(&item.description),
-            downloads: item.downloads,
-            date: item.updated_at.map(short_date),
-            fit,
-            name: item.name,
+        .map(|(item, fit)| {
+            let downloads = count(item.downloads.into(), "download", "downloads");
+            let unfit = matches!(fit, Some(BrowseFit::NoVersion));
+            let line = match fit {
+                Some(BrowseFit::Fits {
+                    version,
+                    liquidbounce,
+                }) => [Some(version), liquidbounce, Some(downloads)]
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<_>>()
+                    .join(" · "),
+                Some(BrowseFit::NoVersion) => format!("Not for {liquidbounce} · {downloads}"),
+                _ => match item.updated_at.map(short_date) {
+                    Some(date) => format!("{date} · {downloads}"),
+                    None => downloads,
+                },
+            };
+            BrowseItem {
+                id: item.id,
+                subscribed: subscribed.contains(&item.id),
+                installable: !unfit,
+                summary: summary(&item.description),
+                line,
+                unfit,
+                name: item.name,
+            }
         })
         .collect();
 
     Ok(Browse {
-        liquidbounce: display_version(&build.lb_version),
+        aside: (item_type == ItemType::Addon).then(|| format!("LiquidBounce {liquidbounce}")),
+        empty: match query {
+            Some(query) => format!("No {plural} match “{query}”."),
+            None => format!("No {plural} published yet."),
+        },
         items,
     })
 }
@@ -512,6 +586,8 @@ pub async fn detail(
     let items = library_items(game, &queued).await?;
     let listed = items.iter().any(|subscribed| subscribed.id == item.id);
     let needed_by = needed_by(client, &items, &queued, item.id).await;
+    let needed_names: Vec<_> = needed_by.iter().map(|needed| needed.name.as_str()).collect();
+    let remove_question = remove_question(&item.name, &needed_names);
     let installed = install::installed(game, &subscribed_item)
         .await
         .map(|installed| installed.revision)
@@ -549,12 +625,17 @@ pub async fn detail(
     Ok(Detail {
         id: item.id,
         item_type: item.item_type,
-        author: item.author,
-        downloads: item.downloads,
+        meta: format!(
+            "{} by {} · {}",
+            item.item_type.name(),
+            item.author,
+            count(item.downloads.into(), "download", "downloads")
+        ),
         summary: summary(&item.description),
         screenshots: screenshots(&item.description),
         subscribed: listed && !queued.removing(item.id),
         can_install,
+        remove_question,
         versions,
         needed_by,
         name: item.name,
@@ -590,10 +671,14 @@ async fn needed_by(
                     String::new()
                 }
             };
+            let type_name = other.item_type.name();
             NeededBy {
                 name: other.name.clone(),
-                item_type: other.item_type,
-                author,
+                line: if author.is_empty() {
+                    type_name.to_owned()
+                } else {
+                    format!("{type_name} by {author}")
+                },
             }
         }),
     )
@@ -690,22 +775,36 @@ mod tests {
     fn tags_the_installed_revision_and_those_not_for_the_build() {
         let fitting = HashSet::from([1, 2]);
         let not_for = || {
-            Some(Tag::NotFor {
-                liquidbounce: "v0.40.1".to_owned(),
+            Some(Tag {
+                text: "Not for v0.40.1".to_owned(),
+                installed: false,
             })
         };
-        assert_eq!(
-            tag(2, Some(2), Some(&fitting), "0.40.1"),
-            Some(Tag::Installed)
-        );
+        let installed = || {
+            Some(Tag {
+                text: "Installed".to_owned(),
+                installed: true,
+            })
+        };
+        assert_eq!(tag(2, Some(2), Some(&fitting), "0.40.1"), installed());
         assert_eq!(tag(1, Some(2), Some(&fitting), "0.40.1"), None);
         assert_eq!(tag(3, Some(2), Some(&fitting), "0.40.1"), not_for());
-        assert_eq!(
-            tag(3, Some(3), Some(&fitting), "0.40.1"),
-            Some(Tag::Installed)
-        );
+        assert_eq!(tag(3, Some(3), Some(&fitting), "0.40.1"), installed());
         assert_eq!(tag(3, None, None, "0.40.1"), None);
         assert_eq!(tag(1, None, Some(&HashSet::new()), "0.40.1"), not_for());
+    }
+
+    #[test]
+    fn asks_before_removing_what_others_need() {
+        assert_eq!(remove_question("Core", &[]), None);
+        assert_eq!(
+            remove_question("Core", &["Extras"]).as_deref(),
+            Some("Remove Core? Extras stops working without it.")
+        );
+        assert_eq!(
+            remove_question("Core", &["Extras", "Tweaks", "Macros"]).as_deref(),
+            Some("Remove Core? Extras, Tweaks and Macros stop working without it.")
+        );
     }
 
     #[test]

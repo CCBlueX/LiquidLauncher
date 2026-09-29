@@ -1,12 +1,11 @@
 <script>
     import { createEventDispatcher } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
-    import ButtonSetting from "../../../settings/ButtonSetting.svelte";
-    import ItemRow from "./ItemRow.svelte";
-    import Message from "./Message.svelte";
-    import ListView from "./ListView.svelte";
-    import { capitalize, count } from "./copy.js";
-    import { track } from "./modrinth.js";
+    import ButtonSetting from "../../../../settings/ButtonSetting.svelte";
+    import ItemRow from "../../../../settings/ItemRow.svelte";
+    import Message from "../../../../settings/Message.svelte";
+    import ListView from "../../../../settings/ListView.svelte";
+    import { track } from "./Mods.svelte";
 
     export let client;
     export let options;
@@ -42,16 +41,15 @@
         bind:query
         placeholder="Search Modrinth mods"
         title="Modrinth"
-        failure="Could not reach Modrinth."
         {request}
         on:back
-        let:result={hits}
+        let:result
 >
-    <svelte:fragment slot="aside">{capitalize(build.subsystem)} {build.mcVersion}</svelte:fragment>
+    <svelte:fragment slot="aside" let:result>{result?.target ?? ""}</svelte:fragment>
 
-    {#each hits as hit (hit.projectId)}
+    {#each result.hits as hit (hit.projectId)}
         <ItemRow name={hit.title} description={hit.description} openable={false} status={hit.installed ? "Installed" : null}>
-            by {hit.author} &middot; {count(hit.downloads, "download", "downloads")}
+            {hit.line}
             <svelte:fragment slot="side">
                 {#if !hit.installed}
                     <ButtonSetting
@@ -64,8 +62,8 @@
             </svelte:fragment>
         </ItemRow>
     {:else}
-        {#if query.trim()}
-            <Message title="No mods match “{query.trim()}”." clearable on:clear={() => query = ""} />
+        {#if result.empty}
+            <Message title={result.empty} clearable on:clear={() => query = ""} />
         {/if}
     {/each}
 </ListView>

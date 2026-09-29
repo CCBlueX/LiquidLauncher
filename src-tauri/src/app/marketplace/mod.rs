@@ -51,6 +51,30 @@ pub enum ItemType {
     Other,
 }
 
+impl ItemType {
+    /// `Add-on`, as a row names an item's type.
+    pub fn name(self) -> &'static str {
+        match self {
+            ItemType::Config => "Config",
+            ItemType::Theme => "Theme",
+            ItemType::Addon => "Add-on",
+            ItemType::Script => "Script",
+            ItemType::Other => "Item",
+        }
+    }
+
+    /// `Add-ons`, as a list is titled.
+    pub fn title(self) -> &'static str {
+        match self {
+            ItemType::Config => "Configs",
+            ItemType::Theme => "Themes",
+            ItemType::Addon => "Add-ons",
+            ItemType::Script => "Scripts",
+            ItemType::Other => "Items",
+        }
+    }
+}
+
 /// A subscription as read for display and staging. Nothing writes this back: edits change the raw
 /// entries, so types and fields this launcher does not know survive.
 #[derive(Serialize, Deserialize, Debug, Clone)]

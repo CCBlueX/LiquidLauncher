@@ -3,9 +3,8 @@
     import { invoke } from "@tauri-apps/api/core";
     import ButtonSetting from "../../../settings/ButtonSetting.svelte";
     import ToggleSetting from "../../../settings/ToggleSetting.svelte";
-    import ItemRow from "./ItemRow.svelte";
-    import ListView from "./ListView.svelte";
-    import { count } from "./copy.js";
+    import ItemRow from "../../../settings/ItemRow.svelte";
+    import ListView from "../../../settings/ListView.svelte";
 
     export let client;
     export let options;
@@ -42,7 +41,6 @@
         bind:this={view}
         bind:result
         title="Builds"
-        failure="Could not reach the LiquidBounce API."
         {request}
         on:back
 >
@@ -53,21 +51,17 @@
             disabled={false}
             on:change={toggleNightly}
     />
-    <svelte:fragment slot="aside">
-        {#if result}
-            {options.launcher.showNightlyBuilds ? count(result.total, "build", "builds") : count(result.total, "release", "releases")}
-        {/if}
-    </svelte:fragment>
+    <svelte:fragment slot="aside">{result?.count ?? ""}</svelte:fragment>
 
     <ItemRow name="Latest" status={result.latest ? "Selected" : null} on:open={() => dispatch("select", -1)} />
     {#each result.builds as build (build.buildId)}
         <ItemRow
-                name="{build.liquidbounce} · Minecraft {build.minecraft}"
-                description={build.message}
+                name={build.name}
+                description={build.description}
                 status={build.selected ? "Selected" : null}
                 on:open={() => dispatch("select", build.buildId)}
         >
-            {build.date} &middot; {build.commit}
+            {build.line}
         </ItemRow>
     {/each}
     {#if result.page < result.pages}

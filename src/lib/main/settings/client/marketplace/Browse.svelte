@@ -1,19 +1,18 @@
 <script>
     import { createEventDispatcher } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
-    import ButtonSetting from "../../../settings/ButtonSetting.svelte";
-    import ItemRow from "./ItemRow.svelte";
-    import Message from "./Message.svelte";
-    import ListView from "./ListView.svelte";
-    import { browseLine, itemTypes } from "./copy.js";
+    import ButtonSetting from "../../../../settings/ButtonSetting.svelte";
+    import ItemRow from "../../../../settings/ItemRow.svelte";
+    import Message from "../../../../settings/Message.svelte";
+    import ListView from "../../../../settings/ListView.svelte";
 
     export let client;
     export let options;
     export let type;
+    export let title;
     export let query = "";
 
     const dispatch = createEventDispatcher();
-    const { title, plural } = itemTypes[type];
 
     let view;
     let busy = null;
@@ -36,26 +35,23 @@
 <ListView
         bind:this={view}
         bind:query
-        placeholder="Search {plural}"
+        placeholder="Search {title.toLowerCase()}"
         {title}
-        failure="Could not reach the marketplace."
         {request}
         on:back
         let:result
 >
-    <svelte:fragment slot="aside" let:result>
-        {#if type === "Addon" && result}LiquidBounce {result.liquidbounce}{/if}
-    </svelte:fragment>
+    <svelte:fragment slot="aside" let:result>{result?.aside ?? ""}</svelte:fragment>
 
     {#each result.items as item (item.id)}
         <ItemRow
                 name={item.name}
                 description={item.summary}
-                dim={item.fit?.kind === "noVersion"}
+                dim={item.unfit}
                 status={item.subscribed ? "Installed" : null}
                 on:open={() => dispatch("open", item.id)}
         >
-            {browseLine(item, result.liquidbounce)}
+            {item.line}
             <svelte:fragment slot="side">
                 {#if !item.subscribed}
                     <ButtonSetting
@@ -68,10 +64,6 @@
             </svelte:fragment>
         </ItemRow>
     {:else}
-        <Message
-                title={query.trim() ? `No ${plural} match “${query.trim()}”.` : `No ${plural} published yet.`}
-                clearable={!!query}
-                on:clear={() => query = ""}
-        />
+        <Message title={result.empty} clearable={!!query} on:clear={() => query = ""} />
     {/each}
 </ListView>

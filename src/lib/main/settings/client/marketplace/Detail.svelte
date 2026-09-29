@@ -2,14 +2,13 @@
     import { createEventDispatcher } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
     import { confirm } from "@tauri-apps/plugin-dialog";
-    import SettingWrapper from "../../../settings/SettingWrapper.svelte";
-    import IconButtonSetting from "../../../settings/IconButtonSetting.svelte";
-    import ButtonSetting from "../../../settings/ButtonSetting.svelte";
-    import RippleLoader from "../../../common/RippleLoader.svelte";
-    import ItemRow from "./ItemRow.svelte";
-    import Message from "./Message.svelte";
+    import SettingWrapper from "../../../../settings/SettingWrapper.svelte";
+    import IconButtonSetting from "../../../../settings/IconButtonSetting.svelte";
+    import ButtonSetting from "../../../../settings/ButtonSetting.svelte";
+    import ItemRow from "../../../../settings/ItemRow.svelte";
+    import Message from "../../../../settings/Message.svelte";
+    import RippleLoader from "../../../../common/RippleLoader.svelte";
     import Screenshots from "./Screenshots.svelte";
-    import { count, itemTypes, neededByLine, removeQuestion } from "./copy.js";
 
     export let client;
     export let options;
@@ -50,8 +49,7 @@
     }
 
     async function remove() {
-        const neededBy = detail.neededBy.map(dependent => dependent.name);
-        if (neededBy.length > 0 && !await confirm(removeQuestion(detail.name, neededBy))) {
+        if (detail.removeQuestion && !await confirm(detail.removeQuestion)) {
             return;
         }
 
@@ -78,9 +76,7 @@
         <div class="head">
             <div>
                 <div class="name">{detail.name}</div>
-                <div class="meta">
-                    {itemTypes[detail.type].name} by {detail.author} &middot; {count(detail.downloads, "download", "downloads")}
-                </div>
+                <div class="meta">{detail.meta}</div>
             </div>
             {#if detail.subscribed}
                 <IconButtonSetting text="Remove" icon="icon-button-close" on:click={() => !busy && remove()} />
@@ -111,12 +107,10 @@
         <SettingWrapper title="Versions" unbounded>
             <div class="versions">
                 {#each detail.versions as { label, liquidbounce, date, tag }}
-                    <span class="version" class:dim={tag?.kind === "notFor"}>{label}</span>
+                    <span class="version" class:dim={tag && !tag.installed}>{label}</span>
                     <span class="muted">{liquidbounce ?? ""}</span>
                     <span class="muted">{date ?? ""}</span>
-                    <span class="tag" class:strong={tag?.kind === "installed"}>
-                        {#if tag?.kind === "installed"}Installed{:else if tag?.kind === "notFor"}Not for {tag.liquidbounce}{/if}
-                    </span>
+                    <span class="tag" class:strong={tag?.installed}>{tag?.text ?? ""}</span>
                 {/each}
             </div>
         </SettingWrapper>
@@ -125,12 +119,12 @@
     {#if detail.neededBy.length > 0}
         <SettingWrapper title="Needed by" unbounded>
             {#each detail.neededBy as dependent}
-                <ItemRow name={dependent.name} openable={false}>{neededByLine(dependent)}</ItemRow>
+                <ItemRow name={dependent.name} openable={false}>{dependent.line}</ItemRow>
             {/each}
         </SettingWrapper>
     {/if}
 {:else if error}
-    <Message title="Could not reach the marketplace." note={error}>
+    <Message title={error}>
         <ButtonSetting small text="Try again" on:click={load} />
     </Message>
 {:else}
