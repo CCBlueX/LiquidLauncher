@@ -4,11 +4,12 @@ use anyhow::{anyhow, Result};
 
 use super::{LauncherData, StartParameter};
 use crate::app::client_api::LaunchManifest;
-use crate::minecraft::java::DistributionSelection;
+use crate::minecraft::java::{DistributionSelection, JavaDistribution};
 use crate::minecraft::{
     java::{find_java_binary, jre_downloader},
     progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
 };
+use crate::utils::{Architecture, OperatingSystem, ARCHITECTURE, OS};
 
 pub async fn load_jre<D: Send + Sync>(
     runtimes_folder: &Path,
@@ -17,6 +18,12 @@ pub async fn load_jre<D: Send + Sync>(
     launcher_data: &LauncherData<D>,
 ) -> Result<PathBuf> {
     let distribution = match &launching_parameter.java_distribution {
+        // Temurin and GraalVM publish no Windows ARM64 builds of current Java versions
+        DistributionSelection::Automatic(_)
+            if OS == OperatingSystem::WINDOWS && *ARCHITECTURE == Architecture::AARCH64 =>
+        {
+            &JavaDistribution::Zulu
+        }
         DistributionSelection::Automatic(_) => &manifest.build.jre_distribution,
         DistributionSelection::Custom(path) => return Ok(PathBuf::from(path)),
         DistributionSelection::Manual(distribution) => distribution,
