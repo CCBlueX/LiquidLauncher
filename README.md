@@ -6,7 +6,6 @@ A custom Minecraft launcher for LiquidBounce.
 [![Forum](https://img.shields.io/badge/Forum-forums.ccbluex.net-4677FF?style=for-the-badge)](https://forums.ccbluex.net)
 [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://liquidbounce.net/discord)
 [![YouTube](https://img.shields.io/badge/YouTube-CCBlueX-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtube.com/CCBlueX)
-[![Twitter](https://img.shields.io/badge/Twitter-@CCBlueX-000000?style=for-the-badge&logo=x&logoColor=white)](https://twitter.com/CCBlueX)
 
 ## Installation
 
@@ -33,7 +32,7 @@ Download the launcher for Windows, macOS or Linux from [liquidbounce.net](https:
 
 ## Issues
 
-If you notice any bugs or missing features, let us know by opening an [issue](https://github.com/CCBlueX/LiquidLauncher/issues). For support, [contact us](https://ccbluex.net/contact).
+If you notice any bugs or missing features, let us know by opening an [issue](https://github.com/CCBlueX/LiquidLauncher/issues). For support, [contact us](https://ccbluex.net/contact). The imprint is at [ccbluex.net/imprint](https://ccbluex.net/imprint).
 
 ## License
 
@@ -81,7 +80,3 @@ We appreciate contributions. So if you want to support us, feel free to make cha
 `feat` `fix` `refactor` `chore` `docs`
 
 Add a short body when the subject alone leaves the next reader guessing.
-
-## Imprint
-
-[ccbluex.net/imprint](https://ccbluex.net/imprint)
