@@ -46,13 +46,52 @@ pub const OS: OperatingSystem = if cfg!(target_os = "windows") {
     OperatingSystem::UNKNOWN
 };
 
-pub static ARCHITECTURE: Lazy<Architecture> = Lazy::new(|| match consts::ARCH {
-    "x86" => Architecture::X86,        // 32-bit
-    "x86_64" => Architecture::X64,     // 64-bit
-    "arm" => Architecture::ARM,        // ARM
-    "aarch64" => Architecture::AARCH64, // AARCH64
-    _ => Architecture::UNKNOWN,        // Unsupported architecture
-});
+/// The machine's architecture, which picks the JRE and natives for the game. An emulated launcher
+/// (x64 under Rosetta or on Windows ARM) still gets a native game.
+pub static ARCHITECTURE: Lazy<Architecture> =
+    Lazy::new(|| match native_arch().unwrap_or(consts::ARCH) {
+        "x86" => Architecture::X86,         // 32-bit
+        "x86_64" => Architecture::X64,      // 64-bit
+        "arm" => Architecture::ARM,         // ARM
+        "aarch64" => Architecture::AARCH64, // AARCH64
+        _ => Architecture::UNKNOWN,         // Unsupported architecture
+    });
+
+#[cfg(target_os = "macos")]
+fn native_arch() -> Option<&'static str> {
+    use sysctl::Sysctl;
+
+    // Set on Apple Silicon, also for processes Rosetta translates
+    let arm64 = sysctl::Ctl::new("hw.optional.arm64").ok()?.value().ok()?;
+    matches!(arm64, sysctl::CtlValue::Int(1)).then_some("aarch64")
+}
+
+#[cfg(windows)]
+fn native_arch() -> Option<&'static str> {
+    use windows_sys::Win32::System::SystemInformation::{
+        IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_ARM64, IMAGE_FILE_MACHINE_I386,
+    };
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, IsWow64Process2};
+
+    // GetNativeSystemInfo would report x64 to an x64 process emulated on ARM64
+    let (mut process, mut native) = (0, 0);
+    if unsafe { IsWow64Process2(GetCurrentProcess(), &mut process, &mut native) } == 0 {
+        return None;
+    }
+
+    match native {
+        IMAGE_FILE_MACHINE_ARM64 => Some("aarch64"),
+        IMAGE_FILE_MACHINE_AMD64 => Some("x86_64"),
+        IMAGE_FILE_MACHINE_I386 => Some("x86"),
+        _ => None,
+    }
+}
+
+// FEX and box64 hide the machine from emulated processes, Linux ARM gets native builds instead
+#[cfg(not(any(target_os = "macos", windows)))]
+fn native_arch() -> Option<&'static str> {
+    None
+}
 
 pub const OS_VERSION: Lazy<String> = Lazy::new(|| os_info::get().version().to_string());
 
@@ -78,7 +117,7 @@ pub enum Architecture {
     ARM,
     #[serde(rename = "aarch64")]
     AARCH64,
-    #[serde(rename = "unknown")]
+    #[serde(rename = "unknown", other)]
     UNKNOWN,
 }
 
@@ -121,7 +160,7 @@ impl OperatingSystem {
     pub fn get_zulu_name(&self) -> Result<&'static str> {
         Ok(match self {
             OperatingSystem::WINDOWS => "windows",
-            OperatingSystem::LINUX => "linux",
+            OperatingSystem::LINUX => "linux_glibc",
             OperatingSystem::OSX => "macos",
             _ => bail!("Unsupported operating system for Zulu runtime"),
         })

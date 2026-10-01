@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
   build-tauri:
@@ -21,9 +22,15 @@ jobs:
           - platform: ubuntu-22.04
             args: >-
 
+          - platform: ubuntu-22.04-arm
+            args: >-
+
           - platform: windows-latest
             args: >-
-    
+
+          - platform: windows-11-arm
+            args: >-
+
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -49,10 +56,10 @@ jobs:
             ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04'
+        if: startsWith(matrix.platform, 'ubuntu')
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libx11-dev xorg-dev libglu1-mesa-dev libglib2.0-0
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libx11-dev xorg-dev libglu1-mesa-dev libglib2.0-0 xdg-utils
 
       - name: Setup Cargo dependency cache
         uses: Swatinem/rust-cache@v2
@@ -65,6 +72,7 @@ jobs:
           bun run build
 
       - name: Build and release
+        if: github.event_name == 'push'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -87,3 +95,18 @@ jobs:
             ${{ startsWith(github.event.head_commit.message, 'release: ') }}
           prerelease: >-
             ${{ !startsWith(github.event.head_commit.message, 'release: ') }}
+
+      - name: Build
+        id: build
+        if: github.event_name == 'pull_request'
+        uses: tauri-apps/tauri-action@v0
+        with:
+          args: >-
+            ${{ matrix.args }} --config {"bundle":{"createUpdaterArtifacts":false}}
+
+      - name: Upload artifacts
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ strategy.job-index }}
+          path: ${{ join(fromJSON(steps.build.outputs.artifactPaths), fromJSON('"\n"')) }}

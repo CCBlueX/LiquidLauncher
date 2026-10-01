@@ -1,6 +1,7 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use crate::utils::{ARCHITECTURE, OS};
 use crate::HTTP_CLIENT;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -20,7 +21,7 @@ impl Default for DistributionSelection {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
 pub enum JavaDistribution {
     #[serde(rename = "temurin")]
     Temurin,
@@ -38,11 +39,12 @@ impl Default for JavaDistribution {
 }
 
 impl JavaDistribution {
-    pub async fn get_url(&self, jre_version: &u32) -> Result<String> {
+    /// `None` when the vendor has no build for the running OS and architecture
+    pub async fn get_url(&self, jre_version: &u32) -> Result<Option<String>> {
         let os_arch = ARCHITECTURE.get_simple_name()?;
         let archive_type = OS.get_archive_type()?;
 
-        Ok(match self {
+        let url = match self {
             JavaDistribution::Temurin => {
                 let os_name = OS.get_adoptium_name()?;
                 format!(
@@ -68,10 +70,46 @@ impl JavaDistribution {
                     bail!("GraalVM only supports Java 17+")
                 }
             }
+            // Azul's file names carry the exact build, so only its metadata API knows the URL
             JavaDistribution::Zulu => {
-                fetch_zulu_download_url(*jre_version).await?
+                #[derive(Deserialize)]
+                struct AzulPackage {
+                    download_url: String,
+                }
+
+                let packages: Vec<AzulPackage> = HTTP_CLIENT
+                    .get(format!(
+                        "https://api.azul.com/metadata/v1/zulu/packages/?java_version={}&os={}&arch={}&archive_type={}&java_package_type=jre&availability_types=CA&release_status=ga&javafx_bundled=false&latest=true&page_size=1",
+                        jre_version,
+                        OS.get_zulu_name()?,
+                        ARCHITECTURE.get_zulu_name()?,
+                        archive_type
+                    ))
+                    .header("accept", "application/json")
+                    .send()
+                    .await?
+                    .error_for_status()?
+                    .json()
+                    .await?;
+
+                return Ok(packages
+                    .into_iter()
+                    .next()
+                    .map(|package| package.download_url));
             }
-        })
+        };
+
+        let response = HTTP_CLIENT.head(&url).send().await?;
+        if response.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+
+        response.error_for_status()?;
+        Ok(Some(url))
+    }
+
+    pub async fn has_build(&self, jre_version: &u32) -> Result<bool> {
+        Ok(self.get_url(jre_version).await?.is_some())
     }
 
     pub fn get_name(&self) -> &str {
@@ -89,37 +127,4 @@ impl JavaDistribution {
             JavaDistribution::Zulu => true,             // Community builds available for all LTS versions
         }
     }
-}
-
-async fn fetch_zulu_download_url(jre_version: u32) -> Result<String> {
-    #[derive(Deserialize)]
-    struct AzulPackage {
-        download_url: String,
-        latest: Option<bool>,
-    }
-
-    let os_param = OS.get_zulu_name()?;
-    let arch_param = ARCHITECTURE.get_zulu_name()?;
-    let request_url = format!(
-        "https://api.azul.com/metadata/v1/zulu/packages/?java_version={}&os={}&arch={}&java_package_type=jre&availability_types=CA&release_status=ga&javafx_bundled=false&latest=true&page_size=1",
-        jre_version, os_param, arch_param
-    );
-
-    let response = HTTP_CLIENT
-        .get(&request_url)
-        .header("accept", "application/json")
-        .send()
-        .await?
-        .error_for_status()?;
-
-    let packages: Vec<AzulPackage> = response.json().await?;
-    if packages.is_empty() {
-        bail!("No Zulu runtime available for Java {} on {}-{}", jre_version, os_param, arch_param);
-    }
-
-    packages
-        .into_iter()
-        .find(|pkg| pkg.latest.unwrap_or(true))
-        .map(|pkg| pkg.download_url)
-        .ok_or_else(|| anyhow!("Failed to determine latest Zulu runtime download URL"))
 }

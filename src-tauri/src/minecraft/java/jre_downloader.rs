@@ -20,11 +20,14 @@
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use path_absolutize::Absolutize;
 use tokio::fs;
+use tracing::info;
 
-use crate::utils::{download_file, tar_gz_extract, zip_extract, OperatingSystem, OS};
+use crate::utils::{
+    download_file, tar_gz_extract, zip_extract, Architecture, OperatingSystem, ARCHITECTURE, OS,
+};
 
 use super::JavaDistribution;
 
@@ -76,6 +79,49 @@ pub async fn find_java_binary(
     Err(anyhow::anyhow!("Failed to find JRE"))
 }
 
+/// Like [find_java_binary], but a runtime for another architecture counts as missing. Launchers
+/// that ran emulated (x64 under Rosetta or on Windows ARM) cached x64 runtimes under the same name.
+pub async fn find_cached_java_binary(
+    runtimes_folder: &Path,
+    jre_distribution: &JavaDistribution,
+    jre_version: &u32,
+) -> Result<PathBuf> {
+    let java_binary = find_java_binary(runtimes_folder, jre_distribution, jre_version).await?;
+
+    if let Some(architecture) = runtime_architecture(&java_binary).await {
+        if architecture != *ARCHITECTURE {
+            info!(
+                "Cached {} {} runtime is for {}, not {}",
+                jre_distribution.get_name(),
+                jre_version,
+                architecture,
+                *ARCHITECTURE
+            );
+            bail!("The cached runtime is for {}", architecture);
+        }
+    }
+
+    Ok(java_binary)
+}
+
+/// From the `release` file next to `bin`, if it names a known architecture.
+async fn runtime_architecture(java_binary: &Path) -> Option<Architecture> {
+    let home = java_binary.parent()?.parent()?;
+    let release = fs::read_to_string(home.join("release")).await.ok()?;
+    let arch = release
+        .lines()
+        .find_map(|line| line.strip_prefix("OS_ARCH="))?
+        .trim_matches('"');
+
+    Some(match arch {
+        "x86_64" | "amd64" => Architecture::X64,
+        "aarch64" | "arm64" => Architecture::AARCH64,
+        "x86" | "i386" | "i586" | "i686" => Architecture::X86,
+        "arm" => Architecture::ARM,
+        _ => return None,
+    })
+}
+
 /// Download specific JRE to runtimes
 pub async fn jre_download<F>(
     runtimes_folder: &Path,
@@ -94,7 +140,18 @@ where
     }
     fs::create_dir_all(&runtime_path).await?;
 
-    let url = jre_distribution.get_url(jre_version).await?;
+    let url = jre_distribution
+        .get_url(jre_version)
+        .await?
+        .with_context(|| {
+            format!(
+                "{} has no Java {} build for {}-{}",
+                jre_distribution.get_name(),
+                jre_version,
+                OS,
+                *ARCHITECTURE
+            )
+        })?;
     let retrieved_bytes = download_file(&url, on_progress).await?;
     let cursor = Cursor::new(&retrieved_bytes[..]);
 

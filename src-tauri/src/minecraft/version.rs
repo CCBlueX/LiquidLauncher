@@ -193,6 +193,24 @@ fn merge_libraries(current_libraries: &mut Vec<Library>, parent_libraries: Vec<L
     *current_libraries = library_map.into_values().collect();
 }
 
+    /// Adds every patch whose `match` names a library of this profile.
+    pub(crate) fn apply_library_patches(&mut self, patches: &[LibraryPatch]) {
+        let names = self
+            .libraries
+            .iter()
+            .map(|library| library.name.clone())
+            .collect::<HashSet<_>>();
+
+        self.libraries.extend(
+            patches
+                .iter()
+                .filter(|patch| {
+                    names.contains(&patch.matches) && !names.contains(&patch.library.name)
+                })
+                .map(|patch| patch.library.clone()),
+        );
+    }
+
     fn merge_options<T>(a: &mut Option<T>, b: Option<T>) {
         if !a.is_some() {
             *a = b;
@@ -528,6 +546,14 @@ pub struct Library {
     #[serde(default)]
     pub rules: Vec<Rule>,
     pub url: Option<String>,
+}
+
+/// A library the API adds next to the one named in `match`, e.g. natives Mojang leaves out.
+#[derive(Deserialize, Clone)]
+pub struct LibraryPatch {
+    #[serde(rename = "match")]
+    pub matches: String,
+    pub library: Library,
 }
 
 impl Library {
