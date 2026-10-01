@@ -1,0 +1,79 @@
+name: AUR
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to (re-)publish to the AUR
+        required: true
+
+jobs:
+  aur:
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - liquidlauncher-bin
+          - liquidlauncher-appimage
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      PACKAGE: ${{ matrix.package }}
+    steps:
+      - name: Install tools
+        run: pacman -Syu --noconfirm --needed git openssh pacman-contrib
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: packaging/aur
+
+      - name: Update PKGBUILD
+        run: |
+          set -euo pipefail
+
+          useradd -m builder
+          cp -r "packaging/aur/${PACKAGE}" /home/builder/pkg
+          chown -R builder /home/builder/pkg
+          cd /home/builder/pkg
+
+          sed -i -e "s/^pkgver=.*/pkgver=${RELEASE_TAG#v}/" -e "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sudo -u builder updpkgsums
+          sudo -u builder sh -c 'makepkg --printsrcinfo > .SRCINFO'
+
+      - name: Push to the AUR
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          ssh_dir="${RUNNER_TEMP}/ssh"
+          install -dm700 "${ssh_dir}"
+          printf '%s\n' "${AUR_SSH_PRIVATE_KEY}" > "${ssh_dir}/key"
+          chmod 600 "${ssh_dir}/key"
+          echo "aur.archlinux.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEuBKrPzbawxA/k2g6NcyV5jmqwJ2s+zpgZGZ7tpLIcN" > "${ssh_dir}/known_hosts"
+          export GIT_SSH_COMMAND="ssh -i ${ssh_dir}/key -o UserKnownHostsFile=${ssh_dir}/known_hosts -o IdentitiesOnly=yes"
+
+          git clone "ssh://aur@aur.archlinux.org/${PACKAGE}.git" "${RUNNER_TEMP}/aur"
+          cp /home/builder/pkg/{PKGBUILD,.SRCINFO,"${PACKAGE}.install"} "${RUNNER_TEMP}/aur/"
+          cd "${RUNNER_TEMP}/aur"
+
+          git add -A
+          if git diff --cached --quiet; then
+            echo "${PACKAGE} is already at ${RELEASE_TAG#v}"
+            exit 0
+          fi
+
+          git -c user.name="Izuna Seikatsu" -c user.email="izuna.seikatsu@ccbluex.net" \
+            commit -m "release: ${RELEASE_TAG#v}"
+          git push origin HEAD:master
