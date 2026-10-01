@@ -55,6 +55,9 @@ Do the above and share your source code with everyone; just like we do.
 ## Icons
 We use [Clarity Line Icons](https://www.svgrepo.com/collection/clarity-line-icons/) for this project.
 
+## NixOS
+Run it with `nix run github:CCBlueX/LiquidLauncher`, or install it with `nix profile install github:CCBlueX/LiquidLauncher`. In a flake-based NixOS configuration, add the input `liquidlauncher.url = "github:CCBlueX/LiquidLauncher";` and put `inputs.liquidlauncher.packages.${pkgs.system}.default` into `environment.systemPackages`.
+
 ## Compile it yourself!
 LiquidLauncher is using Tauri and is written in the programming language Rust, so make sure that it is installed properly. Instructions can be found on [Rust's website](https://www.rust-lang.org/learn/get-started). It also requires NodeJS and bun.
 1. Clone the repository using `git clone --recurse-submodules https://github.com/CCBlueX/LiquidLauncher`. 
