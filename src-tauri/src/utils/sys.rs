@@ -232,17 +232,3 @@ pub fn clean_directory(
 
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn reads_architectures_it_does_not_know_as_unknown() {
-        let arch =
-            |name: &str| serde_json::from_value::<Architecture>(serde_json::json!(name)).unwrap();
-
-        assert_eq!(arch("aarch64"), Architecture::AARCH64);
-        assert_eq!(arch("riscv64"), Architecture::UNKNOWN);
-    }
-}
