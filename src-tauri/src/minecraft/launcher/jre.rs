@@ -7,7 +7,7 @@ use super::{LauncherData, StartParameter};
 use crate::app::client_api::LaunchManifest;
 use crate::minecraft::java::{DistributionSelection, JavaDistribution};
 use crate::minecraft::{
-    java::{find_java_binary, jre_downloader},
+    java::{find_cached_java_binary, jre_downloader},
     progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
 };
 
@@ -35,7 +35,7 @@ pub async fn load_jre<D: Send + Sync>(
     launcher_data.progress_update(ProgressUpdate::set_label("Checking for JRE..."));
 
     if let Ok(path) =
-        find_java_binary(runtimes_folder, &distribution, &manifest.build.jre_version).await
+        find_cached_java_binary(runtimes_folder, &distribution, &manifest.build.jre_version).await
     {
         return Ok(path);
     }
@@ -80,7 +80,7 @@ async fn automatic_distribution<D: Send + Sync>(
         }
 
         // A failed lookup is left for the download to report
-        if find_java_binary(runtimes_folder, &distribution, version)
+        if find_cached_java_binary(runtimes_folder, &distribution, version)
             .await
             .is_ok()
             || distribution.has_build(version).await.unwrap_or(true)
