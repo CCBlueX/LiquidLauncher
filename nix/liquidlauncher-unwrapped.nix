@@ -105,7 +105,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   ];
 
   meta = {
-    description = "Launcher for the LiquidBounce Minecraft client";
+    description = "A custom Minecraft launcher for LiquidBounce, a popular utility mod, that features auto install & update and mod management.";
     homepage = "https://liquidbounce.net";
     license = lib.licenses.gpl3Plus;
     mainProgram = "liquidlauncher";

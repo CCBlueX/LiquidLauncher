@@ -7,7 +7,7 @@
 pkgname=liquidlauncher-bin
 pkgver=0.7.0
 pkgrel=1
-pkgdesc="A custom Minecraft launcher for LiquidBounce, a popular utility mod, that features auto install & update and mod managment."
+pkgdesc="A custom Minecraft launcher for LiquidBounce, a popular utility mod, that features auto install & update and mod management."
 arch=('x86_64' 'aarch64')
 url="https://liquidbounce.net"
 license=('GPL3')
