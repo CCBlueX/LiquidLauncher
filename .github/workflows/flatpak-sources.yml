@@ -1,0 +1,54 @@
+name: Flatpak sources
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - src-tauri/Cargo.lock
+      - yarn.lock
+  workflow_dispatch:
+
+concurrency:
+  group: flatpak-sources
+  cancel-in-progress: true
+
+jobs:
+  sources:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      BUILDER_TOOLS: 74697c75b630d7330e77250fc13cb5ea688d9479
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate sources
+        run: |
+          set -euo pipefail
+
+          python3 -m venv "${RUNNER_TEMP}/venv"
+          "${RUNNER_TEMP}/venv/bin/pip" install --quiet aiohttp tomlkit \
+            "git+https://github.com/flatpak/flatpak-builder-tools.git@${BUILDER_TOOLS}#subdirectory=node"
+          curl -fsSL -o "${RUNNER_TEMP}/flatpak-cargo-generator.py" \
+            "https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/${BUILDER_TOOLS}/cargo/flatpak-cargo-generator.py"
+
+          "${RUNNER_TEMP}/venv/bin/flatpak-node-generator" --no-requests-cache \
+            -o packaging/flatpak/node-sources.json yarn yarn.lock
+          "${RUNNER_TEMP}/venv/bin/python" "${RUNNER_TEMP}/flatpak-cargo-generator.py" \
+            -o packaging/flatpak/cargo-sources.json src-tauri/Cargo.lock
+
+      - name: Commit sources
+        run: |
+          set -euo pipefail
+
+          git add packaging/flatpak
+          if git diff --cached --quiet; then
+            echo "Flatpak sources are up to date"
+            exit 0
+          fi
+
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "chore: update flatpak sources"
+          git push
