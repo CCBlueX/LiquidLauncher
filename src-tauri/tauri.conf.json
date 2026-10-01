@@ -46,7 +46,7 @@
       "icons/icon.ico"
     ],
     "shortDescription": "A custom Minecraft launcher for LiquidBounce",
-    "longDescription": "Installs, updates and starts LiquidBounce, a free and open-source Minecraft hacked client for Fabric, together with Minecraft, Fabric, Java and your mods.",
+    "longDescription": "Installs, updates and starts LiquidBounce, a free and open-source Minecraft hacked client, together with Minecraft, the mod loader, Java and your mods.",
     "license": "GPL-3.0",
     "licenseFile": "../LICENSE",
     "resources": [],
