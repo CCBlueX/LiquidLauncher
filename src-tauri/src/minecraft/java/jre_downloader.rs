@@ -20,11 +20,11 @@
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use path_absolutize::Absolutize;
 use tokio::fs;
 
-use crate::utils::{download_file, tar_gz_extract, zip_extract, OperatingSystem, OS};
+use crate::utils::{download_file, tar_gz_extract, zip_extract, OperatingSystem, ARCHITECTURE, OS};
 
 use super::JavaDistribution;
 
@@ -94,7 +94,18 @@ where
     }
     fs::create_dir_all(&runtime_path).await?;
 
-    let url = jre_distribution.get_url(jre_version).await?;
+    let url = jre_distribution
+        .get_url(jre_version)
+        .await?
+        .with_context(|| {
+            format!(
+                "{} has no Java {} build for {}-{}",
+                jre_distribution.get_name(),
+                jre_version,
+                OS,
+                *ARCHITECTURE
+            )
+        })?;
     let retrieved_bytes = download_file(&url, on_progress).await?;
     let cursor = Cursor::new(&retrieved_bytes[..]);
 

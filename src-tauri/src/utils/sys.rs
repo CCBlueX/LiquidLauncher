@@ -121,7 +121,7 @@ impl OperatingSystem {
     pub fn get_zulu_name(&self) -> Result<&'static str> {
         Ok(match self {
             OperatingSystem::WINDOWS => "windows",
-            OperatingSystem::LINUX => "linux",
+            OperatingSystem::LINUX => "linux_glibc",
             OperatingSystem::OSX => "macos",
             _ => bail!("Unsupported operating system for Zulu runtime"),
         })
