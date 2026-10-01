@@ -165,6 +165,7 @@ pub(crate) async fn launch(
             .await?;
         version.merge(parent_version)?;
     }
+    version.apply_library_patches(&launch_manifest.library_patches);
 
     launcher_data.progress_update(ProgressUpdate::set_label(format!(
         "Launching {}...",

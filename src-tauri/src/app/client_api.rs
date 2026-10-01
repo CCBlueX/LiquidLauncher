@@ -21,6 +21,7 @@ use std::collections::BTreeMap;
 
 use crate::auth::ClientAccount;
 use crate::minecraft::java::JavaDistribution;
+use crate::minecraft::version::LibraryPatch;
 use crate::utils::get_maven_artifact_path;
 use crate::HTTP_CLIENT;
 use anyhow::{Error, Result};
@@ -344,6 +345,8 @@ pub struct LaunchManifest {
     pub subsystem: LoaderSubsystem,
     pub mods: Vec<LoaderMod>,
     pub repositories: BTreeMap<String, String>,
+    #[serde(default)]
+    pub library_patches: Vec<LibraryPatch>,
 }
 
 ///

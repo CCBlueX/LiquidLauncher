@@ -193,6 +193,24 @@ fn merge_libraries(current_libraries: &mut Vec<Library>, parent_libraries: Vec<L
     *current_libraries = library_map.into_values().collect();
 }
 
+    /// Adds every patch whose `match` names a library of this profile.
+    pub(crate) fn apply_library_patches(&mut self, patches: &[LibraryPatch]) {
+        let names = self
+            .libraries
+            .iter()
+            .map(|library| library.name.clone())
+            .collect::<HashSet<_>>();
+
+        self.libraries.extend(
+            patches
+                .iter()
+                .filter(|patch| {
+                    names.contains(&patch.matches) && !names.contains(&patch.library.name)
+                })
+                .map(|patch| patch.library.clone()),
+        );
+    }
+
     fn merge_options<T>(a: &mut Option<T>, b: Option<T>) {
         if !a.is_some() {
             *a = b;
@@ -530,6 +548,14 @@ pub struct Library {
     pub url: Option<String>,
 }
 
+/// A library the API adds next to the one named in `match`, e.g. natives Mojang leaves out.
+#[derive(Deserialize, Clone)]
+pub struct LibraryPatch {
+    #[serde(rename = "match")]
+    pub matches: String,
+    pub library: Library,
+}
+
 impl Library {
 
     fn get_identifier(&self) -> String {
@@ -739,4 +765,75 @@ impl LibraryDownloadInfo {
 #[derive(Deserialize)]
 pub struct Logging {
     // TODO: Add logging configuration
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn profile(names: &[&str]) -> VersionProfile {
+        let libraries: Vec<_> = names.iter().map(|name| json!({ "name": name })).collect();
+        serde_json::from_value(json!({ "id": "26.3", "type": "release", "libraries": libraries }))
+            .unwrap()
+    }
+
+    // In the shape the launch manifest carries them.
+    fn patch(matches: &str, name: &str) -> LibraryPatch {
+        serde_json::from_value(json!({
+            "match": matches,
+            "library": {
+                "name": name,
+                "downloads": {
+                    "artifact": {
+                        "path": "lwjgl-natives-linux-arm64.jar",
+                        "url": "https://repo1.maven.org/maven2/lwjgl-natives-linux-arm64.jar",
+                        "sha1": "101c753b129dbdeed565798d259b2b9544ef3878",
+                        "size": 126343
+                    }
+                },
+                "rules": [{ "action": "allow", "os": { "name": "linux", "arch": "aarch64" } }]
+            }
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn adds_patches_for_libraries_of_the_profile() {
+        let mut profile = profile(&[
+            "org.lwjgl:lwjgl:3.4.3:natives-linux",
+            "org.lwjgl:lwjgl-glfw:3.4.3:natives-linux",
+            "org.lwjgl:lwjgl-glfw:3.4.3:natives-linux-arm64",
+        ]);
+
+        profile.apply_library_patches(&[
+            patch(
+                "org.lwjgl:lwjgl:3.4.3:natives-linux",
+                "org.lwjgl:lwjgl:3.4.3:natives-linux-arm64",
+            ),
+            patch(
+                "org.lwjgl:lwjgl-glfw:3.4.3:natives-linux",
+                "org.lwjgl:lwjgl-glfw:3.4.3:natives-linux-arm64",
+            ),
+            patch(
+                "org.lwjgl:lwjgl:3.4.1:natives-linux",
+                "org.lwjgl:lwjgl:3.4.1:natives-linux-arm64",
+            ),
+        ]);
+
+        let names: Vec<_> = profile
+            .libraries
+            .iter()
+            .map(|library| library.name.as_str())
+            .collect();
+        assert_eq!(
+            names,
+            [
+                "org.lwjgl:lwjgl:3.4.3:natives-linux",
+                "org.lwjgl:lwjgl-glfw:3.4.3:natives-linux",
+                "org.lwjgl:lwjgl-glfw:3.4.3:natives-linux-arm64",
+                "org.lwjgl:lwjgl:3.4.3:natives-linux-arm64",
+            ]
+        );
+    }
 }
