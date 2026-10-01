@@ -1,5 +1,5 @@
 {
-  description = "A custom Minecraft launcher for LiquidBounce, a popular utility mod, that features auto install & update and mod management.";
+  description = "A custom Minecraft launcher for LiquidBounce";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
