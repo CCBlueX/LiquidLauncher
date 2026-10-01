@@ -28,6 +28,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
       ../src
       ../public
       ../src-tauri
+      ../packaging/linux/net.ccbluex.liquidlauncher.metainfo.xml
     ]) (lib.fileset.maybeMissing ../src-tauri/target);
   };
 

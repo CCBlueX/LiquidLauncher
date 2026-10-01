@@ -1,0 +1,3 @@
+# flatpak-node-generator can't read bun.lock, so keep a yarn.lock next to it
+[install.lockfile]
+print = "yarn"

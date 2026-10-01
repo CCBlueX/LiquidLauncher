@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=LiquidLauncher
+Comment=A custom Minecraft launcher for LiquidBounce
+Exec=liquidlauncher
+Icon=net.ccbluex.liquidlauncher
+Terminal=false
+Categories=Game;
+StartupWMClass=liquidlauncher
