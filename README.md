@@ -7,6 +7,12 @@ Discord: https://liquidbounce.net/discord \
 YouTube: https://youtube.com/CCBlueX \
 Twitter: https://twitter.com/CCBlueX
 
+## Installation
+Download the launcher for Windows, macOS or Linux from [liquidbounce.net](https://liquidbounce.net/download) or the [releases](https://github.com/CCBlueX/LiquidLauncher/releases).
+
+- Arch Linux: `liquidlauncher-bin` or `liquidlauncher-appimage` from the AUR
+- NixOS: `nix run github:CCBlueX/LiquidLauncher`, or add the flake's `packages.${pkgs.system}.default` to `environment.systemPackages`
+
 ## Screenshots
 <table>
     <tr>
