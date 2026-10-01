@@ -18,23 +18,23 @@
   <url type="vcs-browser">https://github.com/CCBlueX/LiquidLauncher</url>
   <screenshots>
     <screenshot type="default">
-      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.0/gh_assets/screenshot-1.png</image>
+      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.1/gh_assets/screenshot-1.png</image>
       <caption>Sign-in screen with Microsoft and offline login</caption>
     </screenshot>
     <screenshot type="normal">
-      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.0/gh_assets/screenshot-2.png</image>
-      <caption>Launcher settings</caption>
-    </screenshot>
-    <screenshot type="normal">
-      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.0/gh_assets/screenshot-3.png</image>
+      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.1/gh_assets/screenshot-2.png</image>
       <caption>Launcher home screen</caption>
     </screenshot>
     <screenshot type="normal">
-      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.0/gh_assets/screenshot-4.png</image>
-      <caption>LiquidBounce version selection</caption>
+      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.1/gh_assets/screenshot-3.png</image>
+      <caption>LiquidBounce build and mod selection</caption>
     </screenshot>
     <screenshot type="normal">
-      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.0/gh_assets/screenshot-5.png</image>
+      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.1/gh_assets/screenshot-4.png</image>
+      <caption>Launcher settings</caption>
+    </screenshot>
+    <screenshot type="normal">
+      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.1/gh_assets/screenshot-5.png</image>
       <caption>Game client log</caption>
     </screenshot>
   </screenshots>
