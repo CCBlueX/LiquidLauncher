@@ -1,5 +1,5 @@
 # LiquidLauncher
-The official launcher for LiquidBounce.
+A custom Minecraft launcher for LiquidBounce.
 
 Website: https://liquidbounce.net \
 Forum: https://forums.ccbluex.net \
