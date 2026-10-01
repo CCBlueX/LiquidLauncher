@@ -1,6 +1,6 @@
 [package]
 name = "liquidlauncher"
-version = "0.7.0"
+version = "0.7.1"
 description = "A custom Minecraft launcher for LiquidBounce"
 authors = ["Izuna <izuna.seikatsu@ccbluex.net>", "superblaubeere27"]
 license = "GNU General Public License v3.0"
