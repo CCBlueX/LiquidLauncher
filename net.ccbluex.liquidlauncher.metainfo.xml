@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>net.ccbluex.liquidlauncher</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>LiquidLauncher</name>
+  <summary>Launcher for LiquidBounce</summary>
+  <developer id="net.ccbluex">
+    <name>CCBlueX</name>
+  </developer>
+  <description>
+    <p>Installs, updates and starts LiquidBounce, a free and open-source Minecraft hacked client, together with Minecraft, the mod loader, Java and your mods.</p>
+    <p>Sign in with a Microsoft account or play offline. The game and its dependencies are downloaded at runtime.</p>
+  </description>
+  <launchable type="desktop-id">net.ccbluex.liquidlauncher.desktop</launchable>
+  <url type="homepage">https://liquidbounce.net</url>
+  <url type="bugtracker">https://github.com/CCBlueX/LiquidLauncher/issues</url>
+  <url type="vcs-browser">https://github.com/CCBlueX/LiquidLauncher</url>
+  <screenshots>
+    <screenshot type="default">
+      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.1/gh_assets/screenshot-1.png</image>
+      <caption>Sign-in screen with Microsoft and offline login</caption>
+    </screenshot>
+    <screenshot type="normal">
+      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.1/gh_assets/screenshot-2.png</image>
+      <caption>Launcher home screen</caption>
+    </screenshot>
+    <screenshot type="normal">
+      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.1/gh_assets/screenshot-3.png</image>
+      <caption>LiquidBounce build and mod selection</caption>
+    </screenshot>
+    <screenshot type="normal">
+      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.1/gh_assets/screenshot-4.png</image>
+      <caption>Launcher settings</caption>
+    </screenshot>
+    <screenshot type="normal">
+      <image type="source" width="1000" height="670">https://raw.githubusercontent.com/CCBlueX/LiquidLauncher/v0.7.1/gh_assets/screenshot-5.png</image>
+      <caption>Game client log</caption>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1">
+    <content_attribute id="money-advertising">mild</content_attribute>
+    <content_attribute id="money-purchasing">mild</content_attribute>
+    <content_attribute id="social-info">mild</content_attribute>
+    <content_attribute id="social-chat">intense</content_attribute>
+  </content_rating>
+  <releases>
+    <release version="0.7.0" date="2026-09-29"/>
+  </releases>
+</component>
