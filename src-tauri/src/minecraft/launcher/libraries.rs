@@ -14,7 +14,7 @@ use crate::{
         rule_interpreter,
         version::{LibraryDownloadInfo, VersionProfile},
     },
-    utils::{zip_extract, OS},
+    utils::{zip_extract, Architecture, OperatingSystem, ARCHITECTURE, OS},
 };
 
 use super::{LauncherData, StartParameter};
@@ -106,7 +106,10 @@ pub async fn setup_libraries<D: Send + Sync>(
 
 
                 // Download regular artifact
-                let artifact = library.get_library_download()?;
+                let artifact = match linux_arm64_natives(&library.name) {
+                    Some(artifact) => artifact,
+                    None => library.get_library_download()?,
+                };
 
                 let path = (|| async {  artifact.download(&library.name, folder_clone.clone(), launcher_data).await })
                     .retry(ExponentialBuilder::default())
@@ -145,4 +148,26 @@ pub async fn setup_libraries<D: Send + Sync>(
     ));
 
     Ok(())
+}
+
+/// Mojang only ships x64 LWJGL natives for Linux, Maven Central has the arm64 ones.
+fn linux_arm64_natives(name: &str) -> Option<LibraryDownloadInfo> {
+    if OS != OperatingSystem::LINUX || *ARCHITECTURE != Architecture::AARCH64 {
+        return None;
+    }
+
+    let ["org.lwjgl", artifact, version, "natives-linux"] = name.split(':').collect::<Vec<_>>()[..]
+    else {
+        return None;
+    };
+
+    let path =
+        format!("org/lwjgl/{artifact}/{version}/{artifact}-{version}-natives-linux-arm64.jar");
+
+    Some(LibraryDownloadInfo {
+        url: format!("https://repo1.maven.org/maven2/{path}"),
+        sha1: None,
+        size: None,
+        path,
+    })
 }
