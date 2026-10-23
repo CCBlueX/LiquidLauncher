@@ -144,7 +144,7 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
 
         download_view
             .is_visible()
-            .context("Download view was closed unexpected")?;
+            .context("Download view was closed unexpectedly")?;
     };
 
     let _ = download_view.destroy();
