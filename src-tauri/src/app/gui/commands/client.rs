@@ -407,7 +407,7 @@ pub(crate) async fn run_client(
                         shareable_window.lock().unwrap().show().unwrap();
                     }
 
-                    let message = format!("An error occured:\n\n{:?}", e);
+                    let message = format!("An error occurred:\n\n{:?}", e);
                     shareable_window
                         .lock()
                         .unwrap()
