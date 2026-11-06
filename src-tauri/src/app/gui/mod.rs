@@ -67,6 +67,7 @@ pub fn gui_main() {
             request_build_page,
             request_mods,
             run_client,
+            offline_login_available,
             login_offline,
             login_microsoft_device_code,
             login_microsoft_webview,

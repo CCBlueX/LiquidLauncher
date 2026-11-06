@@ -30,6 +30,13 @@ use crate::{
     minecraft::auth::MinecraftAccount,
 };
 
+/// Flathub only ships the launcher if playing requires an owned Minecraft account.
+/// `/.flatpak-info` exists inside every Flatpak sandbox.
+#[tauri::command]
+pub(crate) fn offline_login_available() -> bool {
+    !std::path::Path::new("/.flatpak-info").exists()
+}
+
 #[tauri::command]
 pub(crate) async fn login_offline(username: &str) -> Result<MinecraftAccount, String> {
     let account = MinecraftAccount::auth_offline(username.to_string()).await;

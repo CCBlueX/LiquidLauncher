@@ -15,6 +15,7 @@
     // "choose" | "webview" | "code"
     let view = "choose";
 
+    let offlineAvailable = false;
     let offlineUsername;
     let deviceCode = null;
     let codeCopied = false;
@@ -33,6 +34,8 @@
         qr.make();
         return qr.createSvgTag({cellSize: 4, margin: 0, alt: "QR code to sign in with Microsoft"});
     }
+
+    invoke("offline_login_available").then((available) => offlineAvailable = available);
 
     async function handleOfflineLoginClick() {
         if (offlineUsername.length > 16 || offlineUsername.length < 1) {
@@ -107,12 +110,12 @@
     }
 
     function reportMicrosoftError(err) {
-        alert(
-            "Microsoft authentication failed.\n\n" +
-             err + "\n\n" +
-            "Should you be unable to resolve this issue, please use the 'Play offline' login option " +
-            "and attempt to log in through the client's inbuilt account manager."
-        );
+        let message = "Microsoft authentication failed.\n\n" + err;
+        if (offlineAvailable) {
+            message += "\n\nShould you be unable to resolve this issue, please use the 'Play offline' login option " +
+                "and attempt to log in through the client's inbuilt account manager.";
+        }
+        alert(message);
     }
 
     listen("microsoft_device_code", (e) => {
@@ -168,10 +171,12 @@
         <ModalButton text="Microsoft login" primary={true} on:click={handleMicrosoftWebviewLoginClick} />
         <ModalButton text="Microsoft device login" primary={false} on:click={startDeviceCodeLogin} />
 
-        <div class="divider">or</div>
+        {#if offlineAvailable}
+            <div class="divider">or</div>
 
-        <ModalInput placeholder="Username" icon="person" characterLimit={16} bind:value={offlineUsername} />
-        <ModalButton text="Offline login" primary={false} on:click={handleOfflineLoginClick} />
+            <ModalInput placeholder="Username" icon="person" characterLimit={16} bind:value={offlineUsername} />
+            <ModalButton text="Offline login" primary={false} on:click={handleOfflineLoginClick} />
+        {/if}
     {/if}
 </div>
 
