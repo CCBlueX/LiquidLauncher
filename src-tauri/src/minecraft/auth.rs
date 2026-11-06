@@ -17,15 +17,18 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 
-use minecraft_auth::java::JavaAuthManager;
+use minecraft_auth::java::{JavaAuthManager, MinecraftProfile};
 use minecraft_auth::msa::MsaDeviceCode;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::app::gui::ShareableWindow;
 use crate::HTTP_CLIENT;
+
+const PROFILE_URL: &str = "https://api.minecraftservices.com/minecraft/profile";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -43,6 +46,13 @@ pub enum MinecraftAccount {
         name: String,
         #[serde(alias = "uuid")]
         id: Uuid,
+    },
+    /// A Minecraft access token without a Microsoft sign-in behind it.
+    #[serde(rename = "Session")]
+    SessionAccount {
+        name: String,
+        id: Uuid,
+        token: String,
     },
 }
 
@@ -81,33 +91,40 @@ impl MinecraftAccount {
         Self::from_manager(manager).await
     }
 
-    /// Authenticate using an offline account
-    /// Generates UUID from following format: OfflinePlayer:<username>
-    /// Java/Kotlin equivalent: UUID.nameUUIDFromBytes("OfflinePlayer:$name".toByteArray())
-    ///
-    /// Explanation: [nameUUIDFromBytes] uses MD5 to generate a UUID from the input bytes.
-    /// The input bytes are the UTF-8 bytes of the string "OfflinePlayer:$name".
-    /// The UUID generated is a version 3 UUID, which is based on the MD5 hash of the input bytes.
-    ///
-    /// Returns a `MinecraftAccount::OfflineAccount` if successful
-    pub async fn auth_offline(username: String) -> Self {
-        // Generate UUID from "OfflinePlayer:$name"
-        let name_str = format!("OfflinePlayer:{}", username);
-        let bytes = name_str.as_bytes();
-        let mut md5: [u8; 16] = md5::compute(bytes).into();
-
-        md5[6] &= 0x0f; // clear version
-        md5[6] |= 0x30; // version 3
-        md5[8] &= 0x3f; // clear variant
-        md5[8] |= 0x80; // IETF variant
-
-        let uuid = Uuid::from_bytes(md5);
-
-        // Return offline account
+    pub fn auth_offline(username: String) -> Self {
         MinecraftAccount::OfflineAccount {
+            id: offline_uuid(&username),
             name: username,
-            id: uuid,
         }
+    }
+
+    pub async fn auth_msa_refresh_token(refresh_token: &str) -> Result<Self> {
+        let manager = JavaAuthManager::builder(HTTP_CLIENT.clone())
+            .login_refresh_token(refresh_token)
+            .await?;
+
+        Self::from_manager(manager).await
+    }
+
+    pub async fn auth_session(token: String) -> Result<Self> {
+        let response = HTTP_CLIENT
+            .get(PROFILE_URL)
+            .bearer_auth(&token)
+            .send()
+            .await?;
+
+        match response.status() {
+            StatusCode::NOT_FOUND => return Err(minecraft_auth::Error::ProfileNotFound.into()),
+            StatusCode::UNAUTHORIZED => bail!("This token is invalid or expired."),
+            _ => {}
+        }
+
+        let profile: MinecraftProfile = response.error_for_status()?.json().await?;
+        Ok(MinecraftAccount::SessionAccount {
+            name: profile.name,
+            id: profile.id,
+            token,
+        })
     }
 
     /// Refresh the access token if necessary
@@ -118,19 +135,15 @@ impl MinecraftAccount {
                 Self::from_manager(manager).await
             }
             offline @ MinecraftAccount::OfflineAccount { .. } => Ok(offline),
+            session @ MinecraftAccount::SessionAccount { .. } => Ok(session),
         }
-    }
-
-    /// Log out the account
-    pub async fn logout(&self) -> Result<()> {
-        // todo: invalidate session
-        Ok(())
     }
 
     pub fn get_username(&self) -> &str {
         match self {
             MinecraftAccount::MsaAccount { name, .. } => name,
             MinecraftAccount::OfflineAccount { name, .. } => name,
+            MinecraftAccount::SessionAccount { name, .. } => name,
         }
     }
 
@@ -145,5 +158,17 @@ impl MinecraftAccount {
             id: profile.id,
         })
     }
+}
 
+/// Same as Java's `UUID.nameUUIDFromBytes("OfflinePlayer:<name>")`.
+pub fn offline_uuid(username: &str) -> Uuid {
+    let name_str = format!("OfflinePlayer:{}", username);
+    let mut md5: [u8; 16] = md5::compute(name_str.as_bytes()).into();
+
+    md5[6] &= 0x0f; // clear version
+    md5[6] |= 0x30; // version 3
+    md5[8] &= 0x3f; // clear variant
+    md5[8] |= 0x80; // IETF variant
+
+    Uuid::from_bytes(md5)
 }

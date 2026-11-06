@@ -6,10 +6,12 @@
     import ToggleSetting from "../../settings/ToggleSetting.svelte";
     import ButtonSetting from "../../settings/ButtonSetting.svelte";
     import LauncherVersion from "../../settings/LauncherVersion.svelte";
-    import {onMount} from "svelte";
+    import {createEventDispatcher, onMount} from "svelte";
     import {invoke} from "@tauri-apps/api/core";
 
     export let options;
+
+    const dispatch = createEventDispatcher();
 
     let launcherVersion = "";
     let defaultDataFolder = "";
@@ -22,17 +24,6 @@
         } catch (error) {
             console.error("Failed to clear data:", error);
             alert(`Failed to clear data: ${error}`);
-        }
-    }
-
-    async function logout() {
-        try {
-            await invoke("logout", { accountData: options.start.account });
-            options.start.account = null;
-            await options.store();
-        } catch (error) {
-            console.error("Logout failed:", error);
-            alert("Failed to logout properly. Please try again.");
         }
     }
 
@@ -122,8 +113,8 @@
 />
 
 <ButtonSetting
-    text="Sign out of Minecraft Account"
-    on:click={logout}
+    text="Manage accounts"
+    on:click={() => dispatch("showAccounts")}
     color="#4677FF"
 />
 

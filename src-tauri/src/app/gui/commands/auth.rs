@@ -26,18 +26,58 @@ use crate::app::client_api::{Client, UserInformation};
 use crate::app::gui::AppState;
 use crate::app::options::Options;
 use crate::{
-    auth::{shared, ClientAccountAuthenticator},
+    auth::{
+        accounts::{self, AccountEntry},
+        shared, ClientAccountAuthenticator,
+    },
     minecraft::auth::MinecraftAccount,
 };
 
+/// Set to `1`, offline accounts no longer need a Microsoft account in the list.
+const ALLOW_OFFLINE_ENV: &str = "LIQUIDLAUNCHER_ALLOW_OFFLINE";
+
+/// The frontend shows "Get Minecraft to play" for this error.
+const NO_MINECRAFT: &str = "no_minecraft";
+
 #[tauri::command]
-pub(crate) async fn login_offline(username: &str) -> Result<MinecraftAccount, String> {
-    let account = MinecraftAccount::auth_offline(username.to_string()).await;
-    Ok(account)
+pub(crate) async fn list_accounts(options: Options) -> Result<Vec<AccountEntry>, String> {
+    accounts::list(&options.start_options.data_directory())
+        .await
+        .map_err(error_text)
 }
 
 #[tauri::command]
-pub(crate) async fn login_microsoft_device_code(window: Window) -> Result<MinecraftAccount, String> {
+pub(crate) async fn select_account(
+    options: Options,
+    id: String,
+) -> Result<MinecraftAccount, String> {
+    accounts::select(&options.start_options.data_directory(), &id)
+        .await
+        .map_err(error_text)
+}
+
+#[tauri::command]
+pub(crate) async fn add_microsoft_webview(
+    window: Window,
+    options: Options,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<MinecraftAccount, String> {
+    ensure_client_stopped(&app_state)?;
+
+    let account = MinecraftAccount::auth_msa_webview(Arc::new(Mutex::new(window)))
+        .await
+        .map_err(error_text)?;
+    save(&app_state, &options, account).await
+}
+
+#[tauri::command]
+pub(crate) async fn add_microsoft_device_code(
+    window: Window,
+    options: Options,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<MinecraftAccount, String> {
+    ensure_client_stopped(&app_state)?;
+
     let account = MinecraftAccount::auth_msa_device_code(|device_code| {
         debug!(
             "enter code {} at {} to sign-in",
@@ -52,19 +92,112 @@ pub(crate) async fn login_microsoft_device_code(window: Window) -> Result<Minecr
             }),
         );
     })
-        .await
-        .map_err(|e| format!("{}", e))?;
-
-    Ok(account)
+    .await
+    .map_err(error_text)?;
+    save(&app_state, &options, account).await
 }
 
 #[tauri::command]
-pub(crate) async fn login_microsoft_webview(window: Window) -> Result<MinecraftAccount, String> {
-    let account = MinecraftAccount::auth_msa_webview(Arc::new(Mutex::new(window)))
-        .await
-        .map_err(|e| format!("{}", e))?;
+pub(crate) async fn add_offline(
+    options: Options,
+    username: String,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<MinecraftAccount, String> {
+    let username = username.trim();
+    if username.is_empty() {
+        return Err("Enter a username.".to_string());
+    }
+    require_microsoft(&options).await?;
 
+    let account = MinecraftAccount::auth_offline(username.to_string());
+    save(&app_state, &options, account).await
+}
+
+#[tauri::command]
+pub(crate) async fn add_session(
+    options: Options,
+    token: String,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<MinecraftAccount, String> {
+    let token = token.trim();
+    if token.is_empty() {
+        return Err("Enter a token.".to_string());
+    }
+
+    // LiquidBounce's session login takes a Microsoft refresh token the same way.
+    let account = if token.starts_with("M.") {
+        MinecraftAccount::auth_msa_refresh_token(token).await
+    } else {
+        require_microsoft(&options).await?;
+        MinecraftAccount::auth_session(token.to_string()).await
+    }
+    .map_err(error_text)?;
+    save(&app_state, &options, account).await
+}
+
+#[tauri::command]
+pub(crate) async fn remove_account(
+    options: Options,
+    id: String,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    ensure_client_stopped(&app_state)?;
+
+    accounts::remove(&options.start_options.data_directory(), &id)
+        .await
+        .map_err(error_text)
+}
+
+#[tauri::command]
+pub(crate) async fn set_favorite(
+    options: Options,
+    id: String,
+    favorite: bool,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    ensure_client_stopped(&app_state)?;
+
+    accounts::set_favorite(&options.start_options.data_directory(), &id, favorite)
+        .await
+        .map_err(error_text)
+}
+
+#[tauri::command]
+pub(crate) fn offline_login_available() -> bool {
+    std::env::var(ALLOW_OFFLINE_ENV).is_ok_and(|value| value == "1")
+}
+
+async fn require_microsoft(options: &Options) -> Result<(), String> {
+    if offline_login_available() {
+        return Ok(());
+    }
+
+    match accounts::has_microsoft(&options.start_options.data_directory()).await {
+        Ok(true) => Ok(()),
+        Ok(false) => Err("Add a Microsoft account first.".to_string()),
+        Err(error) => Err(error_text(error)),
+    }
+}
+
+async fn save(
+    app_state: &AppState,
+    options: &Options,
+    account: MinecraftAccount,
+) -> Result<MinecraftAccount, String> {
+    // A sign-in takes a while, the client may have been started since.
+    ensure_client_stopped(app_state)?;
+
+    accounts::add(&options.start_options.data_directory(), &account)
+        .await
+        .map_err(error_text)?;
     Ok(account)
+}
+
+fn error_text(error: anyhow::Error) -> String {
+    match error.downcast_ref::<minecraft_auth::Error>() {
+        Some(minecraft_auth::Error::ProfileNotFound) => NO_MINECRAFT.to_string(),
+        _ => format!("{:#}", error),
+    }
 }
 
 #[tauri::command]
@@ -157,12 +290,4 @@ pub(crate) async fn refresh(account_data: MinecraftAccount) -> Result<MinecraftA
         account.get_username()
     );
     Ok(account)
-}
-
-#[tauri::command]
-pub(crate) async fn logout(account_data: MinecraftAccount) -> Result<(), String> {
-    account_data
-        .logout()
-        .await
-        .map_err(|e| format!("unable to logout: {:?}", e))
 }

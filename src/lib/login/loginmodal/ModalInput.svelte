@@ -3,14 +3,22 @@
     export let placeholder;
     export let value;
 
-    export let characterLimit;
+    export let characterLimit = undefined;
+    export let password = false;
 </script>
 
 <div class="wrapper">
     <div class="icon">
         <img src="img/icon/icon-{icon}.svg" alt={icon}>
     </div>
-    <input class="input" type="text" placeholder={placeholder} maxlength={characterLimit} bind:value>
+    <input
+            class="input"
+            type={password ? "password" : "text"}
+            {placeholder}
+            maxlength={characterLimit}
+            {value}
+            on:input={(event) => value = event.target.value}
+    >
 </div>
 
 <style>
