@@ -12,6 +12,8 @@
     import ClientLog from "./log/ClientLog.svelte";
     import Settings from "./settings/Settings.svelte";
     import FirstRunWarning from "./FirstRunWarning.svelte";
+    import AccountManager from "./accounts/AccountManager.svelte";
+    import {accounts, loadAccounts} from "./accounts/accounts.js";
     import {onMount} from "svelte";
 
     export let client;
@@ -23,6 +25,7 @@
 
     let logShown = false;
     let settingsShown = false;
+    let accountManagerShown = false;
     let settingsTab = "General";
     let launchVersionWarningShown = false;
     let firstRunWarningShown = false;
@@ -240,8 +243,30 @@
     }
 
     function showSettings(tab) {
+        accountManagerShown = false;
         settingsTab = tab;
         settingsShown = true;
+    }
+
+    async function hideSettings() {
+        settingsShown = false;
+        await options.store();
+        // The data location may have changed, which has its own custom mods
+        await updateMods();
+    }
+
+    async function showAccountManager() {
+        if (settingsShown) await hideSettings();
+        accountManagerShown = true;
+    }
+
+    async function switchAccount(entry) {
+        try {
+            options.start.account = await invoke("select_account", {options, id: entry.id});
+            await options.store();
+        } catch (e) {
+            alert("Failed to switch account.\n\n" + e);
+        }
     }
 
     async function continueAfterFirstRun() {
@@ -297,6 +322,7 @@
     });
 
     onMount(async () => {
+        loadAccounts(options);
         updateClientAccount();
         await updateData();
     });
@@ -335,23 +361,31 @@
             on:updateData={updateData}
             on:updateModStates={updateModStates}
             on:updateMods={updateMods}
-            on:hide={async () => {
-                settingsShown = false;
-                await options.store();
-                // The data location may have changed, which has its own custom mods
-                await updateMods();
-            }}
+            on:showAccounts={showAccountManager}
+            on:hide={hideSettings}
+    />
+{/if}
+
+{#if accountManagerShown}
+    <AccountManager
+            bind:options
+            on:switchAccount={(e) => switchAccount(e.detail)}
+            on:hide={() => accountManagerShown = false}
     />
 {/if}
 
 <VerticalFlexWrapper
-        blur={settingsShown || logShown || launchVersionWarningShown || firstRunWarningShown}
+        blur={settingsShown || accountManagerShown || logShown || launchVersionWarningShown || firstRunWarningShown}
 >
     <MainHeader
             account={options.start.account}
+            accountList={$accounts}
             {running}
             {progressState}
             on:showSettings={() => showSettings("General")}
+            on:manageAccounts={showAccountManager}
+            on:switchAccount={(e) => switchAccount(e.detail)}
+            on:openSwitcher={() => loadAccounts(options)}
     />
 
     <ContentWrapper>

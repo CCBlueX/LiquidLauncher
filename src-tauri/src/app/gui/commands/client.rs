@@ -311,6 +311,9 @@ pub(crate) async fn run_client(
         MinecraftAccount::OfflineAccount { name, id, .. } => {
             (name, id.to_string(), "-".to_string(), "legacy".to_string())
         }
+        MinecraftAccount::SessionAccount { name, id, token } => {
+            (name, id.to_string(), token, "msa".to_string())
+        }
     };
 
     // Random XUID

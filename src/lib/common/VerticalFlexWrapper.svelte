@@ -11,7 +11,6 @@
         display: flex;
         height: 100%;
         flex-direction: column;
-        will-change: filter;
         transition: ease blur .2s;
     }
 

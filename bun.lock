@@ -11,7 +11,6 @@
         "@tauri-apps/plugin-opener": "^2.6.0",
         "@tauri-apps/plugin-process": "^2.4.0",
         "nouislider": "^15.8.1",
-        "qrcode-generator": "^2.0.4",
       },
       "devDependencies": {
         "@sveltejs/vite-plugin-svelte": "^3.1.2",
@@ -212,8 +211,6 @@
     "picocolors": ["picocolors@1.1.1", "", {}, "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="],
 
     "postcss": ["postcss@8.5.28", "", { "dependencies": { "nanoid": "^3.3.18", "picocolors": "^1.1.1", "source-map-js": "^1.2.1" } }, "sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A=="],
-
-    "qrcode-generator": ["qrcode-generator@2.0.4", "", {}, "sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g=="],
 
     "rollup": ["rollup@4.63.5", "", { "dependencies": { "@types/estree": "1.0.9" }, "optionalDependencies": { "@napi-rs/lzma-linux-x64-gnu": "1.5.1", "@rollup/rollup-android-arm-eabi": "4.63.5", "@rollup/rollup-android-arm64": "4.63.5", "@rollup/rollup-darwin-arm64": "4.63.5", "@rollup/rollup-darwin-x64": "4.63.5", "@rollup/rollup-freebsd-arm64": "4.63.5", "@rollup/rollup-freebsd-x64": "4.63.5", "@rollup/rollup-linux-arm-gnueabihf": "4.63.5", "@rollup/rollup-linux-arm-musleabihf": "4.63.5", "@rollup/rollup-linux-arm64-gnu": "4.63.5", "@rollup/rollup-linux-arm64-musl": "4.63.5", "@rollup/rollup-linux-loong64-gnu": "4.63.5", "@rollup/rollup-linux-loong64-musl": "4.63.5", "@rollup/rollup-linux-ppc64-gnu": "4.63.5", "@rollup/rollup-linux-ppc64-musl": "4.63.5", "@rollup/rollup-linux-riscv64-gnu": "4.63.5", "@rollup/rollup-linux-riscv64-musl": "4.63.5", "@rollup/rollup-linux-s390x-gnu": "4.63.5", "@rollup/rollup-linux-x64-gnu": "4.63.5", "@rollup/rollup-linux-x64-musl": "4.63.5", "@rollup/rollup-openbsd-x64": "4.63.5", "@rollup/rollup-openharmony-arm64": "4.63.5", "@rollup/rollup-win32-arm64-msvc": "4.63.5", "@rollup/rollup-win32-ia32-msvc": "4.63.5", "@rollup/rollup-win32-x64-gnu": "4.63.5", "@rollup/rollup-win32-x64-msvc": "4.63.5", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-KRWwmNLlPw5M7HcdYfm15oBv9n9LPtjzpzCIxS/phwqvPyxHSoKX6Y2YU3pxSPfy0CLquVgsx/j/hBi6OvH1Nw=="],
 
