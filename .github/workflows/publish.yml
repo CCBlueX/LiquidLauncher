@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
-      API_TOKEN: ${{ secrets.API_TOKEN }}
     steps:
       - name: Publish release to the API
         run: |
@@ -95,9 +95,9 @@ jobs:
               --arg os "$os" --arg arch "$arch" --arg type "$type" \
               --arg installer_url "$installer_url" --arg checksum "$checksum" \
               --arg updater_url "$updater_url" --arg signature "$signature" \
-              '{os: $os, arch: $arch, type: $type, installer_url: $installer_url,
-                checksum: $checksum,
-                updater_url: (if $updater_url == "" then null else $updater_url end),
+              '{os: $os, arch: $arch, bundleType: $type, installerUrl: $installer_url,
+                sha256: $checksum,
+                updaterUrl: (if $updater_url == "" then null else $updater_url end),
                 signature: (if $signature == "" then null else $signature end)}' \
               >> binaries.jsonl
           done < <(jq -r '.assets[] | [.name, .browser_download_url] | @tsv' release.json)
@@ -112,12 +112,13 @@ jobs:
             --slurpfile release release.json \
             --slurpfile binaries binaries.jsonl \
             '{version: $version,
-              pub_date: $release[0].published_at,
+              publishedAt: $release[0].published_at,
               notes: (($release[0].body // "") | if . == "" then null else . end),
               binaries: $binaries}' > payload.json
 
-          curl -fsS -X POST "https://api.liquidbounce.net/api/v1/launcher/publish" \
-            -H "Authorization: Bearer ${API_TOKEN}" \
+          OIDC_TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.liquidbounce.net" | jq -r .value)
+          curl -fsS -X PUT "https://api.liquidbounce.net/launcher/release" \
+            -H "Authorization: Bearer ${OIDC_TOKEN}" \
             -H "Content-Type: application/json" \
             --data-binary @payload.json
           echo
