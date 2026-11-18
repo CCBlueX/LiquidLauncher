@@ -21,7 +21,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::error::map_into_connection_error;
-use crate::HTTP_CLIENT;
+use crate::{https_client, HTTP_CLIENT};
 use anyhow::Result;
 use backon::{ExponentialBuilder, Retryable};
 use tokio::fs;
@@ -54,6 +54,11 @@ where
 {
     debug!("Downloading file {:?}", url);
     download_request(|| Ok(HTTP_CLIENT.get(url.trim())), on_progress).await
+}
+
+pub async fn download_java(url: &str, progress: impl Fn(u64, u64)) -> Result<Vec<u8>> {
+    let client = https_client()?;
+    download_request(|| Ok(client.get(url)), progress).await
 }
 
 pub async fn download_request(

@@ -20,10 +20,10 @@
 use std::collections::BTreeMap;
 
 use crate::auth::ClientAccount;
-use crate::minecraft::java::JavaDistribution;
+use crate::minecraft::java::{JavaDistribution, JavaPackage};
 use crate::minecraft::version::LibraryPatch;
 use crate::utils::get_maven_artifact_path;
-use crate::HTTP_CLIENT;
+use crate::{https_client, HTTP_CLIENT};
 use anyhow::{Error, Result};
 use chrono::{DateTime, Utc};
 use reqwest::Url;
@@ -175,7 +175,20 @@ impl Client {
 
     /// Request launch manifest of specific build
     pub async fn fetch_launch_manifest(&self, build_id: u32) -> Result<LaunchManifest> {
-        self.request(&format!("builds/{build_id}/launch-manifest"), &[]).await
+        let path = format!("builds/{build_id}/launch-manifest");
+        if self.url.starts_with("https://") && LAUNCHER_API.contains(&self.url.as_str()) {
+            let url = Url::parse(&format!("{}/{path}", self.url))?;
+            let response = https_client()?.get(url.clone()).send().await?.error_for_status()?;
+            let trusted = response.url().origin() == url.origin();
+            let mut manifest: LaunchManifest = response.json().await?;
+            if !trusted {
+                manifest.java_packages.clear();
+            }
+            return Ok(manifest);
+        }
+        let mut manifest: LaunchManifest = self.request(&path, &[]).await?;
+        manifest.java_packages.clear();
+        Ok(manifest)
     }
 
     /// Request list of downloadable mods for mc_version and used subsystem
@@ -338,6 +351,8 @@ pub struct LaunchManifest {
     pub repositories: BTreeMap<String, String>,
     #[serde(default, rename = "libraryPatches")]
     pub library_patches: Vec<LibraryPatch>,
+    #[serde(rename = "javaPackages", default, deserialize_with = "JavaPackage::list")]
+    pub java_packages: Vec<JavaPackage>,
 }
 
 ///
