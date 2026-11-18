@@ -19,7 +19,7 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 use async_zip::base::read::mem::ZipFileReader;
 use tokio::fs;
 use tracing::*;
@@ -36,7 +36,7 @@ use crate::minecraft::progress::{
     get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps,
 };
 use crate::minecraft::version::{VersionManifest, VersionProfile};
-use crate::utils::{download_file, get_maven_artifact_path};
+use crate::utils::{download_file, download_request, get_maven_artifact_path};
 use crate::LAUNCHER_DIRECTORY;
 
 use backon::{ExponentialBuilder, Retryable};
@@ -284,9 +284,9 @@ pub async fn retrieve_and_copy_mods(
 
             let contents = match &current_mod.source {
                 ModSource::SkipAd {
-                    artifact_name: _,
+                    skip_id,
                     url,
-                    extract,
+                    extract, ..
                 } => {
                     launcher_data.log(&format!(
                         "Opening download page for mod {} on {}",
@@ -297,35 +297,25 @@ pub async fn retrieve_and_copy_mods(
                         current_mod.name
                     )));
 
-                    let pid = match client_account {
-                        Some(account) => {
-                            // PID is taken from the URL which is the last part of the URL
-                            // https://dl.liquidbounce.net/skip/c7kMT2q00U -> c7kMT2q00U
-                            let pid = url.split('/').last().context("Failed to get PID")?;
-                            let skip_file_resolve =
-                                client.resolve_skip_file(account, pid).await?;
-                            
-                            // If the skip file resolve has a target PID, use it - 
-                            // if not, it means that the account is not allowed for direct downloads
-                            skip_file_resolve.target_pid.ok_or_else(|| {
-                                anyhow!("Failed to get direct URL for mod {}", current_mod.name)
-                            })?
+                    let (url, account) = match client_account {
+                        Some(account) => (format!("{}/files/skips/{skip_id}", client.url()), Some(account)),
+                        None => {
+                            let pid = open_download_page(url, launcher_data).await?;
+                            (format!("{}/files/{pid}", client.url()), None)
                         }
-                        None => open_download_page(url, launcher_data).await?,
                     };
-                    
-                    // Download the mod
-                    let url = client.get_direct_download_link(&pid);
-                    launcher_data.log(&format!(
-                        "Downloading mod {} from {}",
-                        current_mod.name, url
-                    ));
                     launcher_data.progress_update(ProgressUpdate::set_label(format!(
                         "Downloading mod {}",
                         current_mod.name
                     )));
                     
-                    let retrieved_bytes = download_file(&url, |a, b| {
+                    let retrieved_bytes = download_request(|| {
+                        let request = crate::HTTP_CLIENT.get(&url);
+                        match account {
+                            Some(account) => account.authenticate_request(request),
+                            None => Ok(request),
+                        }
+                    }, |a, b| {
                         launcher_data.progress_update(ProgressUpdate::set_for_step(
                             ProgressUpdateSteps::DownloadLiquidBounceMods,
                             get_progress(mod_idx, a, b),

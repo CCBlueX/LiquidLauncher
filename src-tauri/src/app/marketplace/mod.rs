@@ -43,9 +43,13 @@ pub use staging::stage_addons;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ItemType {
+    #[serde(alias = "config")]
     Config,
+    #[serde(alias = "theme")]
     Theme,
+    #[serde(alias = "addon")]
     Addon,
+    #[serde(alias = "script")]
     Script,
     #[serde(other)]
     Other,
