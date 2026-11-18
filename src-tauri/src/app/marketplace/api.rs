@@ -134,10 +134,11 @@ pub fn download_url(client: &Client, item_id: u32, revision_id: u32) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::{from_value, json};
 
     #[test]
     fn reads_what_an_item_needs() {
-        let linked: Dependencies = serde_json::from_value(serde_json::json!({
+        let linked: Dependencies = from_value(json!({
             "dependencies": [{"id": 771}],
             "requires": [{
                 "id": 771, "type": "addon", "name": "ScriptAPI", "description": "",

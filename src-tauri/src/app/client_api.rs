@@ -427,6 +427,7 @@ mod tests {
     use super::*;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::TcpListener;
+    use tokio::time::{timeout, Duration};
 
     #[tokio::test]
     async fn short_pages_keep_the_filter_and_advance_by_items_received() {
@@ -448,7 +449,7 @@ mod tests {
             }
         };
         let fetch = client.request_pages::<u32>("mods", &[("subsystem", "fabric")]);
-        let (items, ()) = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        let (items, ()) = timeout(Duration::from_secs(5), async {
             tokio::join!(fetch, serve)
         }).await.unwrap();
         assert_eq!(items.unwrap(), [1, 2, 3]);
