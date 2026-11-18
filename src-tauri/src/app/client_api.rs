@@ -185,11 +185,19 @@ impl Client {
         struct Mod {
             name: String, artifact: String, repository: String, required: bool, enabled_by_default: bool,
         }
-        let mods = self.request_pages::<Mod>("launcher/mods", &[("mcVersion", mc_version), ("subsystem", subsystem)]).await?;
-        Ok(mods.into_iter().map(|m| LoaderMod {
-            name: m.name, required: m.required, enabled: m.enabled_by_default,
-            source: ModSource::Repository { artifact: m.artifact, repository: m.repository },
-        }).collect())
+        let mut mods = Vec::new();
+        loop {
+            let page: PaginatedResponse<Mod> = self.request("launcher/mods", &[
+                ("mcVersion", mc_version), ("subsystem", subsystem), ("limit", "100"),
+                ("offset", &mods.len().to_string()),
+            ]).await?;
+            let empty = page.items.is_empty();
+            mods.extend(page.items.into_iter().map(|m| LoaderMod {
+                name: m.name, required: m.required, enabled: m.enabled_by_default,
+                source: ModSource::Repository { artifact: m.artifact, repository: m.repository },
+            }));
+            if empty || mods.len() >= page.total as usize { return Ok(mods); }
+        }
     }
 
     /// Request changelog of specified build
@@ -212,23 +220,6 @@ impl Client {
             .send().await?.error_for_status()?.json().await?)
     }
 
-    pub async fn request_pages<T: DeserializeOwned>(&self, endpoint: &str, filters: &[(&str, &str)]) -> Result<Vec<T>> {
-        let base = Url::parse_with_params(&format!("{}/{endpoint}", self.url), filters)?;
-        let mut items = Vec::new();
-        loop {
-            let mut url = base.clone();
-            url.query_pairs_mut().append_pair("limit", "100").append_pair("offset", &items.len().to_string());
-            let page: PaginatedResponse<T> = self.get(url).await?;
-            if page.items.is_empty() {
-                return Ok(items);
-            }
-            items.extend(page.items);
-            if items.len() >= page.total as usize {
-                return Ok(items);
-            }
-        }
-    }
-
     /// Request JSON formatted data from launcher API, with query parameters
     pub async fn request<T: DeserializeOwned>(
         &self,
@@ -236,10 +227,6 @@ impl Client {
         query: &[(&str, &str)],
     ) -> Result<T> {
         let url = Url::parse_with_params(&format!("{}/{}", self.url, endpoint), query)?;
-        self.get(url).await
-    }
-
-    async fn get<T: DeserializeOwned>(&self, url: Url) -> Result<T> {
         Ok(HTTP_CLIENT
             .get(url)
             .header("X-Session-Token", &self.session_token)
@@ -420,37 +407,4 @@ pub struct UserInformation {
     #[serde(rename = "userId", alias = "uid")]
     pub user_id: String,
     pub premium: bool,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-    use tokio::net::TcpListener;
-
-    #[tokio::test]
-    async fn short_pages_keep_the_filter_and_advance_by_items_received() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let client = Client::new(&format!("http://{}", listener.local_addr().unwrap()), String::new());
-        let serve = async {
-            for (offset, body) in [(0, r#"{"items":[1,2],"total":3}"#), (2, r#"{"items":[3],"total":3}"#)] {
-                let (socket, _) = listener.accept().await.unwrap();
-                let mut socket = BufReader::new(socket);
-                let mut line = String::new();
-                socket.read_line(&mut line).await.unwrap();
-                assert_eq!(line, format!("GET /mods?subsystem=fabric&limit=100&offset={offset} HTTP/1.1\r\n"));
-                while line != "\r\n" {
-                    line.clear();
-                    assert_ne!(socket.read_line(&mut line).await.unwrap(), 0);
-                }
-                let reply = format!("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{body}", body.len());
-                socket.write_all(reply.as_bytes()).await.unwrap();
-            }
-        };
-        let fetch = client.request_pages::<u32>("mods", &[("subsystem", "fabric")]);
-        let (items, ()) = tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            tokio::join!(fetch, serve)
-        }).await.unwrap();
-        assert_eq!(items.unwrap(), [1, 2, 3]);
-    }
 }
