@@ -30,7 +30,7 @@ use reqwest::{IntoUrl, Url};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tokio::fs;
+use tokio::{fs, task::spawn_blocking};
 use tracing::warn;
 
 use crate::app::client_api::{LoaderMod, ModSource};
@@ -440,7 +440,7 @@ async fn versions(dir: &Path, files: &[String]) -> Result<Vec<Option<Version>>> 
     }
 
     let paths: Vec<PathBuf> = files.iter().map(|file_name| dir.join(file_name)).collect();
-    let hashes = tokio::task::spawn_blocking(move || {
+    let hashes = spawn_blocking(move || {
         paths
             .iter()
             .map(|path| sha1sum(path).ok())

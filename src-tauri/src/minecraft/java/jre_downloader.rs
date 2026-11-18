@@ -17,16 +17,17 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::fs::File;
+use std::fs::{File, TryLockError};
 use std::io::{Cursor, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::{bail, ensure, Context, Result};
+use base16ct::lower::encode_string;
 use chrono::Utc;
 use path_absolutize::Absolutize;
 use sha2::{Digest, Sha256};
-use tokio::{fs, process::Command};
+use tokio::{fs, process::Command, spawn, task::spawn_blocking, time::timeout};
 use tracing::warn;
 
 use crate::utils::{
@@ -126,7 +127,7 @@ async fn lock_file(dir: &Path) -> Result<File> {
 
 pub fn check_for_update(root: &Path, vendor: JavaDistribution, major: u32) {
     let root = root.to_owned();
-    tokio::spawn(async move {
+    spawn(async move {
         if let Err(error) = update_if_due(&root, &vendor, major).await {
             warn!(
                 "Could not update {} Java {major}: {error:#}",
@@ -141,8 +142,8 @@ async fn update_if_due(root: &Path, vendor: &JavaDistribution, major: u32) -> Re
     let lock = lock_file(&dir).await?;
     match lock.try_lock() {
         Ok(()) => (),
-        Err(std::fs::TryLockError::WouldBlock) => return Ok(()),
-        Err(std::fs::TryLockError::Error(error)) => return Err(error.into()),
+        Err(TryLockError::WouldBlock) => return Ok(()),
+        Err(TryLockError::Error(error)) => return Err(error.into()),
     }
     let deadline = dir.join("next-check");
     let now = Utc::now().timestamp();
@@ -175,7 +176,7 @@ async fn running_version(java: &Path) -> Result<JavaVersion> {
     } else {
         java.to_owned()
     };
-    let output = tokio::time::timeout(
+    let output = timeout(
         Duration::from_secs(15),
         Command::new(probe)
             .args(["-Xmx32m", "-XshowSettings:properties", "-version"])
@@ -206,7 +207,7 @@ pub async fn jre_download<F: Fn(u64, u64)>(
 ) -> Result<PathBuf> {
     let dir = cache(root, vendor, *major);
     let lock = lock_file(&dir).await?;
-    let _lock = tokio::task::spawn_blocking(move || lock.lock().map(|_| lock)).await??;
+    let _lock = spawn_blocking(move || lock.lock().map(|_| lock)).await??;
     if let Ok(java) = find_cached_java_binary(root, vendor, major).await {
         return Ok(java);
     }
@@ -243,8 +244,7 @@ async fn activate(
 ) -> Result<PathBuf> {
     ensure!(valid_hash(&package.sha256), "Invalid Java package checksum");
     ensure!(
-        base16ct::lower::encode_string(&Sha256::digest(bytes))
-            .eq_ignore_ascii_case(&package.sha256),
+        encode_string(&Sha256::digest(bytes)).eq_ignore_ascii_case(&package.sha256),
         "Java package checksum mismatch"
     );
     let stage = dir.join("partial");
@@ -314,7 +314,7 @@ mod tests {
         Ok((
             JavaPackage {
                 url: String::new(),
-                sha256: base16ct::lower::encode_string(&Sha256::digest(&bytes)),
+                sha256: encode_string(&Sha256::digest(&bytes)),
                 version: JavaVersion::parse(version).unwrap(),
             },
             bytes,
