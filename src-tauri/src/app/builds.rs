@@ -159,12 +159,12 @@ pub async fn page(client: &Client, page: u32, nightly: bool, selected: i32) -> R
     Ok(BuildPage {
         latest: selected == -1,
         builds,
-        page: response.pagination.current,
-        pages: response.pagination.pages,
+        page,
+        pages: response.total.div_ceil(PAGE_SIZE),
         count: if nightly {
-            count(response.pagination.items.into(), "build", "builds")
+            count(response.total.into(), "build", "builds")
         } else {
-            count(response.pagination.items.into(), "release", "releases")
+            count(response.total.into(), "release", "releases")
         },
     })
 }
@@ -182,25 +182,23 @@ mod tests {
 
     #[test]
     fn reads_a_build_of_the_paginated_endpoint() {
-        // An item of GET /api/v3/version/nextgen/builds?nightly=true.
         let build: Build = serde_json::from_value(serde_json::json!({
-            "build_id": 17371,
-            "commit_id": "adfddc0781d056201037ac16b216cfd3e2df4e4a",
-            "branch": "nextgen",
+            "id": 17371,
+            "commitId": "adfddc0781d056201037ac16b216cfd3e2df4e4a",
+            "edition": "nextgen",
             "subsystem": "fabric",
-            "lb_version": "0.40.1",
-            "mc_version": "26.2",
+            "lbVersion": "0.40.1",
+            "mcVersion": "26.2",
             "release": false,
-            "date": "2026-09-23T13:24:01Z",
+            "committedAt": "2026-09-23T13:24:01Z",
             "message": "refactor(interop): switch engine to CIO (#9233)\n\nBecause we don't need HTTP2",
-            "skip_pid": "llCnF8hAQc",
-            "jre_version": 25,
-            "jre_distribution": "temurin",
-            "fabric_api_version": "0.153.0+26.2",
-            "fabric_loader_version": "0.19.3",
-            "kotlin_version": "2.4.0",
-            "kotlin_mod_version": "1.13.12+kotlin.2.4.0",
-            "url": "https://liquidbounce.net/download/queue/17371"
+            "jreVersion": 25,
+            "jreDistribution": "temurin",
+            "fabricApiVersion": "0.153.0+26.2",
+            "fabricLoaderVersion": "0.19.3",
+            "kotlinVersion": "2.4.0",
+            "kotlinModVersion": "1.13.12+kotlin.2.4.0",
+            "downloadUrl": "https://liquidbounce.net/download/queue/17371"
         }))
         .unwrap();
 

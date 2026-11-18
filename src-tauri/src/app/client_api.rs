@@ -25,7 +25,7 @@ use crate::minecraft::version::LibraryPatch;
 use crate::utils::get_maven_artifact_path;
 use crate::HTTP_CLIENT;
 use anyhow::{Error, Result};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use reqwest::Url;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -42,9 +42,6 @@ pub const LAUNCHER_API: [&str; 3] = [
     // A VPN or a proxy can be used to secure the connection.
     "http://nossl.api.liquidbounce.net",
 ];
-
-pub const API_V1: &str = "api/v1";
-pub const API_V3: &str = "api/v3";
 
 #[derive(Serialize, Deserialize)]
 pub struct Client {
@@ -155,9 +152,8 @@ impl Client {
         &self.session_token
     }
 
-    /// Request all blog posts
     pub async fn blog_posts(&self, page: u32) -> Result<PaginatedResponse<BlogPost>> {
-        self.request_from_endpoint(API_V3, &format!("blog?page={}", page)).await
+        self.request("blog/posts", &[("offset", &page.saturating_sub(1).saturating_mul(10).to_string()), ("limit", "10")]).await
     }
 
     /// A page of builds, newest first: releases, or every build with `nightly`.
@@ -167,86 +163,72 @@ impl Client {
         limit: u32,
         nightly: bool,
     ) -> Result<PaginatedResponse<Build>> {
-        let endpoint = format!("version/{}/builds", CLIENT_BRANCH);
-        let (page, limit, nightly) = (page.to_string(), limit.to_string(), nightly.to_string());
-        self.request(API_V3, &endpoint, &[("page", &page), ("limit", &limit), ("nightly", &nightly)])
-            .await
+        let offset = page.saturating_sub(1).saturating_mul(limit).to_string();
+        let limit = limit.to_string();
+        let params = [("edition", CLIENT_BRANCH), ("offset", offset.as_str()), ("limit", &limit), ("release", "true")];
+        self.request("builds", if nightly { &params[..3] } else { &params }).await
     }
 
     pub async fn build(&self, build_id: u32) -> Result<Build> {
-        self.request_from_endpoint(API_V3, &format!("version/build/{}", build_id))
-            .await
+        self.request(&format!("builds/{build_id}"), &[]).await
     }
 
     /// Request launch manifest of specific build
     pub async fn fetch_launch_manifest(&self, build_id: u32) -> Result<LaunchManifest> {
-        self.request_from_endpoint(API_V1, &format!("version/launch/{}", build_id))
-            .await
+        self.request(&format!("builds/{build_id}/launch-manifest"), &[]).await
     }
 
     /// Request list of downloadable mods for mc_version and used subsystem
     pub async fn fetch_mods(&self, mc_version: &str, subsystem: &str) -> Result<Vec<LoaderMod>> {
-        self.request_from_endpoint(API_V1, &format!("version/mods/{}/{}", mc_version, subsystem))
-            .await
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Mod {
+            name: String, artifact: String, repository: String, required: bool, enabled_by_default: bool,
+        }
+        let mut mods = Vec::new();
+        loop {
+            let page: PaginatedResponse<Mod> = self.request("launcher/mods", &[
+                ("mcVersion", mc_version), ("subsystem", subsystem), ("limit", "100"),
+                ("offset", &mods.len().to_string()),
+            ]).await?;
+            let empty = page.items.is_empty();
+            mods.extend(page.items.into_iter().map(|m| LoaderMod {
+                name: m.name, required: m.required, enabled: m.enabled_by_default,
+                source: ModSource::Repository { artifact: m.artifact, repository: m.repository },
+            }));
+            if empty || mods.len() >= page.total as usize { return Ok(mods); }
+        }
     }
 
     /// Request changelog of specified build
     pub async fn fetch_changelog(&self, build_id: u32) -> Result<Changelog> {
-        self.request_from_endpoint(API_V1, &format!("version/changelog/{}", build_id))
-            .await
+        #[derive(Deserialize)]
+        struct Detail {
+            #[serde(flatten)]
+            build: Build,
+            changelog: Option<Text>,
+        }
+        #[derive(Deserialize)]
+        struct Text { text: String }
+        let detail: Detail = self.request(&format!("builds/{build_id}"), &[]).await?;
+        let changelog = detail.changelog.map(|c| c.text).unwrap_or_else(|| detail.build.message.clone());
+        Ok(Changelog { build: detail.build, changelog })
     }
 
-    /// Resolve direct download link from skip file pid
     pub async fn fetch_user(&self, client_account: &ClientAccount) -> Result<UserInformation> {
-        self.request_with_client_account("oauth/user", client_account)
-            .await
-    }
-
-    /// Resolve direct download link from skip file pid
-    pub async fn resolve_skip_file(
-        &self,
-        client_account: &ClientAccount,
-        pid: &str,
-    ) -> Result<SkipFileResolve> {
-        self.request_with_client_account(&format!("file/resolve/{}", pid), client_account)
-            .await
-    }
-
-    /// Uses [self.url] to create a direct download link for a file with the given pid.
-    pub fn get_direct_download_link(&self, pid: &str) -> String {
-        format!("{}/{}/file/{}", self.url, API_V3, pid)
-    }
-
-    /// Request JSON formatted data from launcher API
-    pub async fn request_from_endpoint<T: DeserializeOwned>(&self, api_version: &str, endpoint: &str) -> Result<T> {
-        self.request(api_version, endpoint, &[]).await
+        Ok(client_account.authenticate_request(HTTP_CLIENT.get(format!("{}/me", self.url)))?
+            .send().await?.error_for_status()?.json().await?)
     }
 
     /// Request JSON formatted data from launcher API, with query parameters
     pub async fn request<T: DeserializeOwned>(
         &self,
-        api_version: &str,
         endpoint: &str,
         query: &[(&str, &str)],
     ) -> Result<T> {
-        let url = Url::parse_with_params(&format!("{}/{}/{}", self.url, api_version, endpoint), query)?;
+        let url = Url::parse_with_params(&format!("{}/{}", self.url, endpoint), query)?;
         Ok(HTTP_CLIENT
             .get(url)
-            .header("X-Session-Token", &self.session_token)
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<T>()
-            .await?)
-    }
-
-    pub async fn request_with_client_account<T: DeserializeOwned>(
-        &self,
-        endpoint: &str,
-        client_account: &ClientAccount,
-    ) -> Result<T> {
-        Ok(client_account
-            .authenticate_request(HTTP_CLIENT.get(format!("{}/{}/{}", self.url, API_V3, endpoint)))?
             .header("X-Session-Token", &self.session_token)
             .send()
             .await?
@@ -259,30 +241,22 @@ impl Client {
 #[derive(Serialize, Deserialize)]
 pub struct PaginatedResponse<T> {
     pub items: Vec<T>,
-    pub pagination: Pagination,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Pagination {
-    pub current: u32,
-    pub pages: u32,
-    pub items: u32,
+    pub total: u32,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct BlogPost {
-    #[serde(rename(serialize = "postId"))]
-    pub post_id: u32,
-    #[serde(rename(serialize = "postUid"))]
+    #[serde(rename(serialize = "postUid", deserialize = "id"))]
     pub post_uid: String,
     pub author: String,
     pub title: String,
     pub description: String,
-    pub date: NaiveDateTime,
-    #[serde(rename(serialize = "bannerText"))]
-    pub banner_text: String,
-    #[serde(rename(serialize = "bannerImageUrl"))]
-    pub banner_image_url: String,
+    #[serde(rename(deserialize = "publishedAt"))]
+    pub date: DateTime<Utc>,
+    #[serde(rename = "bannerText")]
+    pub banner_text: Option<String>,
+    #[serde(rename = "bannerImageUrl")]
+    pub banner_image_url: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -296,23 +270,26 @@ pub struct Changelog {
 ///
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Build {
-    #[serde(rename(serialize = "buildId"))]
+    #[serde(rename(serialize = "buildId", deserialize = "id"))]
     pub build_id: u32,
-    #[serde(rename(serialize = "commitId"))]
+    #[serde(rename = "commitId")]
     pub commit_id: String,
+    #[serde(rename(deserialize = "edition"))]
     pub branch: String,
     pub subsystem: String,
-    #[serde(rename(serialize = "lbVersion"))]
+    #[serde(rename = "lbVersion")]
     pub lb_version: String,
-    #[serde(rename(serialize = "mcVersion"))]
+    #[serde(rename = "mcVersion")]
     pub mc_version: String,
     pub release: bool,
+    #[serde(rename(deserialize = "committedAt"))]
     pub date: DateTime<Utc>,
     pub message: String,
+    #[serde(rename(deserialize = "downloadUrl"))]
     pub url: String,
-    #[serde(rename(serialize = "jreDistribution"), default)]
+    #[serde(rename = "jreDistribution", default)]
     pub jre_distribution: JavaDistribution,
-    #[serde(rename(serialize = "jreVersion"))]
+    #[serde(rename = "jreVersion")]
     pub jre_version: u32,
     #[serde(flatten)]
     pub subsystem_specific_data: SubsystemSpecificData,
@@ -323,16 +300,17 @@ pub struct Build {
 /// This can be used for any subsystem, but for now it is only implemented for Fabric.
 /// It has to be turned into an Enum to be able to decide on it's own for specific data, but for now this is not required.
 ///
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(default)]
 pub struct SubsystemSpecificData {
     // Additional data
-    #[serde(rename(serialize = "fabricApiVersion"))]
+    #[serde(rename = "fabricApiVersion")]
     pub fabric_api_version: String,
-    #[serde(rename(serialize = "fabricLoaderVersion"))]
+    #[serde(rename = "fabricLoaderVersion")]
     pub fabric_loader_version: String,
-    #[serde(rename(serialize = "kotlinVersion"))]
+    #[serde(rename = "kotlinVersion")]
     pub kotlin_version: String,
-    #[serde(rename(serialize = "kotlinModVersion"))]
+    #[serde(rename = "kotlinModVersion")]
     pub kotlin_mod_version: String,
 }
 
@@ -345,7 +323,7 @@ pub struct LaunchManifest {
     pub subsystem: LoaderSubsystem,
     pub mods: Vec<LoaderMod>,
     pub repositories: BTreeMap<String, String>,
-    #[serde(default)]
+    #[serde(default, rename = "libraryPatches")]
     pub library_patches: Vec<LibraryPatch>,
 }
 
@@ -357,7 +335,7 @@ pub struct LoaderMod {
     #[serde(default)]
     pub required: bool,
     #[serde(default)]
-    #[serde(alias = "default")]
+    #[serde(alias = "enabledByDefault")]
     pub enabled: bool,
     pub name: String,
     pub source: ModSource,
@@ -373,6 +351,8 @@ pub enum ModSource {
     #[serde(rename_all = "camelCase")]
     SkipAd {
         artifact_name: String,
+        skip_id: String,
+        #[serde(rename = "downloadUrl")]
         url: String,
         #[serde(default)]
         extract: bool,
@@ -410,26 +390,21 @@ pub enum LoaderSubsystem {
     #[serde(rename = "fabric")]
     Fabric {
         manifest: String,
+        #[serde(rename = "modDirectory")]
         mod_directory: String,
     },
     #[serde(rename = "forge")]
     Forge {
         manifest: String,
+        #[serde(rename = "modDirectory")]
         mod_directory: String,
     },
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct SkipFileResolve {
-    pub error: bool,
-    pub msg: String,
-    pub target_pid: Option<String>
 }
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct UserInformation {
     pub nickname: String,
-    #[serde(rename = "userId", alias = "user_id")]
+    #[serde(rename = "userId", alias = "uid")]
     pub user_id: String,
     pub premium: bool,
 }

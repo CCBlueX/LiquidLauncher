@@ -189,7 +189,7 @@ mod tests {
             {
                 "id": 19,
                 "version": "1.0.1",
-                "created_at": "2026-09-20T10:00:00",
+                "createdAt": "2026-09-20T10:00:00Z",
                 "liquidbounce": { "min": "0.40.0", "max": "0.40.1" },
             },
             {
@@ -226,22 +226,22 @@ mod tests {
             (17223, "0.40.1", "2026-09-14T18:08:10Z", true),
         ] {
             let build: Build = serde_json::from_value(json!({
-                "build_id": build_id,
-                "commit_id": "",
-                "branch": "nextgen",
+                "id": build_id,
+                "commitId": "",
+                "edition": "nextgen",
                 "subsystem": "fabric",
-                "lb_version": lb_version,
-                "mc_version": "26.2",
+                "lbVersion": lb_version,
+                "mcVersion": "26.2",
                 "release": build_id == 16941,
-                "date": date,
+                "committedAt": date,
                 "message": "",
-                "url": "",
-                "jre_version": 25,
-                "jre_distribution": "temurin",
-                "fabric_api_version": "0.153.0+26.2",
-                "fabric_loader_version": "0.19.3",
-                "kotlin_version": "2.4.0",
-                "kotlin_mod_version": "1.13.12+kotlin.2.4.0",
+                "downloadUrl": "",
+                "jreVersion": 25,
+                "jreDistribution": "temurin",
+                "fabricApiVersion": "0.153.0+26.2",
+                "fabricLoaderVersion": "0.19.3",
+                "kotlinVersion": "2.4.0",
+                "kotlinModVersion": "1.13.12+kotlin.2.4.0",
             }))
             .unwrap();
             assert_eq!(supports_addons(&build), expected, "build {build_id}");
