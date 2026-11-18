@@ -20,5 +20,6 @@
 mod distribution;
 pub(crate) mod jre_downloader;
 mod runtime;
+mod version;
 
-pub use {distribution::*, jre_downloader::*, runtime::*};
+pub use {distribution::*, jre_downloader::*, runtime::*, version::JavaVersion};

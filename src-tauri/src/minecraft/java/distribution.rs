@@ -1,8 +1,9 @@
-use anyhow::{bail, Result};
-use crate::utils::{ARCHITECTURE, OS};
-use crate::HTTP_CLIENT;
-use reqwest::StatusCode;
+use anyhow::{ensure, Context, Result};
 use serde::{Deserialize, Serialize};
+
+use super::JavaVersion;
+use crate::utils::{Architecture, ARCHITECTURE, OS};
+use crate::HTTP_CLIENT;
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type", content = "value")]
@@ -38,78 +39,30 @@ impl Default for JavaDistribution {
     }
 }
 
+pub struct JavaPackage {
+    pub version: JavaVersion,
+    pub url: String,
+    pub sha256: String,
+}
+
 impl JavaDistribution {
-    /// `None` when the vendor has no build for the running OS and architecture
-    pub async fn get_url(&self, jre_version: &u32) -> Result<Option<String>> {
-        let os_arch = ARCHITECTURE.get_simple_name()?;
-        let archive_type = OS.get_archive_type()?;
-
-        let url = match self {
-            JavaDistribution::Temurin => {
-                let os_name = OS.get_adoptium_name()?;
-                format!(
-                    "https://api.adoptium.net/v3/binary/latest/{}/ga/{}/{}/jre/hotspot/normal/eclipse?project=jdk",
-                    jre_version, os_name, os_arch
-                )
-            }
-            JavaDistribution::GraalVM => {
-                let os_name = OS.get_graal_name()?;
-
-                if jre_version > &17 {
-                    format!(
-                        "https://download.oracle.com/graalvm/{}/latest/graalvm-jdk-{}_{}-{}_bin.{}",
-                        jre_version, jre_version, os_name, os_arch, archive_type
-                    )
-                } else if jre_version == &17 {
-                    // Use archive link for 17.0.12
-                    format!(
-                        "https://download.oracle.com/graalvm/17/archive/graalvm-jdk-17.0.12_{}-{}_bin.{}",
-                        os_name, os_arch, archive_type
-                    )
-                } else {
-                    bail!("GraalVM only supports Java 17+")
-                }
-            }
-            // Azul's file names carry the exact build, so only its metadata API knows the URL
-            JavaDistribution::Zulu => {
-                #[derive(Deserialize)]
-                struct AzulPackage {
-                    download_url: String,
-                }
-
-                let packages: Vec<AzulPackage> = HTTP_CLIENT
-                    .get(format!(
-                        "https://api.azul.com/metadata/v1/zulu/packages/?java_version={}&os={}&arch={}&archive_type={}&java_package_type=jre&availability_types=CA&release_status=ga&javafx_bundled=false&latest=true&page_size=1",
-                        jre_version,
-                        OS.get_zulu_name()?,
-                        ARCHITECTURE.get_zulu_name()?,
-                        archive_type
-                    ))
-                    .header("accept", "application/json")
-                    .send()
-                    .await?
-                    .error_for_status()?
-                    .json()
-                    .await?;
-
-                return Ok(packages
-                    .into_iter()
-                    .next()
-                    .map(|package| package.download_url));
-            }
+    pub async fn package(&self, major: &u32) -> Result<Option<JavaPackage>> {
+        let package = match self {
+            Self::Temurin => temurin(*major).await?,
+            Self::Zulu => zulu(*major).await?,
+            Self::GraalVM => graal(*major).await?,
         };
-
-        let response = HTTP_CLIENT.head(&url).send().await?;
-        if response.status() == StatusCode::NOT_FOUND {
-            return Ok(None);
+        if let Some(build) = &package {
+            ensure!(
+                build.version.major() == *major,
+                "Vendor returned the wrong Java major"
+            );
         }
-
-        response.error_for_status()?;
-        Ok(Some(url))
+        Ok(package)
     }
 
     pub async fn has_build(&self, jre_version: &u32) -> Result<bool> {
-        Ok(self.get_url(jre_version).await?.is_some())
+        Ok(self.package(jre_version).await?.is_some())
     }
 
     pub fn get_name(&self) -> &str {
@@ -124,7 +77,129 @@ impl JavaDistribution {
         match self {
             JavaDistribution::Temurin => true, // Supports 8, 11, 17, 21
             JavaDistribution::GraalVM => version >= 17, // Only supports 17+
-            JavaDistribution::Zulu => true,             // Community builds available for all LTS versions
+            JavaDistribution::Zulu => true,    // Community builds available for all LTS versions
         }
     }
+}
+
+async fn temurin(major: u32) -> Result<Option<JavaPackage>> {
+    #[derive(Deserialize)]
+    struct Asset {
+        binary: Binary,
+        version: Version,
+    }
+    #[derive(Deserialize)]
+    struct Binary {
+        package: Package,
+    }
+    #[derive(Deserialize)]
+    struct Package {
+        link: String,
+        checksum: String,
+    }
+    #[derive(Deserialize)]
+    struct Version {
+        openjdk_version: String,
+    }
+
+    let assets: Vec<Asset> = HTTP_CLIENT
+        .get(format!(
+            "https://api.adoptium.net/v3/assets/latest/{major}/hotspot?architecture={}&os={}&image_type=jre&vendor=eclipse",
+            ARCHITECTURE.get_simple_name()?,
+            OS.get_adoptium_name()?,
+        ))
+        .send().await?.error_for_status()?.json().await?;
+    assets
+        .into_iter()
+        .next()
+        .map(|asset| {
+            Ok(JavaPackage {
+                version: JavaVersion::parse(&asset.version.openjdk_version)
+                    .context("Invalid Temurin version")?,
+                url: asset.binary.package.link,
+                sha256: asset.binary.package.checksum,
+            })
+        })
+        .transpose()
+}
+
+async fn zulu(major: u32) -> Result<Option<JavaPackage>> {
+    #[derive(Deserialize)]
+    struct Package {
+        java_version: Vec<u32>,
+        openjdk_build_number: Option<u32>,
+        download_url: String,
+        sha256_hash: String,
+    }
+
+    let packages: Vec<Package> = HTTP_CLIENT
+        .get(format!(
+            "https://api.azul.com/metadata/v1/zulu/packages/?java_version={major}&os={}&arch={}&archive_type={}&java_package_type=jre&availability_types=CA&release_status=ga&javafx_bundled=false&latest=true&page_size=1&include_fields=sha256_hash,openjdk_build_number",
+            OS.get_zulu_name()?,
+            ARCHITECTURE.get_zulu_name()?,
+            OS.get_archive_type()?,
+        ))
+        .send().await?.error_for_status()?.json().await?;
+    packages
+        .into_iter()
+        .next()
+        .map(|package| {
+            Ok(JavaPackage {
+                version: JavaVersion::new(package.java_version, package.openjdk_build_number)
+                    .context("Invalid Zulu version")?,
+                url: package.download_url,
+                sha256: package.sha256_hash,
+            })
+        })
+        .transpose()
+}
+
+async fn graal(major: u32) -> Result<Option<JavaPackage>> {
+    #[derive(Deserialize)]
+    struct Artifacts {
+        items: Vec<Artifact>,
+    }
+    #[derive(Deserialize)]
+    struct Artifact {
+        id: String,
+        checksum: String,
+        metadata: Vec<Metadata>,
+    }
+    #[derive(Deserialize)]
+    struct Metadata {
+        key: String,
+        value: String,
+    }
+
+    let arch = match *ARCHITECTURE {
+        Architecture::X64 => "amd64",
+        Architecture::AARCH64 => "aarch64",
+        _ => return Ok(None),
+    };
+    let os = OS.get_graal_name()?;
+    let base = "https://gds.oracle.com/api/20220101/artifacts";
+    // Select only GFTC releases: later 17 and 21 patches require a separate Oracle license.
+    let catalog: Artifacts = HTTP_CLIENT
+        .get(format!(
+            "{base}?productId=D53FAE8052773FFAE0530F15000AA6C6&licenseId=FD40B563DC17366EE0531518000ADC4D&metadata=isBase:True&metadata=edition:ee&metadata=os:{os}&metadata=arch:{arch}&status=PUBLISHED&displayName=Oracle%20GraalVM%20for%20JDK%20{major}%20release&sortBy=timeCreated&sortOrder=DESC&limit=1&responseFields=id&responseFields=checksum&responseFields=metadata"
+        ))
+        .send().await?.error_for_status()?.json().await?;
+    catalog
+        .items
+        .into_iter()
+        .next()
+        .map(|artifact| {
+            let version = artifact
+                .metadata
+                .iter()
+                .find(|field| field.key == "version")
+                .and_then(|field| JavaVersion::parse(&field.value))
+                .context("Missing GraalVM release version")?;
+            Ok(JavaPackage {
+                version,
+                url: format!("{base}/{}/content", artifact.id),
+                sha256: artifact.checksum,
+            })
+        })
+        .transpose()
 }

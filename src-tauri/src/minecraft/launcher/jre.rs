@@ -1,4 +1,3 @@
-use std::iter;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Result};
@@ -37,6 +36,7 @@ pub async fn load_jre<D: Send + Sync>(
     if let Ok(path) =
         find_cached_java_binary(runtimes_folder, &distribution, &manifest.build.jre_version).await
     {
+        jre_downloader::check_for_update(runtimes_folder, distribution, manifest.build.jre_version);
         return Ok(path);
     }
 
@@ -66,26 +66,29 @@ async fn automatic_distribution<D: Send + Sync>(
 ) -> Result<JavaDistribution> {
     let preferred = &manifest.build.jre_distribution;
     let version = &manifest.build.jre_version;
-    let fallbacks = [
+    let distributions = [
+        preferred.clone(),
         JavaDistribution::Temurin,
         JavaDistribution::Zulu,
         JavaDistribution::GraalVM,
-    ]
-    .into_iter()
-    .filter(|distribution| distribution != preferred);
+    ];
+    for distribution in &distributions {
+        if distribution.supports_version(*version)
+            && find_cached_java_binary(runtimes_folder, distribution, version)
+                .await
+                .is_ok()
+        {
+            return Ok(distribution.clone());
+        }
+    }
 
-    for distribution in iter::once(preferred.clone()).chain(fallbacks) {
-        if !distribution.supports_version(*version) {
+    for (index, distribution) in distributions.iter().enumerate() {
+        if distributions[..index].contains(distribution) || !distribution.supports_version(*version)
+        {
             continue;
         }
-
-        // A failed lookup is left for the download to report
-        if find_cached_java_binary(runtimes_folder, &distribution, version)
-            .await
-            .is_ok()
-            || distribution.has_build(version).await.unwrap_or(true)
-        {
-            if distribution != *preferred {
+        if distribution.has_build(version).await.unwrap_or(true) {
+            if distribution != preferred {
                 launcher_data.log(&format!(
                     "{} has no Java {} build for this platform, using {}",
                     preferred.get_name(),
@@ -94,7 +97,7 @@ async fn automatic_distribution<D: Send + Sync>(
                 ));
             }
 
-            return Ok(distribution);
+            return Ok(distribution.clone());
         }
     }
 
