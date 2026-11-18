@@ -26,7 +26,7 @@ use crate::utils::{OS, OS_VERSION};
 use anyhow::Result;
 use directories::ProjectDirs;
 use once_cell::sync::Lazy;
-use reqwest::{Client, ClientBuilder};
+use reqwest::Client;
 use std::io;
 use std::time::Duration;
 use tracing::{debug, debug_span, error, info};
@@ -51,21 +51,16 @@ static LAUNCHER_DIRECTORY: Lazy<ProjectDirs> =
 
 static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
-fn client_builder() -> ClientBuilder {
+static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
     Client::builder()
         .user_agent(APP_USER_AGENT)
         .connect_timeout(Duration::from_secs(15))
         // Stall between reads, not a whole-request timeout: this client also
         // downloads large assets, which are slow but not stuck.
         .read_timeout(Duration::from_secs(60))
-}
-
-static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| client_builder().build().unwrap_or_else(|_| Client::new()));
-static HTTPS_CLIENT: Lazy<reqwest::Result<Client>> = Lazy::new(|| client_builder().https_only(true).build());
-
-fn https_client() -> Result<&'static Client> {
-    HTTPS_CLIENT.as_ref().map_err(|error| anyhow::anyhow!("Failed to initialize HTTPS: {error}"))
-}
+        .build()
+        .unwrap_or_else(|_| Client::new())
+});
 
 pub fn main() -> Result<()> {
     use tracing_subscriber::{fmt, EnvFilter};

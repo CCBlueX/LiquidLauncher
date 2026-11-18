@@ -73,7 +73,7 @@ impl JavaPackage {
             && OS.get_simple_name().ok() == Some(self.os.as_str())
             && ARCHITECTURE.get_simple_name().ok() == Some(self.arch.as_str())
             && OS.get_archive_type().ok() == Some(self.archive.as_str())
-            && self.url.starts_with("https://")
+            && (self.url.starts_with("http://") || self.url.starts_with("https://"))
             && self.sha256.len() == 64
             && self.sha256.bytes().all(|b| b.is_ascii_hexdigit())
     }

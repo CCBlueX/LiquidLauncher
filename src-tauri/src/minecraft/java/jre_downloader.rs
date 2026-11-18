@@ -30,7 +30,7 @@ use tokio::{fs, process::Command, spawn, task::spawn_blocking, time::timeout};
 use tracing::warn;
 
 use crate::utils::{
-    download_java, tar_gz_extract, zip_extract, Architecture, OperatingSystem, ARCHITECTURE, OS,
+    download_file, tar_gz_extract, zip_extract, Architecture, OperatingSystem, ARCHITECTURE, OS,
 };
 
 use super::{JavaDistribution, JavaPackage, JavaRuntime, JavaVersion};
@@ -262,7 +262,7 @@ pub async fn jre_download<F: Fn(u64, u64)>(
         }
         installed = Some(version);
     }
-    let bytes = download_java(&package.url, progress).await?;
+    let bytes = download_file(&package.url, progress).await?;
     activate(&dir, major, package, installed.as_ref(), &bytes).await?;
     find_cached_java_binary(root, vendor, &major).await
 }
