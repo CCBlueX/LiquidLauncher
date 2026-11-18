@@ -112,7 +112,6 @@ async fn runtime_architecture(java_binary: &Path) -> Option<Architecture> {
     })
 }
 
-// Tokio files do not expose the OS lock shared by launcher processes.
 async fn lock_file(dir: &Path) -> Result<File> {
     fs::create_dir_all(dir).await?;
     Ok(fs::OpenOptions::new()
@@ -271,10 +270,8 @@ async fn activate(
         "Refusing to downgrade Java"
     );
 
-    // A game can still be using any previously selected directory.
     let dest = dir.join(&package.sha256);
     if fs::try_exists(&dest).await? {
-        // An interrupted activation can leave a fully validated directory here.
         binary(&dest).await?;
         fs::remove_dir_all(stage).await?;
     } else {
