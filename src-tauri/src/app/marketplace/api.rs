@@ -113,26 +113,7 @@ pub async fn revision(client: &Client, item_id: u32, revision_id: u32) -> Result
 /// Every revision that fits the build, newest first.
 pub async fn revisions_for(client: &Client, item_id: u32, build: &Build) -> Result<Vec<Revision>> {
     let path = format!("marketplace/items/{item_id}/revisions");
-    let mut revisions = vec![];
-    loop {
-        let response: PaginatedResponse<Revision> = client
-            .request(
-                &path,
-                &[
-                    ("minecraft", &build.mc_version),
-                    ("liquidbounce", &build.lb_version),
-                    ("offset", &revisions.len().to_string()),
-                    ("limit", "50"),
-                ],
-            )
-            .await?;
-        let empty = response.items.is_empty();
-        revisions.extend(response.items);
-        if empty || revisions.len() >= response.total as usize {
-            break;
-        }
-    }
-    Ok(revisions)
+    client.request_pages(&path, &[("minecraft", &build.mc_version), ("liquidbounce", &build.lb_version)]).await
 }
 
 /// The items an item needs installed beside it.
