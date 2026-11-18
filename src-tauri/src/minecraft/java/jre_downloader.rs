@@ -63,7 +63,7 @@ async fn binary(dir: &Path) -> Result<PathBuf> {
             _ => folder_path.join("bin").join("java"),
         };
 
-        if java_binary.is_file() {
+        if fs::metadata(&java_binary).await.is_ok_and(|m| m.is_file()) {
             if let Some(arch) = runtime_architecture(&java_binary).await {
                 ensure!(arch == *ARCHITECTURE, "Cached Java is for {arch}");
             }
@@ -112,6 +112,7 @@ async fn runtime_architecture(java_binary: &Path) -> Option<Architecture> {
     })
 }
 
+// Tokio files do not expose the OS lock shared by launcher processes.
 async fn lock_file(dir: &Path) -> Result<File> {
     fs::create_dir_all(dir).await?;
     Ok(fs::OpenOptions::new()
@@ -272,7 +273,7 @@ async fn activate(
 
     // A game can still be using any previously selected directory.
     let dest = dir.join(&package.sha256);
-    if dest.exists() {
+    if fs::try_exists(&dest).await? {
         // An interrupted activation can leave a fully validated directory here.
         binary(&dest).await?;
         fs::remove_dir_all(stage).await?;
@@ -333,7 +334,7 @@ mod tests {
         let (new, bytes) = archive("21.0.9+10").await?;
         fs::create_dir_all(dir.join("partial/jdk/bin")).await?;
         update_if_due(root.path(), &vendor, 21).await?;
-        assert!(!dir.join("next-check").exists());
+        assert!(!fs::try_exists(dir.join("next-check")).await?);
         assert!(activate(&dir, 21, &new, Some(&old.version), b"truncated")
             .await
             .is_err());
