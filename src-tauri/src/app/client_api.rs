@@ -31,6 +31,7 @@ use reqwest::Url;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, debug_span, error, info, warn};
+use tokio::try_join;
 use crate::app::client_api_target::CLIENT_BRANCH;
 
 /// API endpoint url
@@ -174,9 +175,12 @@ impl Client {
         self.request(&format!("builds/{build_id}"), &[]).await
     }
 
-    pub async fn java_distributions(&self) -> Result<Vec<JavaDistribution>> {
-        let packages = self.request("launcher/java-packages", &[]).await?;
-        Ok(local_distributions(packages, OS.get_simple_name()?, ARCHITECTURE.get_simple_name()?))
+    pub async fn java_distributions(&self) -> Result<Vec<JavaVendor>> {
+        let (packages, vendors) = try_join!(
+            self.request("launcher/java-packages", &[]),
+            self.request("launcher/java-vendors", &[]),
+        )?;
+        Ok(local_distributions(packages, vendors, OS.get_simple_name()?, ARCHITECTURE.get_simple_name()?))
     }
 
     /// Request launch manifest of specific build
@@ -256,14 +260,28 @@ struct ListedPackage {
     arch: String,
 }
 
-fn local_distributions(packages: Vec<ListedPackage>, os: &str, arch: &str) -> Vec<JavaDistribution> {
-    let mut vendors: Vec<_> = packages.into_iter()
+#[derive(Deserialize, Serialize)]
+pub struct JavaVendor {
+    vendor: JavaDistribution,
+    name: String,
+}
+
+/// The vendors with a package for this platform, in the order the API lists them. One it has
+/// no name for goes last, under its identifier.
+fn local_distributions(packages: Vec<ListedPackage>, vendors: Vec<JavaVendor>, os: &str, arch: &str) -> Vec<JavaVendor> {
+    let mut local: Vec<_> = packages.into_iter()
         .filter(|p| p.os == os && p.arch == arch)
         .map(|p| p.vendor)
         .collect();
-    vendors.sort_unstable();
-    vendors.dedup();
-    vendors
+    local.sort_unstable();
+    local.dedup();
+    let mut listed: Vec<_> = vendors.into_iter().filter(|v| local.contains(&v.vendor)).collect();
+    for vendor in local {
+        if !listed.iter().any(|v| v.vendor == vendor) {
+            listed.push(JavaVendor { name: vendor.get_name().to_owned(), vendor });
+        }
+    }
+    listed
 }
 
 /// Every item of a paginated list, asking for the next page by how many items came so far.
@@ -464,15 +482,25 @@ mod tests {
     use std::cell::RefCell;
 
     #[test]
-    fn catalog_lists_each_local_distribution_once() {
+    fn catalog_lists_local_distributions_as_the_api_orders_them() {
         let packages = from_value(json!([
             { "vendor": "second", "os": "linux", "arch": "x64", "major": 17 },
             { "vendor": "first", "os": "linux", "arch": "x64", "major": 21 },
             { "vendor": "second", "os": "linux", "arch": "x64", "major": 21 },
+            { "vendor": "unnamed", "os": "linux", "arch": "x64", "major": 21 },
             { "vendor": "other-arch", "os": "linux", "arch": "aarch64", "major": 21 },
             { "vendor": "other-os", "os": "windows", "arch": "x64", "major": 21 }
         ])).unwrap();
-        assert_eq!(to_value(local_distributions(packages, "linux", "x64")).unwrap(), json!(["first", "second"]));
+        let vendors = from_value(json!([
+            { "vendor": "second", "name": "Second JDK", "position": 0 },
+            { "vendor": "other-os", "name": "Elsewhere JDK", "position": 1 },
+            { "vendor": "first", "name": "First JDK", "position": 2 }
+        ])).unwrap();
+        assert_eq!(to_value(local_distributions(packages, vendors, "linux", "x64")).unwrap(), json!([
+            { "vendor": "second", "name": "Second JDK" },
+            { "vendor": "first", "name": "First JDK" },
+            { "vendor": "unnamed", "name": "unnamed" }
+        ]));
     }
 
     #[tokio::test]

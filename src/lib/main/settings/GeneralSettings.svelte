@@ -17,9 +17,13 @@
     let systemMemory = options.start.memory;
     let vendors = [];
 
+    const isListed = id => vendors.some(v => v.vendor === id);
+
     // A saved distribution stays selectable after the API stops listing it.
     $: saved = options.start.javaDistribution;
-    $: distributions = saved.type === "manual" && !vendors.includes(saved.value) ? [...vendors, saved.value] : vendors;
+    $: distributions = saved.type === "manual" && !isListed(saved.value)
+        ? [...vendors, { vendor: saved.value, name: saved.value }]
+        : vendors;
 
     async function clearData() {
         try {
@@ -45,8 +49,8 @@
     function resetJavaDistribution() {
         if (options.start.javaDistribution.type === "custom") {
             options.start.javaDistribution.value = "";
-        } else if (options.start.javaDistribution.type === "manual") {
-            options.start.javaDistribution.value = vendors[0];
+        } else if (options.start.javaDistribution.type === "manual" && !isListed(options.start.javaDistribution.value)) {
+            options.start.javaDistribution.value = vendors[0].vendor;
         }
     }
 
@@ -81,7 +85,7 @@
 {#if options.start.javaDistribution.type === "manual"}
     <SelectSetting
         title="Distribution"
-        items={distributions.map(value => ({ value, text: value }))}
+        items={distributions.map(v => ({ value: v.vendor, text: v.name }))}
         bind:value={options.start.javaDistribution.value}
     />
 {/if}

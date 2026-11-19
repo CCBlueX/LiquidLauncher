@@ -98,7 +98,7 @@ mod tests {
         for name in ["", "../java", "/java", "a\\b", "-jdk", "a_b", "Jdk", "café", &"a".repeat(65)] {
             assert!(from_value::<DistributionSelection>(selection(name)).is_err(), "{name}");
         }
-        for name in ["custom", "vendor-42", "1--", &"a".repeat(64)] {
+        for name in ["temurin", "graalvm", "zulu", "vendor-42", "1--", &"a".repeat(64)] {
             let input = selection(name);
             let parsed: DistributionSelection = from_value(input.clone()).unwrap();
             assert_eq!(serde_json::to_value(parsed).unwrap(), input);

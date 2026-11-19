@@ -33,13 +33,12 @@ use uuid::Uuid;
 
 use super::failed;
 use crate::app::builds::{self, BuildPage};
-use crate::app::client_api::{BlogPost, Build, Changelog, Client, PaginatedResponse};
+use crate::app::client_api::{BlogPost, Build, Changelog, Client, JavaVendor, PaginatedResponse};
 use crate::app::client_api::LoaderMod;
 use crate::app::marketplace::{self, GameDir};
 use crate::app::modrinth::{self, CustomMod};
 use crate::app::options::Options;
 use crate::auth::{shared, ClientAccount};
-use crate::minecraft::java::JavaDistribution;
 use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     auth::MinecraftAccount,
     launcher::{LauncherData, StartParameter},
@@ -96,7 +95,7 @@ pub(crate) async fn request_build_page(
 }
 
 #[tauri::command]
-pub(crate) async fn get_java_distributions(client: Client) -> Result<Vec<JavaDistribution>, String> {
+pub(crate) async fn get_java_distributions(client: Client) -> Result<Vec<JavaVendor>, String> {
     client.java_distributions().await.map_err(failed("load Java distributions"))
 }
 
