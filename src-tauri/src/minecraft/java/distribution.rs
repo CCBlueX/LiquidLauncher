@@ -21,25 +21,31 @@ impl Default for DistributionSelection {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+/// The identifier of a Java vendor as the API names it, such as `temurin`. It is part of folder
+/// names, hence the narrow set of characters.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "String")]
 pub struct JavaDistribution(String);
+
+impl JavaDistribution {
+    pub fn get_name(&self) -> &str {
+        &self.0
+    }
+}
 
 impl TryFrom<String> for JavaDistribution {
     type Error = &'static str;
 
     fn try_from(name: String) -> Result<Self, Self::Error> {
-        if name.is_empty()
-            || name.len() > 64
-            || name.starts_with('-')
-            || !name.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
-        {
+        let is_allowed = |byte: u8| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-';
+        if name.is_empty() || name.len() > 64 || name.starts_with('-') || !name.bytes().all(is_allowed) {
             return Err("Invalid Java distribution ID");
         }
         Ok(Self(name))
     }
 }
 
+/// A Java archive the API approved for one vendor, Java version and platform.
 #[derive(Clone, Deserialize)]
 pub struct JavaPackage {
     pub vendor: JavaDistribution,
@@ -59,31 +65,32 @@ fn parse_version<'de, D: Deserializer<'de>>(input: D) -> Result<JavaVersion, D::
 }
 
 impl JavaPackage {
+    /// Reads the packages of a launch manifest, leaving out any this launcher cannot read.
     pub fn list<'de, D: Deserializer<'de>>(input: D) -> Result<Vec<Self>, D::Error> {
         let Value::Array(packages) = Value::deserialize(input)? else {
             return Ok(Vec::new());
         };
         Ok(packages
             .into_iter()
-            .filter_map(|item| from_value(item).ok())
+            .filter_map(|package| from_value(package).ok())
             .collect())
     }
 
+    /// Whether this machine can install the package as Java `major`.
     pub fn fits(&self, major: u32) -> bool {
+        let is_for_this_platform = OS.get_simple_name().ok() == Some(self.os.as_str())
+            && ARCHITECTURE.get_simple_name().ok() == Some(self.arch.as_str())
+            && OS.get_archive_type().ok() == Some(self.archive.as_str());
+        let is_download = self.url.starts_with("http://") || self.url.starts_with("https://");
+        // The checksum names the folder the package is installed to.
+        let is_checksum =
+            self.sha256.len() == 64 && self.sha256.bytes().all(|byte| byte.is_ascii_hexdigit());
+
         self.major == major
             && self.version.major() == major
-            && OS.get_simple_name().ok() == Some(self.os.as_str())
-            && ARCHITECTURE.get_simple_name().ok() == Some(self.arch.as_str())
-            && OS.get_archive_type().ok() == Some(self.archive.as_str())
-            && (self.url.starts_with("http://") || self.url.starts_with("https://"))
-            && self.sha256.len() == 64
-            && self.sha256.bytes().all(|b| b.is_ascii_hexdigit())
-    }
-}
-
-impl JavaDistribution {
-    pub fn get_name(&self) -> &str {
-        &self.0
+            && is_for_this_platform
+            && is_download
+            && is_checksum
     }
 }
 

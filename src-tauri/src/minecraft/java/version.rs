@@ -1,23 +1,28 @@
 use std::cmp::Ordering;
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+/// A released Java version such as `21.0.13.1+2`: the numbers 21.0.13.1 and the build 2. The
+/// catalog of a vendor may leave the build out.
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct JavaVersion {
     numbers: Vec<u32>,
     build: Option<u32>,
 }
 
 impl JavaVersion {
-    pub(super) fn new(mut numbers: Vec<u32>, build: Option<u32>) -> Option<Self> {
+    fn new(mut numbers: Vec<u32>, build: Option<u32>) -> Option<Self> {
         if !numbers.first().is_some_and(|&major| major > 0) {
             return None;
         }
+        // `21` and `21.0.0` are the same release.
         while numbers.last() == Some(&0) {
             numbers.pop();
         }
         Some(Self { numbers, build })
     }
 
+    /// `None` for anything but a release, such as an early-access build.
     pub fn parse(text: &str) -> Option<Self> {
+        // Java 8 calls its release 8.0.512+9 `1.8.0_512-b09`.
         if let Some(update) = text.strip_prefix("1.8.0_") {
             let (update, build) = match update.split_once("-b") {
                 Some((update, build)) => (update, Some(build.parse().ok()?)),
@@ -45,10 +50,14 @@ impl JavaVersion {
         self.numbers[0]
     }
 
+    /// Whether an installed Java is the release this version names. Without a build, any build
+    /// of the same numbers is.
     pub fn matches(&self, installed: &Self) -> bool {
         self.numbers == installed.numbers && (self.build.is_none() || self.build == installed.build)
     }
 
+    /// Whether this version is a later release of the same Java version than the installed one.
+    /// Builds only tell two releases apart when both are known.
     pub fn is_newer_than(&self, installed: &Self) -> bool {
         if self.major() != installed.major() {
             return false;

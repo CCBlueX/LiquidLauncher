@@ -17,7 +17,6 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use super::JavaVersion;
 use anyhow::{bail, Result};
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -30,33 +29,24 @@ use tracing::debug;
 
 pub struct JavaRuntime {
     path: PathBuf,
+    /// Kept open by the game, see `lease` in `jre_downloader`.
     lease: Option<File>,
-    version: Option<JavaVersion>,
 }
 
 impl JavaRuntime {
     pub fn new(path: PathBuf) -> JavaRuntime {
-        Self {
-            path,
-            lease: None,
-            version: None,
-        }
+        Self { path, lease: None }
     }
 
-    pub(super) fn cached(path: PathBuf, lease: Option<File>, version: Option<JavaVersion>) -> Self {
+    pub(super) fn leased(path: PathBuf, lease: File) -> Self {
         Self {
             path,
-            lease,
-            version,
+            lease: Some(lease),
         }
     }
 
     pub fn path(&self) -> &Path {
         &self.path
-    }
-
-    pub fn version(&self) -> Option<&JavaVersion> {
-        self.version.as_ref()
     }
 
     pub async fn execute(&self, arguments: Vec<String>, game_dir: &Path) -> Result<Child> {
@@ -68,7 +58,7 @@ impl JavaRuntime {
 
         let mut command = Command::new(&self.path);
         if let Some(lease) = &self.lease {
-            // Keep the installation in use even if the launcher exits before Minecraft.
+            // As its standard input the game inherits the lease, and holds it after the launcher quits.
             command.stdin(Stdio::from(lease.try_clone()?));
         }
         command.current_dir(game_dir);

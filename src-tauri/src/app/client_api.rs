@@ -268,17 +268,26 @@ pub struct JavaVendor {
 
 /// The vendors with a package for this platform, in the order the API lists them. One it has
 /// no name for goes last, under its identifier.
-fn local_distributions(packages: Vec<ListedPackage>, vendors: Vec<JavaVendor>, os: &str, arch: &str) -> Vec<JavaVendor> {
-    let mut local: Vec<_> = packages.into_iter()
-        .filter(|p| p.os == os && p.arch == arch)
-        .map(|p| p.vendor)
+fn local_distributions(
+    packages: Vec<ListedPackage>,
+    vendors: Vec<JavaVendor>,
+    os: &str,
+    arch: &str,
+) -> Vec<JavaVendor> {
+    let local: Vec<JavaDistribution> = packages
+        .into_iter()
+        .filter(|package| package.os == os && package.arch == arch)
+        .map(|package| package.vendor)
         .collect();
-    local.sort_unstable();
-    local.dedup();
-    let mut listed: Vec<_> = vendors.into_iter().filter(|v| local.contains(&v.vendor)).collect();
+
+    let mut listed: Vec<JavaVendor> = vendors
+        .into_iter()
+        .filter(|named| local.contains(&named.vendor))
+        .collect();
     for vendor in local {
-        if !listed.iter().any(|v| v.vendor == vendor) {
-            listed.push(JavaVendor { name: vendor.get_name().to_owned(), vendor });
+        if listed.iter().all(|named| named.vendor != vendor) {
+            let name = vendor.get_name().to_owned();
+            listed.push(JavaVendor { vendor, name });
         }
     }
     listed
