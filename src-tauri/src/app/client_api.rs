@@ -18,6 +18,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::future::Future;
 
 use crate::auth::ClientAccount;
 use crate::minecraft::java::{JavaDistribution, JavaPackage};
@@ -174,23 +175,8 @@ impl Client {
     }
 
     pub async fn java_distributions(&self) -> Result<Vec<JavaDistribution>> {
-        #[derive(Deserialize)]
-        struct Package {
-            vendor: JavaDistribution,
-            os: String,
-            arch: String,
-        }
-
-        let packages: Vec<Package> = self.request("launcher/java-packages", &[]).await?;
-        let os = OS.get_simple_name()?;
-        let arch = ARCHITECTURE.get_simple_name()?;
-        let mut vendors: Vec<_> = packages.into_iter()
-            .filter(|p| p.os == os && p.arch == arch)
-            .map(|p| p.vendor)
-            .collect();
-        vendors.sort_unstable();
-        vendors.dedup();
-        Ok(vendors)
+        let packages = self.request("launcher/java-packages", &[]).await?;
+        Ok(local_distributions(packages, OS.get_simple_name()?, ARCHITECTURE.get_simple_name()?))
     }
 
     /// Request launch manifest of specific build
@@ -234,19 +220,11 @@ impl Client {
 
     pub async fn request_pages<T: DeserializeOwned>(&self, endpoint: &str, filters: &[(&str, &str)]) -> Result<Vec<T>> {
         let base = Url::parse_with_params(&format!("{}/{endpoint}", self.url), filters)?;
-        let mut items = Vec::new();
-        loop {
+        all_pages(|offset| {
             let mut url = base.clone();
-            url.query_pairs_mut().append_pair("limit", "100").append_pair("offset", &items.len().to_string());
-            let page: PaginatedResponse<T> = self.get(url).await?;
-            if page.items.is_empty() {
-                return Ok(items);
-            }
-            items.extend(page.items);
-            if items.len() >= page.total as usize {
-                return Ok(items);
-            }
-        }
+            url.query_pairs_mut().append_pair("limit", "100").append_pair("offset", &offset.to_string());
+            self.get(url)
+        }).await
     }
 
     /// Request JSON formatted data from launcher API, with query parameters
@@ -268,6 +246,41 @@ impl Client {
             .error_for_status()?
             .json::<T>()
             .await?)
+    }
+}
+
+#[derive(Deserialize)]
+struct ListedPackage {
+    vendor: JavaDistribution,
+    os: String,
+    arch: String,
+}
+
+fn local_distributions(packages: Vec<ListedPackage>, os: &str, arch: &str) -> Vec<JavaDistribution> {
+    let mut vendors: Vec<_> = packages.into_iter()
+        .filter(|p| p.os == os && p.arch == arch)
+        .map(|p| p.vendor)
+        .collect();
+    vendors.sort_unstable();
+    vendors.dedup();
+    vendors
+}
+
+/// Every item of a paginated list, asking for the next page by how many items came so far.
+async fn all_pages<T, F>(page_at: impl Fn(usize) -> F) -> Result<Vec<T>>
+where
+    F: Future<Output = Result<PaginatedResponse<T>>>,
+{
+    let mut items = Vec::new();
+    loop {
+        let page = page_at(items.len()).await?;
+        if page.items.is_empty() {
+            return Ok(items);
+        }
+        items.extend(page.items);
+        if items.len() >= page.total as usize {
+            return Ok(items);
+        }
     }
 }
 
@@ -447,56 +460,30 @@ pub struct UserInformation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-    use tokio::net::TcpListener;
+    use serde_json::{from_value, json, to_value};
+    use std::cell::RefCell;
 
-    async fn reply(listener: &TcpListener, path: &str, body: &str) {
-        let (socket, _) = listener.accept().await.unwrap();
-        let mut socket = BufReader::new(socket);
-        let mut line = String::new();
-        socket.read_line(&mut line).await.unwrap();
-        let target = line.strip_prefix("GET ").unwrap().strip_suffix(" HTTP/1.1\r\n").unwrap();
-        assert_eq!(target.trim_end_matches('?'), path);
-        while line != "\r\n" {
-            line.clear();
-            assert_ne!(socket.read_line(&mut line).await.unwrap(), 0);
-        }
-        let response = format!("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{body}", body.len());
-        socket.write_all(response.as_bytes()).await.unwrap();
+    #[test]
+    fn catalog_lists_each_local_distribution_once() {
+        let packages = from_value(json!([
+            { "vendor": "second", "os": "linux", "arch": "x64", "major": 17 },
+            { "vendor": "first", "os": "linux", "arch": "x64", "major": 21 },
+            { "vendor": "second", "os": "linux", "arch": "x64", "major": 21 },
+            { "vendor": "other-arch", "os": "linux", "arch": "aarch64", "major": 21 },
+            { "vendor": "other-os", "os": "windows", "arch": "x64", "major": 21 }
+        ])).unwrap();
+        assert_eq!(to_value(local_distributions(packages, "linux", "x64")).unwrap(), json!(["first", "second"]));
     }
 
     #[tokio::test]
-    async fn catalog_lists_each_local_distribution_once() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let client = Client::new(&format!("http://{}", listener.local_addr().unwrap()), String::new());
-        let os = OS.get_simple_name().unwrap();
-        let arch = ARCHITECTURE.get_simple_name().unwrap();
-        let body = serde_json::json!([
-            { "vendor": "second", "os": os, "arch": arch, "major": 17 },
-            { "vendor": "first", "os": os, "arch": arch, "major": 21 },
-            { "vendor": "second", "os": os, "arch": arch, "major": 21 },
-            { "vendor": "other-arch", "os": os, "arch": "other", "major": 21 },
-            { "vendor": "other-os", "os": "other", "arch": arch, "major": 21 }
-        ]).to_string();
-        let (vendors, ()) = tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            tokio::join!(client.java_distributions(), reply(&listener, "/launcher/java-packages", &body))
+    async fn short_pages_advance_by_items_received() {
+        let asked = RefCell::new(Vec::new());
+        let items = all_pages(|offset| {
+            asked.borrow_mut().push(offset);
+            let items = match offset { 0 => vec![1, 2], 2 => vec![3], _ => vec![] };
+            async move { Ok(PaginatedResponse { items, total: 3 }) }
         }).await.unwrap();
-        assert_eq!(serde_json::to_value(vendors.unwrap()).unwrap(), serde_json::json!(["first", "second"]));
-    }
-
-    #[tokio::test]
-    async fn short_pages_keep_the_filter_and_advance_by_items_received() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let client = Client::new(&format!("http://{}", listener.local_addr().unwrap()), String::new());
-        let serve = async {
-            for (offset, body) in [(0, r#"{"items":[1,2],"total":3}"#), (2, r#"{"items":[3],"total":3}"#)] {
-                reply(&listener, &format!("/mods?subsystem=fabric&limit=100&offset={offset}"), body).await;
-            }
-        };
-        let fetch = client.request_pages::<u32>("mods", &[("subsystem", "fabric")]);
-        let (items, ()) = tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            tokio::join!(fetch, serve)
-        }).await.unwrap();
-        assert_eq!(items.unwrap(), [1, 2, 3]);
+        assert_eq!(items, [1, 2, 3]);
+        assert_eq!(*asked.borrow(), [0, 2]);
     }
 }
