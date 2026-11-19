@@ -394,6 +394,11 @@ mod tests {
     use async_compression::tokio::write::GzipEncoder;
     use tokio::io::AsyncWriteExt;
     use tokio::process::Child;
+    use tokio::sync::Mutex;
+
+    /// A process started while another test unpacks its `java` keeps that file open for a
+    /// moment, and running it then fails as "text file busy".
+    static ONE_AT_A_TIME: Mutex<()> = Mutex::const_new(());
 
     /// A package whose `java` reports the version, and sleeps when told to `hold`.
     async fn package(version: &str) -> Result<(JavaPackage, Vec<u8>)> {
@@ -447,6 +452,7 @@ mod tests {
     async fn a_newer_package_replaces_the_installation_once_no_game_runs_from_it() -> Result<()> {
         let root = tempfile::tempdir()?;
         let root = root.path();
+        let _alone = ONE_AT_A_TIME.lock().await;
         let (old, archive) = package("21.0.8+9").await?;
         let cache = new_cache(root, &old).await?;
         let find = || async { find_java(root, &old.vendor, 21).await };
@@ -488,6 +494,7 @@ mod tests {
     async fn an_installation_by_an_older_launcher_goes_once_replaced() -> Result<()> {
         let root = tempfile::tempdir()?;
         let root = root.path();
+        let _alone = ONE_AT_A_TIME.lock().await;
         let (package, archive) = package("21.0.9+10").await?;
         let legacy = legacy_dir(root, &package.vendor, 21);
         fs::create_dir(&legacy).await?;
@@ -516,6 +523,7 @@ mod tests {
     async fn what_no_launch_picked_for_a_month_goes() -> Result<()> {
         let root = tempfile::tempdir()?;
         let root = root.path();
+        let _alone = ONE_AT_A_TIME.lock().await;
         let (package, archive) = package("21.0.9+10").await?;
         let cache = new_cache(root, &package).await?;
         activate(&cache, &package, &archive).await?;
