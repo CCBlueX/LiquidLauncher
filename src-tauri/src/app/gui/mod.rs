@@ -65,6 +65,7 @@ pub fn gui_main() {
             store_options,
             request_build,
             request_build_page,
+            get_java_distributions,
             request_mods,
             run_client,
             login_offline,

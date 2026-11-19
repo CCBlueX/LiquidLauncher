@@ -29,6 +29,7 @@
 
     {#if activeTab === "General"}
         <GeneralSettings
+                {client}
                 bind:options
         />
     {:else if activeTab === "Minecraft"}

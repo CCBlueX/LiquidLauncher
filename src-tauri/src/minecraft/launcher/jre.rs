@@ -5,9 +5,9 @@ use tokio::spawn;
 use tracing::warn;
 
 use crate::app::client_api::LaunchManifest;
-use crate::minecraft::java::{DistributionSelection, JavaDistribution, JavaRuntime};
+use crate::minecraft::java::{DistributionSelection, JavaRuntime};
 use crate::minecraft::{
-    java::{find_cached_java_binary, jre_download},
+    java::{find_cached_java_binary, find_unlisted_java, jre_download},
     progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
 };
 
@@ -22,30 +22,20 @@ pub async fn load_jre(
     let major = manifest.build.jre_version;
     let preferred = match selection {
         DistributionSelection::Custom(path) => return Ok(JavaRuntime::new(path.into())),
-        DistributionSelection::Manual(vendor) => vendor,
-        DistributionSelection::Automatic(_) => &manifest.build.jre_distribution,
+        DistributionSelection::Manual(vendor) => Some(vendor),
+        DistributionSelection::Automatic(_) => manifest.build.jre_distribution.as_ref(),
     };
 
     launcher_data.progress_update(ProgressUpdate::set_label("Checking for JRE..."));
 
-    let vendors = [
-        preferred,
-        &JavaDistribution::Temurin,
-        &JavaDistribution::Zulu,
-        &JavaDistribution::GraalVM,
-    ];
+    let automatic = matches!(selection, DistributionSelection::Automatic(_));
+    let packages = manifest.java_packages.iter().filter(|p| p.fits(major));
+    let primary = preferred.map(|v| (v, packages.clone().find(|p| &p.vendor == v)));
+    let others = packages.clone()
+        .filter(|p| automatic && Some(&p.vendor) != preferred)
+        .map(|p| (&p.vendor, Some(p)));
     let mut first = None;
-    for (index, &vendor) in vendors.iter().enumerate() {
-        if index > 0
-            && (matches!(selection, DistributionSelection::Manual(_))
-                || vendors[..index].contains(&vendor))
-        {
-            continue;
-        }
-        let package = manifest
-            .java_packages
-            .iter()
-            .find(|p| &p.vendor == vendor && p.fits(major));
+    for (vendor, package) in primary.into_iter().chain(others) {
         first = first.or(package);
         if let Ok(runtime) = find_cached_java_binary(runtimes_folder, vendor, &major).await {
             if let Some(package) =
@@ -65,9 +55,16 @@ pub async fn load_jre(
             return Ok(runtime);
         }
     }
+    if automatic {
+        let listed = |name: &str| preferred.is_some_and(|v| v.get_name() == name)
+            || packages.clone().any(|p| p.vendor.get_name() == name);
+        if let Some(runtime) = find_unlisted_java(runtimes_folder, major, listed).await {
+            return Ok(runtime);
+        }
+    }
     let package = first.with_context(|| format!(
-        "No trusted Java {major} package for {} on {}-{}. Select a custom Java executable in Settings.",
-        match selection { DistributionSelection::Manual(vendor) => vendor.get_name(), _ => "any vendor" },
+        "No Java {major} package for {} on {}-{}. Select another distribution or a custom Java executable in Settings.",
+        match selection { DistributionSelection::Manual(vendor) => vendor.get_name(), _ => "any distribution" },
         OS, *ARCHITECTURE,
     ))?;
 

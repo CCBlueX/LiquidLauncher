@@ -22,7 +22,7 @@ use std::collections::BTreeMap;
 use crate::auth::ClientAccount;
 use crate::minecraft::java::{JavaDistribution, JavaPackage};
 use crate::minecraft::version::LibraryPatch;
-use crate::utils::get_maven_artifact_path;
+use crate::utils::{get_maven_artifact_path, ARCHITECTURE, OS};
 use crate::HTTP_CLIENT;
 use anyhow::{Error, Result};
 use chrono::{DateTime, Utc};
@@ -173,17 +173,29 @@ impl Client {
         self.request(&format!("builds/{build_id}"), &[]).await
     }
 
+    pub async fn java_distributions(&self) -> Result<Vec<JavaDistribution>> {
+        #[derive(Deserialize)]
+        struct Package {
+            vendor: JavaDistribution,
+            os: String,
+            arch: String,
+        }
+
+        let packages: Vec<Package> = self.request("launcher/java-packages", &[]).await?;
+        let os = OS.get_simple_name()?;
+        let arch = ARCHITECTURE.get_simple_name()?;
+        let mut vendors: Vec<_> = packages.into_iter()
+            .filter(|p| p.os == os && p.arch == arch)
+            .map(|p| p.vendor)
+            .collect();
+        vendors.sort_unstable();
+        vendors.dedup();
+        Ok(vendors)
+    }
+
     /// Request launch manifest of specific build
     pub async fn fetch_launch_manifest(&self, build_id: u32) -> Result<LaunchManifest> {
-        let url = Url::parse(&format!("{}/builds/{build_id}/launch-manifest", self.url))?;
-        let response = HTTP_CLIENT.get(url.clone()).send().await?.error_for_status()?;
-        let trusted = url.scheme() == "https" && LAUNCHER_API.contains(&self.url.as_str())
-            && response.url().origin() == url.origin();
-        let mut manifest: LaunchManifest = response.json().await?;
-        if !trusted {
-            manifest.java_packages.clear();
-        }
-        Ok(manifest)
+        self.request(&format!("builds/{build_id}/launch-manifest"), &[]).await
     }
 
     /// Request list of downloadable mods for mc_version and used subsystem
@@ -309,7 +321,7 @@ pub struct Build {
     #[serde(rename(deserialize = "downloadUrl"))]
     pub url: String,
     #[serde(rename = "jreDistribution", default)]
-    pub jre_distribution: JavaDistribution,
+    pub jre_distribution: Option<JavaDistribution>,
     #[serde(rename = "jreVersion")]
     pub jre_version: u32,
     #[serde(flatten)]
@@ -438,23 +450,47 @@ mod tests {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::TcpListener;
 
+    async fn reply(listener: &TcpListener, path: &str, body: &str) {
+        let (socket, _) = listener.accept().await.unwrap();
+        let mut socket = BufReader::new(socket);
+        let mut line = String::new();
+        socket.read_line(&mut line).await.unwrap();
+        let target = line.strip_prefix("GET ").unwrap().strip_suffix(" HTTP/1.1\r\n").unwrap();
+        assert_eq!(target.trim_end_matches('?'), path);
+        while line != "\r\n" {
+            line.clear();
+            assert_ne!(socket.read_line(&mut line).await.unwrap(), 0);
+        }
+        let response = format!("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{body}", body.len());
+        socket.write_all(response.as_bytes()).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn catalog_lists_each_local_distribution_once() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let client = Client::new(&format!("http://{}", listener.local_addr().unwrap()), String::new());
+        let os = OS.get_simple_name().unwrap();
+        let arch = ARCHITECTURE.get_simple_name().unwrap();
+        let body = serde_json::json!([
+            { "vendor": "second", "os": os, "arch": arch, "major": 17 },
+            { "vendor": "first", "os": os, "arch": arch, "major": 21 },
+            { "vendor": "second", "os": os, "arch": arch, "major": 21 },
+            { "vendor": "other-arch", "os": os, "arch": "other", "major": 21 },
+            { "vendor": "other-os", "os": "other", "arch": arch, "major": 21 }
+        ]).to_string();
+        let (vendors, ()) = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            tokio::join!(client.java_distributions(), reply(&listener, "/launcher/java-packages", &body))
+        }).await.unwrap();
+        assert_eq!(serde_json::to_value(vendors.unwrap()).unwrap(), serde_json::json!(["first", "second"]));
+    }
+
     #[tokio::test]
     async fn short_pages_keep_the_filter_and_advance_by_items_received() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let client = Client::new(&format!("http://{}", listener.local_addr().unwrap()), String::new());
         let serve = async {
             for (offset, body) in [(0, r#"{"items":[1,2],"total":3}"#), (2, r#"{"items":[3],"total":3}"#)] {
-                let (socket, _) = listener.accept().await.unwrap();
-                let mut socket = BufReader::new(socket);
-                let mut line = String::new();
-                socket.read_line(&mut line).await.unwrap();
-                assert_eq!(line, format!("GET /mods?subsystem=fabric&limit=100&offset={offset} HTTP/1.1\r\n"));
-                while line != "\r\n" {
-                    line.clear();
-                    assert_ne!(socket.read_line(&mut line).await.unwrap(), 0);
-                }
-                let reply = format!("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{body}", body.len());
-                socket.write_all(reply.as_bytes()).await.unwrap();
+                reply(&listener, &format!("/mods?subsystem=fabric&limit=100&offset={offset}"), body).await;
             }
         };
         let fetch = client.request_pages::<u32>("mods", &[("subsystem", "fabric")]);

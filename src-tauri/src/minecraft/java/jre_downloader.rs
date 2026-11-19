@@ -129,6 +129,30 @@ pub async fn find_cached_java_binary(
     runtime(&root.join(format!("{}_{}", vendor.get_name(), major)), None).await
 }
 
+pub async fn find_unlisted_java(
+    root: &Path,
+    major: u32,
+    listed: impl Fn(&str) -> bool,
+) -> Option<JavaRuntime> {
+    let mut entries = fs::read_dir(root).await.ok()?;
+    let legacy = major.to_string();
+    let platform = format!("{major}_{OS}_{}", *ARCHITECTURE);
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let Ok(mut name) = entry.file_name().into_string() else { continue };
+        let Some((vendor, suffix)) = name.split_once('_') else { continue };
+        if (suffix != legacy && suffix != platform) || listed(vendor) {
+            continue;
+        }
+        name.truncate(vendor.len());
+        if let Ok(vendor) = JavaDistribution::try_from(name) {
+            if let Ok(runtime) = find_cached_java_binary(root, &vendor, &major).await {
+                return Some(runtime);
+            }
+        }
+    }
+    None
+}
+
 fn valid_hash(value: &str) -> bool {
     value.len() == 64 && value.bytes().all(|b| b.is_ascii_hexdigit())
 }
@@ -357,7 +381,7 @@ mod tests {
         Ok((
             JavaPackage {
                 major: 21,
-                vendor: JavaDistribution::Temurin,
+                vendor: JavaDistribution::try_from("example-jdk".to_owned()).unwrap(),
                 os: "linux".into(),
                 arch: ARCHITECTURE.to_string(),
                 archive: "tar.gz".into(),
@@ -370,16 +394,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn discovers_only_matching_legacy_caches() -> Result<()> {
+        let root = tempfile::tempdir()?;
+        let bin = root.path().join("unlisted-jdk_21/jdk/bin");
+        fs::create_dir_all(&bin).await?;
+        let java = bin.join("java");
+        fs::write(&java, []).await?;
+        assert!(find_unlisted_java(root.path(), 17, |_| false).await.is_none());
+        assert!(find_unlisted_java(root.path(), 21, |name| name == "unlisted-jdk").await.is_none());
+        assert_eq!(find_unlisted_java(root.path(), 21, |_| false).await.unwrap().path(), java);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn selects_only_completed_upgrades() -> Result<()> {
         let root = tempfile::tempdir()?;
-        let vendor = JavaDistribution::Temurin;
-        let dir = cache(root.path(), &vendor, 21);
+        let (old, bytes) = archive("21.0.8+9").await?;
+        let vendor = &old.vendor;
+        let dir = cache(root.path(), vendor, 21);
         let lock = lock_file(&dir).await?;
         lock.lock()?;
-        let (old, bytes) = archive("21.0.8+9").await?;
         activate(&dir, 21, &old, None, &bytes).await?;
         let first = dir.join(&old.sha256).join("jdk/bin/java");
-        let playing = find_cached_java_binary(root.path(), &vendor, &21).await?;
+        let playing = find_cached_java_binary(root.path(), vendor, &21).await?;
         let mut game = playing.execute(vec!["hold".into()], root.path()).await?;
         drop(playing);
         let (new, bytes) = archive("21.0.9+10").await?;
@@ -389,7 +426,7 @@ mod tests {
             .is_err());
         assert!(activate(&dir, 25, &new, None, &bytes).await.is_err());
         assert_eq!(
-            find_cached_java_binary(root.path(), &vendor, &21)
+            find_cached_java_binary(root.path(), vendor, &21)
                 .await?
                 .path(),
             first
@@ -397,7 +434,7 @@ mod tests {
         activate(&dir, 21, &new, Some(&old.version), &bytes).await?;
         let next = dir.join(&new.sha256).join("jdk/bin/java");
         assert_eq!(
-            find_cached_java_binary(root.path(), &vendor, &21)
+            find_cached_java_binary(root.path(), vendor, &21)
                 .await?
                 .path(),
             next
@@ -406,7 +443,7 @@ mod tests {
         let hidden = next.with_extension("hidden");
         fs::rename(&next, &hidden).await?;
         assert_eq!(
-            find_cached_java_binary(root.path(), &vendor, &21)
+            find_cached_java_binary(root.path(), vendor, &21)
                 .await?
                 .path(),
             first

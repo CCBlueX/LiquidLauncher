@@ -39,6 +39,7 @@ use crate::app::marketplace::{self, GameDir};
 use crate::app::modrinth::{self, CustomMod};
 use crate::app::options::Options;
 use crate::auth::{shared, ClientAccount};
+use crate::minecraft::java::JavaDistribution;
 use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     auth::MinecraftAccount,
     launcher::{LauncherData, StartParameter},
@@ -92,6 +93,11 @@ pub(crate) async fn request_build_page(
     )
     .await
     .map_err(failed("request builds"))
+}
+
+#[tauri::command]
+pub(crate) async fn get_java_distributions(client: Client) -> Result<Vec<JavaDistribution>, String> {
+    client.java_distributions().await.map_err(failed("load Java distributions"))
 }
 
 #[tauri::command]

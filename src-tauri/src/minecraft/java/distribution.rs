@@ -21,20 +21,22 @@ impl Default for DistributionSelection {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
-pub enum JavaDistribution {
-    #[serde(rename = "temurin")]
-    Temurin,
-    #[serde(rename = "graalvm")]
-    GraalVM,
-    #[serde(rename = "zulu")]
-    Zulu,
-}
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String")]
+pub struct JavaDistribution(String);
 
-impl Default for JavaDistribution {
-    fn default() -> Self {
-        // Temurin supports any version of java
-        JavaDistribution::Temurin
+impl TryFrom<String> for JavaDistribution {
+    type Error = &'static str;
+
+    fn try_from(name: String) -> Result<Self, Self::Error> {
+        if name.is_empty()
+            || name.len() > 64
+            || name.starts_with('-')
+            || !name.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        {
+            return Err("Invalid Java distribution ID");
+        }
+        Ok(Self(name))
     }
 }
 
@@ -81,10 +83,25 @@ impl JavaPackage {
 
 impl JavaDistribution {
     pub fn get_name(&self) -> &str {
-        match self {
-            JavaDistribution::Temurin => "temurin",
-            JavaDistribution::GraalVM => "graalvm",
-            JavaDistribution::Zulu => "zulu",
+        &self.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn manual_distribution_must_be_a_safe_cache_name() {
+        let selection = |vendor: &str| json!({ "type": "manual", "value": vendor });
+        for name in ["", "../java", "/java", "a\\b", "-jdk", "a_b", "Jdk", "café", &"a".repeat(65)] {
+            assert!(from_value::<DistributionSelection>(selection(name)).is_err(), "{name}");
+        }
+        for name in ["custom", "vendor-42", "1--", &"a".repeat(64)] {
+            let input = selection(name);
+            let parsed: DistributionSelection = from_value(input.clone()).unwrap();
+            assert_eq!(serde_json::to_value(parsed).unwrap(), input);
         }
     }
 }
