@@ -18,7 +18,7 @@
  */
 
 use std::fs::File;
-use std::io::{Cursor, ErrorKind};
+use std::io::{self, Cursor, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -43,6 +43,28 @@ fn cache(root: &Path, vendor: &JavaDistribution, major: u32) -> PathBuf {
         OS,
         *ARCHITECTURE
     ))
+}
+
+/// Where launchers before the per-platform caches kept the one installation of a vendor and major.
+fn legacy_cache(root: &Path, vendor: &JavaDistribution, major: u32) -> PathBuf {
+    root.join(format!("{}_{}", vendor.get_name(), major))
+}
+
+/// A shared hold on an installation. The game inherits it, so what it runs from is not deleted.
+async fn lease(dir: &Path) -> io::Result<Option<File>> {
+    let mut options = fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(windows)]
+    options.share_mode(1); // FILE_SHARE_READ survives handle inheritance.
+    match options.open(dir.join("in-use")).await {
+        Ok(file) => {
+            let file = file.into_std().await;
+            file.try_lock_shared()?;
+            Ok(Some(file))
+        }
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error),
+    }
 }
 
 async fn runtime(dir: &Path, lease: Option<File>) -> Result<JavaRuntime> {
@@ -106,27 +128,29 @@ pub async fn find_cached_java_binary(
     if let Ok(active) = fs::read_to_string(dir.join("active")).await {
         for hash in active.lines().filter(|s| valid_hash(s)) {
             let generation = dir.join(hash);
-            let mut options = fs::OpenOptions::new();
-            options.read(true);
-            #[cfg(windows)]
-            options.share_mode(1); // FILE_SHARE_READ survives handle inheritance.
-            let lease = match options.open(generation.join("in-use")).await {
-                Ok(file) => {
-                    let file = file.into_std().await;
-                    if file.try_lock_shared().is_err() {
-                        continue;
-                    }
-                    Some(file)
-                }
-                Err(error) if error.kind() == ErrorKind::NotFound => None,
-                Err(_) => continue,
+            let Ok(held) = lease(&generation).await else {
+                continue;
             };
-            if let Ok(java) = runtime(&generation, lease).await {
+            if let Ok(java) = runtime(&generation, held).await {
+                let legacy = legacy_cache(root, vendor, *major);
+                spawn(async move {
+                    if let Err(error) = remove_unused(&legacy).await {
+                        warn!("Could not remove replaced Java installation: {error}");
+                    }
+                });
                 return Ok(java);
             }
         }
     }
-    runtime(&root.join(format!("{}_{}", vendor.get_name(), major)), None).await
+    let legacy = legacy_cache(root, vendor, *major);
+    // Older launchers wrote no lease file.
+    let _ = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(legacy.join("in-use"))
+        .await;
+    let held = lease(&legacy).await?;
+    runtime(&legacy, held).await
 }
 
 pub async fn find_unlisted_java(
@@ -185,50 +209,54 @@ async fn lock_file(dir: &Path) -> Result<File> {
         .await)
 }
 
+/// Deletes an installation, or answers `false` while a game still runs from it.
+async fn remove_unused(dir: &Path) -> Result<bool> {
+    let lease = match fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(dir.join("in-use"))
+        .await
+    {
+        Ok(file) => file.into_std().await,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(true),
+        // Windows refuses the open while a game holds the lease.
+        Err(_) => return Ok(false),
+    };
+    if lease.try_lock().is_err() {
+        return Ok(false);
+    }
+    // The lease goes last: until then nobody can start a game from what is left.
+    let mut entries = fs::read_dir(dir).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        if entry.file_name() == "in-use" {
+            continue;
+        }
+        if entry.file_type().await?.is_dir() {
+            fs::remove_dir_all(entry.path()).await?;
+        } else {
+            fs::remove_file(entry.path()).await?;
+        }
+    }
+    drop(lease);
+    fs::remove_dir_all(dir).await?;
+    Ok(true)
+}
+
 async fn prune(dir: &Path) -> Result<()> {
     let active = fs::read_to_string(dir.join("active")).await?;
     let mut entries = fs::read_dir(dir).await?;
     let mut pending = false;
     while let Some(entry) = entries.next_entry().await? {
         let name = entry.file_name();
-        if name
-            .to_str()
-            .and_then(|s| s.strip_prefix(".obsolete-"))
-            .is_some_and(valid_hash)
-            && entry.file_type().await?.is_dir()
-            && fs::try_exists(entry.path().join("in-use")).await?
-        {
-            fs::remove_dir_all(entry.path()).await?;
-            continue;
-        }
         let Some(hash) = name.to_str().filter(|name| valid_hash(name)) else {
             continue;
         };
         if active.lines().any(|kept| hash == kept) || !entry.file_type().await?.is_dir() {
             continue;
         }
-        let lease = match fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(entry.path().join("in-use"))
-            .await
-        {
-            Ok(file) => file.into_std().await,
-            Err(error) if error.kind() == ErrorKind::NotFound => continue,
-            Err(_) => {
-                pending = true;
-                continue;
-            }
-        };
-        if lease.try_lock().is_err() {
-            pending = true;
-            continue;
-        }
-        // The rename removes it from readers' search path before releasing the lease.
-        let trash = dir.join(format!(".obsolete-{hash}"));
-        fs::rename(entry.path(), &trash).await?;
-        drop(lease);
-        fs::remove_dir_all(&trash).await?;
+        pending |= !remove_unused(&entry.path()).await?;
     }
     if !pending {
         fs::remove_file(dir.join("prune-pending")).await?;
@@ -365,7 +393,7 @@ async fn activate(
 mod tests {
     use super::*;
     use async_compression::tokio::write::GzipEncoder;
-    use tokio::io::AsyncWriteExt;
+    use tokio::{io::AsyncWriteExt, time::sleep};
 
     async fn archive(version: &str) -> Result<(JavaPackage, Vec<u8>)> {
         let script = format!("#!/bin/sh\nif [ \"$1\" = hold ]; then exec sleep 60; fi\necho 'java.runtime.version = {version}' >&2\n");
@@ -403,6 +431,38 @@ mod tests {
         assert!(find_unlisted_java(root.path(), 17, |_| false).await.is_none());
         assert!(find_unlisted_java(root.path(), 21, |name| name == "unlisted-jdk").await.is_none());
         assert_eq!(find_unlisted_java(root.path(), 21, |_| false).await.unwrap().path(), java);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn removes_a_replaced_legacy_installation_once_unused() -> Result<()> {
+        let root = tempfile::tempdir()?;
+        let (package, bytes) = archive("21.0.9+10").await?;
+        let vendor = &package.vendor;
+        let legacy = legacy_cache(root.path(), vendor, 21);
+        fs::create_dir_all(&legacy).await?;
+        tar_gz_extract(Cursor::new(&bytes[..]), &legacy).await?;
+        let playing = find_cached_java_binary(root.path(), vendor, &21).await?;
+        assert_eq!(playing.path(), legacy.join("jdk/bin/java"));
+        let mut game = playing.execute(vec!["hold".into()], root.path()).await?;
+        drop(playing);
+
+        let dir = cache(root.path(), vendor, 21);
+        let lock = lock_file(&dir).await?;
+        lock.lock()?;
+        activate(&dir, 21, &package, None, &bytes).await?;
+        assert!(!remove_unused(&legacy).await?);
+        assert!(fs::try_exists(legacy.join("jdk/bin/java")).await?);
+
+        game.kill().await?;
+        let managed = find_cached_java_binary(root.path(), vendor, &21).await?;
+        assert!(managed.path().starts_with(&dir));
+        timeout(Duration::from_secs(5), async {
+            while fs::try_exists(&legacy).await.unwrap_or(true) {
+                sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await?;
         Ok(())
     }
 
