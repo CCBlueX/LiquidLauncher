@@ -7,13 +7,32 @@ use tracing::warn;
 use crate::app::client_api::LaunchManifest;
 use crate::minecraft::java::{DistributionSelection, JavaRuntime};
 use crate::minecraft::{
-    java::{find_cached_java_binary, find_unlisted_java, jre_download},
+    java::{find_cached_java_binary, find_unlisted_java, jre_download, remove_stale},
     progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
 };
 
 use crate::utils::{ARCHITECTURE, OS};
 
 pub async fn load_jre(
+    runtimes_folder: &Path,
+    manifest: &LaunchManifest,
+    selection: &DistributionSelection,
+    launcher_data: &impl ProgressReceiver,
+) -> Result<JavaRuntime> {
+    let runtime = select_jre(runtimes_folder, manifest, selection, launcher_data).await?;
+    // A custom path may point into the folder, so nothing is cleaned up while one is selected.
+    if !matches!(selection, DistributionSelection::Custom(_)) {
+        let root = runtimes_folder.to_owned();
+        spawn(async move {
+            if let Err(error) = remove_stale(&root).await {
+                warn!("Could not clean up Java installations: {error}");
+            }
+        });
+    }
+    Ok(runtime)
+}
+
+async fn select_jre(
     runtimes_folder: &Path,
     manifest: &LaunchManifest,
     selection: &DistributionSelection,

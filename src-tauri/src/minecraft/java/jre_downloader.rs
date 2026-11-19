@@ -24,6 +24,7 @@ use std::time::Duration;
 
 use anyhow::{bail, ensure, Context, Result};
 use base16ct::lower::encode_string;
+use chrono::Utc;
 use path_absolutize::Absolutize;
 use sha2::{Digest, Sha256};
 use tokio::{fs, process::Command, spawn, task::spawn_blocking, time::timeout};
@@ -34,6 +35,9 @@ use crate::utils::{
 };
 
 use super::{JavaDistribution, JavaPackage, JavaRuntime, JavaVersion};
+
+/// How long an installation that no launch picks stays on disk.
+const STALE_AFTER: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 
 fn cache(root: &Path, vendor: &JavaDistribution, major: u32) -> PathBuf {
     root.join(format!(
@@ -132,6 +136,7 @@ pub async fn find_cached_java_binary(
                 continue;
             };
             if let Ok(java) = runtime(&generation, held).await {
+                mark_used(&dir).await;
                 let legacy = legacy_cache(root, vendor, *major);
                 spawn(async move {
                     if let Err(error) = remove_unused(&legacy).await {
@@ -150,7 +155,9 @@ pub async fn find_cached_java_binary(
         .open(legacy.join("in-use"))
         .await;
     let held = lease(&legacy).await?;
-    runtime(&legacy, held).await
+    let java = runtime(&legacy, held).await?;
+    mark_used(&legacy).await;
+    Ok(java)
 }
 
 pub async fn find_unlisted_java(
@@ -264,6 +271,56 @@ async fn prune(dir: &Path) -> Result<()> {
     Ok(())
 }
 
+async fn mark_used(dir: &Path) {
+    let _ = fs::write(dir.join("last-used"), Utc::now().timestamp().to_string()).await;
+}
+
+/// Deletes the installations no launch picked for [`STALE_AFTER`], whichever launcher version
+/// made them. One seen for the first time counts as used now.
+pub async fn remove_stale(root: &Path) -> Result<()> {
+    let mut entries = fs::read_dir(root).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        let dir = entry.path();
+        if !entry.file_type().await?.is_dir() {
+            continue;
+        }
+        let used = fs::read_to_string(dir.join("last-used"))
+            .await
+            .ok()
+            .and_then(|at| at.trim().parse::<i64>().ok());
+        match used {
+            None => mark_used(&dir).await,
+            Some(at) if Utc::now().timestamp() - at <= STALE_AFTER.as_secs() as i64 => (),
+            Some(_) => {
+                if let Err(error) = remove_cache(&dir).await {
+                    warn!("Could not remove unused Java installation: {error}");
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Deletes a cache with every installation in it that no game runs from.
+async fn remove_cache(dir: &Path) -> Result<()> {
+    let lock = lock_file(dir).await?;
+    if lock.try_lock().is_err() {
+        return Ok(());
+    }
+    let mut in_use = false;
+    let mut entries = fs::read_dir(dir).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        if entry.file_name().to_str().is_some_and(valid_hash) && entry.file_type().await?.is_dir() {
+            in_use |= !remove_unused(&entry.path()).await?;
+        }
+    }
+    drop(lock);
+    if !in_use {
+        remove_unused(dir).await?;
+    }
+    Ok(())
+}
+
 async fn running_version(java: &Path) -> Result<JavaVersion> {
     let probe = if cfg!(windows) {
         java.with_file_name("java.exe")
@@ -355,32 +412,23 @@ async fn activate(
     );
 
     let dest = dir.join(&package.sha256);
-    if fs::try_exists(&dest).await? {
-        let existing = runtime(&dest, None).await?;
-        ensure!(
-            running_version(existing.path()).await? == version,
-            "Cached package version mismatch"
-        );
+    let intact = match runtime(&dest, None).await {
+        Ok(existing) => running_version(existing.path())
+            .await
+            .is_ok_and(|found| found == version),
+        Err(_) => false,
+    };
+    if intact {
         fs::remove_dir_all(stage).await?;
     } else {
+        ensure!(
+            remove_unused(&dest).await?,
+            "The damaged Java installation is still in use"
+        );
         fs::File::create_new(stage.join("in-use")).await?;
         fs::rename(stage, &dest).await?;
     }
-    let previous = fs::read_to_string(dir.join("active"))
-        .await
-        .unwrap_or_default();
-    let mut active = package.sha256.clone();
-    for old in previous
-        .lines()
-        .filter(|hash| valid_hash(hash) && *hash != package.sha256)
-    {
-        if runtime(&dir.join(old), None).await.is_ok() {
-            active.push('\n');
-            active.push_str(old);
-            break;
-        }
-    }
-    fs::write(dir.join("active.tmp"), active).await?;
+    fs::write(dir.join("active.tmp"), &package.sha256).await?;
     fs::rename(dir.join("active.tmp"), dir.join("active")).await?;
     fs::write(dir.join("prune-pending"), b"").await?;
     if let Err(error) = prune(dir).await {
@@ -467,7 +515,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn selects_only_completed_upgrades() -> Result<()> {
+    async fn keeps_only_the_newest_completed_upgrade() -> Result<()> {
         let root = tempfile::tempdir()?;
         let (old, bytes) = archive("21.0.8+9").await?;
         let vendor = &old.vendor;
@@ -500,22 +548,52 @@ mod tests {
             next
         );
         assert_eq!(running_version(&first).await?, old.version);
-        let hidden = next.with_extension("hidden");
-        fs::rename(&next, &hidden).await?;
+        game.kill().await?;
+        prune(&dir).await?;
+        assert!(!fs::try_exists(dir.join(&old.sha256)).await?);
+
+        fs::remove_file(&next).await?;
+        assert!(find_cached_java_binary(root.path(), vendor, &21)
+            .await
+            .is_err());
+        activate(&dir, 21, &new, None, &bytes).await?;
         assert_eq!(
             find_cached_java_binary(root.path(), vendor, &21)
                 .await?
                 .path(),
-            first
+            next
         );
-        fs::rename(hidden, &next).await?;
-        let (third, bytes) = archive("21.0.10+1").await?;
-        activate(&dir, 21, &third, Some(&old.version), &bytes).await?;
-        assert!(fs::try_exists(&first).await?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn removes_what_no_launch_used_for_a_month() -> Result<()> {
+        let root = tempfile::tempdir()?;
+        let (package, bytes) = archive("21.0.9+10").await?;
+        let vendor = &package.vendor;
+        let dir = cache(root.path(), vendor, 21);
+        drop(lock_file(&dir).await?);
+        activate(&dir, 21, &package, None, &bytes).await?;
+        let playing = find_cached_java_binary(root.path(), vendor, &21).await?;
+        let mut game = playing.execute(vec!["hold".into()], root.path()).await?;
+        drop(playing);
+        let ancient = root.path().join("17");
+        fs::create_dir_all(ancient.join("jdk/bin")).await?;
+        fs::write(ancient.join("last-used"), "1\n").await?;
+        let unseen = root.path().join("unseen-jdk_8");
+        fs::create_dir(&unseen).await?;
+
+        remove_stale(root.path()).await?;
+        assert!(!fs::try_exists(&ancient).await?);
+        assert!(fs::try_exists(unseen.join("last-used")).await?);
+        assert!(fs::try_exists(&dir).await?);
+
+        fs::write(dir.join("last-used"), "1").await?;
+        remove_stale(root.path()).await?;
+        assert!(fs::try_exists(dir.join(&package.sha256).join("jdk/bin/java")).await?);
         game.kill().await?;
-        prune(&dir).await?;
-        assert!(!fs::try_exists(&first).await?);
-        assert!(fs::try_exists(dir.join(new.sha256)).await?);
+        remove_stale(root.path()).await?;
+        assert!(!fs::try_exists(&dir).await?);
         Ok(())
     }
 }
