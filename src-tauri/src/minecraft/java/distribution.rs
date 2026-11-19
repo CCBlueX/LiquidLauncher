@@ -1,8 +1,8 @@
-use anyhow::{bail, Result};
+use serde::{de::Error, Deserialize, Deserializer, Serialize};
+use serde_json::{from_value, Value};
+
+use super::JavaVersion;
 use crate::utils::{ARCHITECTURE, OS};
-use crate::HTTP_CLIENT;
-use reqwest::StatusCode;
-use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type", content = "value")]
@@ -21,110 +21,94 @@ impl Default for DistributionSelection {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
-pub enum JavaDistribution {
-    #[serde(rename = "temurin")]
-    Temurin,
-    #[serde(rename = "graalvm")]
-    GraalVM,
-    #[serde(rename = "zulu")]
-    Zulu,
-}
-
-impl Default for JavaDistribution {
-    fn default() -> Self {
-        // Temurin supports any version of java
-        JavaDistribution::Temurin
-    }
-}
+/// The identifier of a Java vendor as the API names it, such as `temurin`. It is part of folder
+/// names, hence the narrow set of characters.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "String")]
+pub struct JavaDistribution(String);
 
 impl JavaDistribution {
-    /// `None` when the vendor has no build for the running OS and architecture
-    pub async fn get_url(&self, jre_version: &u32) -> Result<Option<String>> {
-        let os_arch = ARCHITECTURE.get_simple_name()?;
-        let archive_type = OS.get_archive_type()?;
-
-        let url = match self {
-            JavaDistribution::Temurin => {
-                let os_name = OS.get_adoptium_name()?;
-                format!(
-                    "https://api.adoptium.net/v3/binary/latest/{}/ga/{}/{}/jre/hotspot/normal/eclipse?project=jdk",
-                    jre_version, os_name, os_arch
-                )
-            }
-            JavaDistribution::GraalVM => {
-                let os_name = OS.get_graal_name()?;
-
-                if jre_version > &17 {
-                    format!(
-                        "https://download.oracle.com/graalvm/{}/latest/graalvm-jdk-{}_{}-{}_bin.{}",
-                        jre_version, jre_version, os_name, os_arch, archive_type
-                    )
-                } else if jre_version == &17 {
-                    // Use archive link for 17.0.12
-                    format!(
-                        "https://download.oracle.com/graalvm/17/archive/graalvm-jdk-17.0.12_{}-{}_bin.{}",
-                        os_name, os_arch, archive_type
-                    )
-                } else {
-                    bail!("GraalVM only supports Java 17+")
-                }
-            }
-            // Azul's file names carry the exact build, so only its metadata API knows the URL
-            JavaDistribution::Zulu => {
-                #[derive(Deserialize)]
-                struct AzulPackage {
-                    download_url: String,
-                }
-
-                let packages: Vec<AzulPackage> = HTTP_CLIENT
-                    .get(format!(
-                        "https://api.azul.com/metadata/v1/zulu/packages/?java_version={}&os={}&arch={}&archive_type={}&java_package_type=jre&availability_types=CA&release_status=ga&javafx_bundled=false&latest=true&page_size=1",
-                        jre_version,
-                        OS.get_zulu_name()?,
-                        ARCHITECTURE.get_zulu_name()?,
-                        archive_type
-                    ))
-                    .header("accept", "application/json")
-                    .send()
-                    .await?
-                    .error_for_status()?
-                    .json()
-                    .await?;
-
-                return Ok(packages
-                    .into_iter()
-                    .next()
-                    .map(|package| package.download_url));
-            }
-        };
-
-        let response = HTTP_CLIENT.head(&url).send().await?;
-        if response.status() == StatusCode::NOT_FOUND {
-            return Ok(None);
-        }
-
-        response.error_for_status()?;
-        Ok(Some(url))
-    }
-
-    pub async fn has_build(&self, jre_version: &u32) -> Result<bool> {
-        Ok(self.get_url(jre_version).await?.is_some())
-    }
-
     pub fn get_name(&self) -> &str {
-        match self {
-            JavaDistribution::Temurin => "temurin",
-            JavaDistribution::GraalVM => "graalvm",
-            JavaDistribution::Zulu => "zulu",
+        &self.0
+    }
+}
+
+impl TryFrom<String> for JavaDistribution {
+    type Error = &'static str;
+
+    fn try_from(name: String) -> Result<Self, Self::Error> {
+        let is_allowed = |byte: u8| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-';
+        if name.is_empty() || name.len() > 64 || name.starts_with('-') || !name.bytes().all(is_allowed) {
+            return Err("Invalid Java distribution ID");
         }
+        Ok(Self(name))
+    }
+}
+
+/// A Java archive the API approved for one vendor, Java version and platform.
+#[derive(Clone, Deserialize)]
+pub struct JavaPackage {
+    pub vendor: JavaDistribution,
+    pub os: String,
+    pub arch: String,
+    pub archive: String,
+    pub major: u32,
+    #[serde(deserialize_with = "parse_version")]
+    pub version: JavaVersion,
+    pub url: String,
+    pub sha256: String,
+}
+
+fn parse_version<'de, D: Deserializer<'de>>(input: D) -> Result<JavaVersion, D::Error> {
+    JavaVersion::parse(&String::deserialize(input)?)
+        .ok_or_else(|| D::Error::custom("Invalid Java version"))
+}
+
+impl JavaPackage {
+    /// Reads the packages of a launch manifest, leaving out any this launcher cannot read.
+    pub fn list<'de, D: Deserializer<'de>>(input: D) -> Result<Vec<Self>, D::Error> {
+        let Value::Array(packages) = Value::deserialize(input)? else {
+            return Ok(Vec::new());
+        };
+        Ok(packages
+            .into_iter()
+            .filter_map(|package| from_value(package).ok())
+            .collect())
     }
 
-    pub fn supports_version(&self, version: u32) -> bool {
-        match self {
-            JavaDistribution::Temurin => true, // Supports 8, 11, 17, 21
-            JavaDistribution::GraalVM => version >= 17, // Only supports 17+
-            JavaDistribution::Zulu => true,             // Community builds available for all LTS versions
+    /// Whether this machine can install the package as Java `major`.
+    pub fn fits(&self, major: u32) -> bool {
+        let is_for_this_platform = OS.get_simple_name().ok() == Some(self.os.as_str())
+            && ARCHITECTURE.get_simple_name().ok() == Some(self.arch.as_str())
+            && OS.get_archive_type().ok() == Some(self.archive.as_str());
+        let is_download = self.url.starts_with("http://") || self.url.starts_with("https://");
+        // The checksum names the folder the package is installed to.
+        let is_checksum =
+            self.sha256.len() == 64 && self.sha256.bytes().all(|byte| byte.is_ascii_hexdigit());
+
+        self.major == major
+            && self.version.major() == major
+            && is_for_this_platform
+            && is_download
+            && is_checksum
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn manual_distribution_must_be_a_safe_cache_name() {
+        let selection = |vendor: &str| json!({ "type": "manual", "value": vendor });
+        for name in ["", "../java", "/java", "a\\b", "-jdk", "a_b", "Jdk", "café", &"a".repeat(65)] {
+            assert!(from_value::<DistributionSelection>(selection(name)).is_err(), "{name}");
+        }
+        for name in ["temurin", "graalvm", "zulu", "vendor-42", "1--", &"a".repeat(64)] {
+            let input = selection(name);
+            let parsed: DistributionSelection = from_value(input.clone()).unwrap();
+            assert_eq!(serde_json::to_value(parsed).unwrap(), input);
         }
     }
 }

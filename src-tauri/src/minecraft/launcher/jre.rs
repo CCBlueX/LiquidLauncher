@@ -1,105 +1,124 @@
-use std::iter;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Context, Result};
+use tokio::spawn;
+use tracing::warn;
 
-use super::{LauncherData, StartParameter};
 use crate::app::client_api::LaunchManifest;
-use crate::minecraft::java::{DistributionSelection, JavaDistribution};
-use crate::minecraft::{
-    java::{find_cached_java_binary, jre_downloader},
-    progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
+use crate::minecraft::java::{
+    find_any_java, find_java, install_java, remove_old_java, DistributionSelection,
+    JavaDistribution, JavaPackage, JavaRuntime,
 };
+use crate::minecraft::progress::{
+    get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps,
+};
+use crate::utils::{ARCHITECTURE, OS};
 
-pub async fn load_jre<D: Send + Sync>(
+pub async fn load_jre(
     runtimes_folder: &Path,
     manifest: &LaunchManifest,
-    launching_parameter: &StartParameter,
-    launcher_data: &LauncherData<D>,
-) -> Result<PathBuf> {
-    let distribution = match &launching_parameter.java_distribution {
-        DistributionSelection::Automatic(_) => {
-            automatic_distribution(runtimes_folder, manifest, launcher_data).await?
-        }
-        DistributionSelection::Custom(path) => return Ok(PathBuf::from(path)),
-        DistributionSelection::Manual(distribution) => distribution.clone(),
+    selection: &DistributionSelection,
+    launcher_data: &impl ProgressReceiver,
+) -> Result<JavaRuntime> {
+    let chosen = match selection {
+        DistributionSelection::Custom(path) => return Ok(JavaRuntime::new(path.into())),
+        DistributionSelection::Manual(vendor) => Some(vendor),
+        DistributionSelection::Automatic(_) => None,
     };
+    let runtime = managed_jre(runtimes_folder, manifest, chosen, launcher_data).await?;
 
-    // Check if distribution supports JRE version
-    if !distribution.supports_version(manifest.build.jre_version) {
-        return Err(anyhow!(
-            "The selected JRE distribution does not support the required version of Java."
-        ));
-    }
+    let root = runtimes_folder.to_owned();
+    spawn(async move {
+        if let Err(error) = remove_old_java(&root).await {
+            warn!("Could not remove old Java installations: {error:#}");
+        }
+    });
+    Ok(runtime)
+}
+
+/// The installed Java of the chosen vendor, or of any vendor when none is chosen. Installs it
+/// first when there is none.
+async fn managed_jre(
+    runtimes_folder: &Path,
+    manifest: &LaunchManifest,
+    chosen: Option<&JavaDistribution>,
+    launcher_data: &impl ProgressReceiver,
+) -> Result<JavaRuntime> {
+    let major = manifest.build.jre_version;
+    let packages: Vec<&JavaPackage> = manifest
+        .java_packages
+        .iter()
+        .filter(|package| package.fits(major))
+        .collect();
+    let package_of = |vendor: &JavaDistribution| {
+        packages
+            .iter()
+            .copied()
+            .find(|package| &package.vendor == vendor)
+    };
+    let vendors: Vec<&JavaDistribution> = match chosen {
+        Some(vendor) => vec![vendor],
+        // What the build asks for comes first, then every vendor the API has a package of.
+        None => manifest
+            .build
+            .jre_distribution
+            .iter()
+            .chain(packages.iter().map(|package| &package.vendor))
+            .collect(),
+    };
 
     launcher_data.progress_update(ProgressUpdate::set_label("Checking for JRE..."));
 
-    if let Ok(path) =
-        find_cached_java_binary(runtimes_folder, &distribution, &manifest.build.jre_version).await
-    {
-        return Ok(path);
+    for vendor in &vendors {
+        if let Some(runtime) = find_java(runtimes_folder, vendor, major).await {
+            // Play starts with what is installed. A newer package is for the next launch.
+            if let Some(package) = package_of(vendor) {
+                update_in_background(runtimes_folder, package);
+            }
+            return Ok(runtime);
+        }
     }
+    if chosen.is_none() {
+        // A vendor the API stopped listing stays in use for as long as it is installed.
+        if let Some(runtime) = find_any_java(runtimes_folder, major).await {
+            return Ok(runtime);
+        }
+    }
+
+    let package = vendors
+        .iter()
+        .find_map(|vendor| package_of(vendor))
+        .with_context(|| {
+            format!(
+                "No Java {major} package for {} on {OS}-{}. Select another distribution or a custom Java executable in Settings.",
+                chosen.map_or("any distribution", JavaDistribution::get_name),
+                *ARCHITECTURE,
+            )
+        })?;
 
     launcher_data.log("Downloading JRE...");
     launcher_data.progress_update(ProgressUpdate::set_label("Download JRE..."));
 
-    jre_downloader::jre_download(
-        &runtimes_folder,
-        &distribution,
-        &manifest.build.jre_version,
-        |a, b| {
-            launcher_data.progress_update(ProgressUpdate::set_for_step(
-                ProgressUpdateSteps::DownloadJRE,
-                get_progress(0, a, b),
-                get_max(1),
-            ));
-        },
-    )
+    install_java(runtimes_folder, package, |downloaded, total| {
+        launcher_data.progress_update(ProgressUpdate::set_for_step(
+            ProgressUpdateSteps::DownloadJRE,
+            get_progress(0, downloaded, total),
+            get_max(1),
+        ));
+    })
     .await
 }
 
-/// The API's distribution, or the first other one with a build for this OS and architecture.
-async fn automatic_distribution<D: Send + Sync>(
-    runtimes_folder: &Path,
-    manifest: &LaunchManifest,
-    launcher_data: &LauncherData<D>,
-) -> Result<JavaDistribution> {
-    let preferred = &manifest.build.jre_distribution;
-    let version = &manifest.build.jre_version;
-    let fallbacks = [
-        JavaDistribution::Temurin,
-        JavaDistribution::Zulu,
-        JavaDistribution::GraalVM,
-    ]
-    .into_iter()
-    .filter(|distribution| distribution != preferred);
-
-    for distribution in iter::once(preferred.clone()).chain(fallbacks) {
-        if !distribution.supports_version(*version) {
-            continue;
+fn update_in_background(runtimes_folder: &Path, package: &JavaPackage) {
+    let root = runtimes_folder.to_owned();
+    let package = package.clone();
+    spawn(async move {
+        if let Err(error) = install_java(&root, &package, |_, _| ()).await {
+            warn!(
+                "Could not update {} Java {}: {error:#}",
+                package.vendor.get_name(),
+                package.major
+            );
         }
-
-        // A failed lookup is left for the download to report
-        if find_cached_java_binary(runtimes_folder, &distribution, version)
-            .await
-            .is_ok()
-            || distribution.has_build(version).await.unwrap_or(true)
-        {
-            if distribution != *preferred {
-                launcher_data.log(&format!(
-                    "{} has no Java {} build for this platform, using {}",
-                    preferred.get_name(),
-                    version,
-                    distribution.get_name()
-                ));
-            }
-
-            return Ok(distribution);
-        }
-    }
-
-    bail!(
-        "No distribution has a Java {} build for this platform",
-        version
-    )
+    });
 }

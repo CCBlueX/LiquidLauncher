@@ -33,7 +33,7 @@ use uuid::Uuid;
 
 use super::failed;
 use crate::app::builds::{self, BuildPage};
-use crate::app::client_api::{BlogPost, Build, Changelog, Client, PaginatedResponse};
+use crate::app::client_api::{BlogPost, Build, Changelog, Client, JavaVendor, PaginatedResponse};
 use crate::app::client_api::LoaderMod;
 use crate::app::marketplace::{self, GameDir};
 use crate::app::modrinth::{self, CustomMod};
@@ -92,6 +92,11 @@ pub(crate) async fn request_build_page(
     )
     .await
     .map_err(failed("request builds"))
+}
+
+#[tauri::command]
+pub(crate) async fn get_java_distributions(client: Client) -> Result<Vec<JavaVendor>, String> {
+    client.java_distributions().await.map_err(failed("load Java distributions"))
 }
 
 #[tauri::command]

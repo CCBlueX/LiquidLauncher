@@ -27,7 +27,7 @@ use std::process::exit;
 use anyhow::{bail, Context, Result};
 
 use path_absolutize::Absolutize;
-use tokio::{io, spawn};
+use tokio::{fs::try_exists, io, spawn};
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::*;
@@ -36,7 +36,7 @@ use crate::app::client_api::{Client, LaunchManifest};
 use crate::app::marketplace::{self, GameDir};
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
-use crate::minecraft::java::{DistributionSelection, JavaRuntime};
+use crate::minecraft::java::DistributionSelection;
 use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
 use crate::{join_and_mkdir, join_and_mkdir_vec};
 use crate::{
@@ -172,17 +172,17 @@ pub async fn launch<D: Send + Sync>(
     // Setup vanilla integration symlinks
     setup_installation_link(&game_dir, &launching_parameter.vanilla_integration, &launcher_data)?;
 
-    let java_bin = load_jre(
+    let java_runtime = load_jre(
         &runtimes_folder,
         &manifest,
-        &launching_parameter,
+        &launching_parameter.java_distribution,
         &launcher_data,
     )
     .await
     .context("Failed to load JRE")?;
 
-    launcher_data.log(&format!("Java Path: {:?}", java_bin));
-    if !java_bin.exists() {
+    launcher_data.log(&format!("Java Path: {}", java_runtime.path().display()));
+    if !try_exists(java_runtime.path()).await? {
         bail!("Java binary not found");
     }
 
@@ -219,9 +219,6 @@ pub async fn launch<D: Send + Sync>(
     )
     .await
     .context("Failed to setup assets")?;
-
-    // Game
-    let java_runtime = JavaRuntime::new(java_bin);
 
     let mut command_arguments = Vec::new();
 
