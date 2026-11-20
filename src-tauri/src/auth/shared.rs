@@ -86,14 +86,7 @@ pub async fn write(data: &Path, account: Option<&ClientAccount>) -> Result<()> {
         }
     }
 
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).await?;
-    }
-
-    let temporary = path.with_extension("json.tmp");
-    fs::write(&temporary, serde_json::to_vec(&root)?).await?;
-    fs::rename(&temporary, &path).await?;
-    Ok(())
+    write_root(&path, &root).await
 }
 
 pub async fn renew(data: &Path, account: ClientAccount) -> Result<ClientAccount> {
@@ -102,14 +95,27 @@ pub async fn renew(data: &Path, account: ClientAccount) -> Result<ClientAccount>
     Ok(account)
 }
 
-fn path(data: &Path) -> PathBuf {
-    data.join("gameDir")
-        .join(CLIENT_BRANCH)
-        .join("LiquidBounce")
-        .join("account.json")
+pub(super) fn liquidbounce_dir(data: &Path) -> PathBuf {
+    data.join("gameDir").join(CLIENT_BRANCH).join("LiquidBounce")
 }
 
-async fn read_root(path: &Path) -> Result<Option<Value>> {
+fn path(data: &Path) -> PathBuf {
+    liquidbounce_dir(data).join("account.json")
+}
+
+/// Writes a temporary file first, so the client never reads half a file.
+pub(super) async fn write_root(path: &Path, root: &Value) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).await?;
+    }
+
+    let temporary = path.with_extension("json.tmp");
+    fs::write(&temporary, serde_json::to_vec(root)?).await?;
+    fs::rename(&temporary, path).await?;
+    Ok(())
+}
+
+pub(super) async fn read_root(path: &Path) -> Result<Option<Value>> {
     let raw = match fs::read_to_string(path).await {
         Ok(raw) => raw,
         Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
@@ -117,6 +123,9 @@ async fn read_root(path: &Path) -> Result<Option<Value>> {
             return Err(error).with_context(|| format!("Failed to read {}", path.display()))
         }
     };
+    if raw.trim().is_empty() {
+        return Ok(None);
+    }
 
     serde_json::from_str(&raw)
         .map(Some)

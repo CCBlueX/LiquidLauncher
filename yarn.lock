@@ -566,11 +566,6 @@ postcss@^8.4.43:
     picocolors "^1.1.1"
     source-map-js "^1.2.1"
 
-qrcode-generator@^2.0.4:
-  version "2.0.4"
-  resolved "https://registry.npmjs.org/qrcode-generator/-/qrcode-generator-2.0.4.tgz"
-  integrity sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==
-
 rollup@^4.20.0:
   version "4.63.5"
   resolved "https://registry.npmjs.org/rollup/-/rollup-4.63.5.tgz"

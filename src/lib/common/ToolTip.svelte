@@ -3,6 +3,7 @@
     import { afterUpdate } from "svelte";
 
     export let text;
+    export let below = false;
 
     let element;
     let shown = false;
@@ -20,7 +21,7 @@
 
 <div bind:this={element}>
     {#if shown}
-        <div transition:fly={{ y: -10, duration: 200 }} class="tooltip">
+        <div transition:fly={{ y: below ? 10 : -10, duration: 200 }} class="tooltip" class:below>
             {text}
         </div>
     {/if}
@@ -51,5 +52,14 @@
         position: absolute;
         left: 50%;
         transform: translateX(-50%) rotate(45deg);
+    }
+
+    .tooltip.below {
+        top: 100%;
+        transform: translate(-50%, 14px);
+    }
+
+    .tooltip.below::after {
+        top: -5px;
     }
 </style>

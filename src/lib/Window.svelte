@@ -146,7 +146,8 @@
         position: fixed;
         top: 0;
         left: 0;
-        width: calc(100vw - 150px);
+        /* Stops left of the account card, which has to stay clickable. */
+        width: calc(100vw - 400px);
         height: 100px;
         z-index: 100;
     }
