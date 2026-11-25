@@ -31,14 +31,15 @@ use tokio::fs;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
-use super::failed;
+use super::{data_directory, failed};
 use crate::app::builds::{self, BuildPage};
 use crate::app::client_api::{BlogPost, Build, Changelog, Client, JavaVendor, PaginatedResponse};
 use crate::app::client_api::LoaderMod;
-use crate::app::marketplace::{self, GameDir};
+use crate::app::marketplace;
 use crate::app::modrinth::{self, CustomMod};
 use crate::app::options::Options;
 use crate::auth::{shared, ClientAccount};
+use crate::minecraft::game_dir::GameDir;
 use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
     auth::MinecraftAccount,
     launcher::{LauncherData, StartParameter},
@@ -297,7 +298,7 @@ pub(crate) async fn run_client(
 ) -> Result<(), String> {
     // A shared mutex for the window object.
     let shareable_window: ShareableWindow = Arc::new(Mutex::new(window));
-    let data = options.start_options.data_directory();
+    let data = data_directory(&options).await?;
 
     let minecraft_account = options
         .start_options
@@ -361,7 +362,6 @@ pub(crate) async fn run_client(
     });
 
     let copy_of_runner_instance = runner_instance.clone();
-    let branch = launch_manifest.build.branch.clone();
     marketplace::game_started();
 
     let parameters = StartParameter {
@@ -420,7 +420,7 @@ pub(crate) async fn run_client(
                         .unwrap();
                     handle_stderr(&shareable_window, message.as_bytes()).unwrap();
                 };
-                marketplace::game_exited(&GameDir::new(data, branch)).await;
+                marketplace::game_exited(&GameDir::new(data)).await;
 
                 *copy_of_runner_instance
                     .lock()

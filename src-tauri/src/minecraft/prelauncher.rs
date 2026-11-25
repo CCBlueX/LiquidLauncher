@@ -30,6 +30,7 @@ use crate::app::marketplace;
 use crate::app::webview::open_download_page;
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
+use crate::minecraft::game_dir::GameDir;
 use crate::minecraft::launcher;
 use crate::minecraft::launcher::{LauncherData, StartParameter};
 use crate::minecraft::progress::{
@@ -84,7 +85,7 @@ pub(crate) async fn launch(
     };
 
     // Copy retrieve and copy mods from manifest
-    clear_mods(&data_directory, &launch_manifest).await?;
+    clear_mods(&data_directory).await?;
     retrieve_and_copy_mods(
         &data_directory,
         &launch_manifest,
@@ -182,11 +183,8 @@ pub(crate) async fn launch(
     Ok(())
 }
 
-pub(crate) async fn clear_mods(data: &Path, manifest: &LaunchManifest) -> Result<()> {
-    let mods_path = data
-        .join("gameDir")
-        .join(&manifest.build.branch)
-        .join("mods");
+pub(crate) async fn clear_mods(data: &Path) -> Result<()> {
+    let mods_path = GameDir::new(data).mods();
 
     if !mods_path.exists() {
         return Ok(());
@@ -218,10 +216,7 @@ pub async fn retrieve_and_copy_mods(
     let mod_cache_path = data.join("mod_cache");
     let mod_custom_path =
         custom_mods_directory(data, &manifest.build.branch, &manifest.build.mc_version);
-    let mods_path = data
-        .join("gameDir")
-        .join(&manifest.build.branch)
-        .join("mods");
+    let mods_path = GameDir::new(data).mods();
 
     fs::create_dir_all(&mod_cache_path).await.with_context(|| {
         format!(

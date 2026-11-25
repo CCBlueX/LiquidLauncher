@@ -18,6 +18,5 @@
  */
 
 
-// We must no longer request the branches from our API,
-//   as there is just one supported.
-pub const CLIENT_BRANCH: &str = "nextgen";
+// The one edition this launcher serves: its builds, its game directory, its marketplace items.
+pub const CLIENT_EDITION: &str = "nextgen";

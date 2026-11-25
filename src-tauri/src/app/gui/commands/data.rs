@@ -19,9 +19,11 @@
 
 use tracing::warn;
 
+use super::data_directory;
 use crate::{
     app::options::Options,
     auth::shared,
+    minecraft::game_dir::GameDir,
     LAUNCHER_DIRECTORY
 };
 
@@ -29,9 +31,9 @@ use crate::{
 pub(crate) async fn get_options() -> Result<Options, String> {
     let config_dir = LAUNCHER_DIRECTORY.config_dir();
     let mut options = Options::load(config_dir).await.unwrap_or_default();
+    let data = data_directory(&options).await?;
 
     if let Some(account) = options.premium_options.account.take() {
-        let data = options.start_options.data_directory();
         let moved = async {
             if shared::read(&data).await?.is_none() {
                 shared::write(&data, Some(&account)).await?;
@@ -58,11 +60,10 @@ pub(crate) async fn store_options(options: Options) -> Result<(), String> {
 
 #[tauri::command]
 pub(crate) async fn clear_data(options: Options) -> Result<(), String> {
-    let data_directory = options.start_options.data_directory();
+    let data = data_directory(&options).await?;
 
     [
         "assets",
-        "gameDir",
         "libraries",
         "mod_cache",
         "natives",
@@ -70,7 +71,8 @@ pub(crate) async fn clear_data(options: Options) -> Result<(), String> {
         "versions",
     ]
         .iter()
-        .map(|dir| data_directory.join(dir))
+        .map(|dir| data.join(dir))
+        .chain([GameDir::root(&data)])
         .filter(|dir| dir.exists())
         .map(std::fs::remove_dir_all)
         .collect::<Result<Vec<_>, _>>()

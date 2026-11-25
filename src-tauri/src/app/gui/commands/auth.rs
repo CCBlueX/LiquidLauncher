@@ -22,6 +22,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Window};
 use tracing::{debug, error, info};
 
+use super::data_directory;
 use crate::app::client_api::{Client, UserInformation};
 use crate::app::gui::AppState;
 use crate::app::options::Options;
@@ -72,7 +73,7 @@ pub(crate) async fn client_account(
     client: Client,
     options: Options,
 ) -> Result<Option<UserInformation>, String> {
-    let data = options.start_options.data_directory();
+    let data = data_directory(&options).await?;
     let Some(mut account) = shared::read(&data)
         .await
         .map_err(|e| format!("unable to read client account: {:?}", e))?
@@ -112,7 +113,7 @@ pub(crate) async fn client_account_authenticate(
         .await
         .map_err(|e| format!("unable to fetch user information: {:?}", e))?;
 
-    shared::write(&options.start_options.data_directory(), Some(&account))
+    shared::write(&data_directory(&options).await?, Some(&account))
         .await
         .map_err(|e| format!("unable to store client account: {:?}", e))?;
     Ok(user)
@@ -125,7 +126,7 @@ pub(crate) async fn client_account_logout(
 ) -> Result<(), String> {
     ensure_client_stopped(&app_state)?;
 
-    shared::write(&options.start_options.data_directory(), None)
+    shared::write(&data_directory(&options).await?, None)
         .await
         .map_err(|e| format!("unable to store client account: {:?}", e))
 }

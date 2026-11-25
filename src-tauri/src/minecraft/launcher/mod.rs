@@ -33,9 +33,10 @@ use tokio::time::sleep;
 use tracing::*;
 
 use crate::app::client_api::{Client, LaunchManifest};
-use crate::app::marketplace::{self, GameDir};
+use crate::app::marketplace;
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
+use crate::minecraft::game_dir::GameDir;
 use crate::minecraft::java::DistributionSelection;
 use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
 use crate::{join_and_mkdir, join_and_mkdir_vec};
@@ -167,7 +168,8 @@ pub async fn launch<D: Send + Sync>(
     let natives_folder = join_and_mkdir!(client_folder, "natives");
     let libraries_folder = join_and_mkdir!(data, "libraries");
     let assets_folder = join_and_mkdir!(data, "assets");
-    let game_dir = join_and_mkdir_vec!(data, vec!["gameDir", &*manifest.build.branch]);
+    let game_dir = GameDir::new(data).path();
+    crate::mkdir!(game_dir);
 
     // Setup vanilla integration symlinks
     setup_installation_link(&game_dir, &launching_parameter.vanilla_integration, &launcher_data)?;
@@ -315,7 +317,7 @@ pub async fn launch<D: Send + Sync>(
 
     if !launching_parameter.keep_launcher_open {
         // The launcher quits with the game, before run_client could apply these.
-        marketplace::game_exited(&GameDir::new(data_dir, &manifest.build.branch)).await;
+        marketplace::game_exited(&GameDir::new(data_dir)).await;
         // Hide launcher window
         exit(0);
     }

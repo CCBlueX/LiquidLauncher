@@ -27,7 +27,7 @@ use serde_json::{json, Map, Value};
 use tokio::fs;
 
 use super::ClientAccount;
-use crate::app::client_api_target::CLIENT_BRANCH;
+use crate::minecraft::game_dir::GameDir;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -103,10 +103,7 @@ pub async fn renew(data: &Path, account: ClientAccount) -> Result<ClientAccount>
 }
 
 fn path(data: &Path) -> PathBuf {
-    data.join("gameDir")
-        .join(CLIENT_BRANCH)
-        .join("LiquidBounce")
-        .join("account.json")
+    GameDir::new(data).client().join("account.json")
 }
 
 async fn read_root(path: &Path) -> Result<Option<Value>> {

@@ -20,19 +20,20 @@
 use anyhow::Context;
 use tauri::State;
 
-use super::{failed, search_query};
+use super::{data_directory, failed, search_query};
 use crate::app::builds;
 use crate::app::client_api::Client;
-use crate::app::client_api_target::CLIENT_BRANCH;
 use crate::app::gui::AppState;
 use crate::app::marketplace::view::{self, Browse, Detail, Library, Remote, Selected};
-use crate::app::marketplace::{self, api, GameDir, ItemType, SubscribedItem};
+use crate::app::marketplace::{self, api, ItemType, SubscribedItem};
 use crate::app::options::Options;
+use crate::minecraft::game_dir::GameDir;
 
 /// Takes the options from the frontend, like `run_client`: Settings stores them only once it
 /// closes, so the stored ones may point at another data directory.
-fn game_dir(options: &Options) -> GameDir {
-    GameDir::new(options.start_options.data_directory(), CLIENT_BRANCH)
+async fn game_dir(options: &Options) -> anyhow::Result<GameDir> {
+    let data = data_directory(options).await.map_err(anyhow::Error::msg)?;
+    Ok(GameDir::new(data))
 }
 
 /// The installed add-ons, themes and scripts. Without `check` it reads the disk alone and returns at
@@ -60,7 +61,7 @@ pub(crate) async fn get_marketplace_library(
         build: build.as_ref(),
         latest: options.version_options.build_id == -1,
     };
-    view::library(&game_dir(&options), &selected, remote)
+    async { view::library(&game_dir(&options).await?, &selected, remote).await }
         .await
         .map_err(failed("read the marketplace subscriptions"))
 }
@@ -75,7 +76,7 @@ pub(crate) async fn browse_marketplace(
 ) -> Result<Browse, String> {
     async {
         let build = builds::selected(&client, &options, &app_state.build).await?;
-        let game = game_dir(&options);
+        let game = game_dir(&options).await?;
         view::browse(&client, &game, &build, item_type, search_query(&query)).await
     }
     .await
@@ -91,7 +92,7 @@ pub(crate) async fn get_marketplace_item(
 ) -> Result<Detail, String> {
     async {
         let build = builds::selected(&client, &options, &app_state.build).await?;
-        view::detail(&client, &game_dir(&options), &build, item_id).await
+        view::detail(&client, &game_dir(&options).await?, &build, item_id).await
     }
     .await
     .map_err(failed("load the item"))
@@ -125,7 +126,7 @@ pub(crate) async fn install_marketplace_item(
             Some(newest.first().context("Nothing is published yet")?.id)
         };
 
-        marketplace::add(&client, &game_dir(&options), item, revision).await
+        marketplace::add(&client, &game_dir(&options).await?, item, revision).await
     }
     .await
     .map_err(failed("install marketplace item"))
@@ -133,7 +134,7 @@ pub(crate) async fn install_marketplace_item(
 
 #[tauri::command]
 pub(crate) async fn remove_marketplace_item(options: Options, item_id: u32) -> Result<(), String> {
-    marketplace::remove(&game_dir(&options), item_id)
+    async { marketplace::remove(&game_dir(&options).await?, item_id).await }
         .await
         .map_err(failed("remove marketplace item"))
 }
