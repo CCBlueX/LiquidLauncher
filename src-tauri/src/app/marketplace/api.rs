@@ -25,7 +25,7 @@ use serde::Deserialize;
 
 use super::ItemType;
 use crate::app::client_api::{Build, Client, PaginatedResponse};
-use crate::app::client_api_target::CLIENT_BRANCH;
+use crate::app::client_api_target::CLIENT_EDITION;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Item {
@@ -77,7 +77,7 @@ pub async fn items(
     let limit = limit.to_string();
     let mut params = vec![
         ("limit", limit.as_str()),
-        ("edition", CLIENT_BRANCH),
+        ("edition", CLIENT_EDITION),
         ("type", item_type),
     ];
     params.extend(query.map(|query| ("q", query)));

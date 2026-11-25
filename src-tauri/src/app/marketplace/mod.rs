@@ -19,7 +19,7 @@
 
 //! Marketplace items shared with LiquidBounce.
 //!
-//! Both programs read and write `gameDir/<branch>/LiquidBounce/marketplace.json` and the items
+//! Both programs read and write `instances/<edition>/LiquidBounce/marketplace.json` and the items
 //! installed beside it. The client owns the format, so everything here matches what it produces.
 
 pub mod api;
@@ -30,7 +30,6 @@ mod subscriptions;
 pub mod view;
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex, MutexGuard};
 
 use anyhow::Result;
@@ -38,6 +37,7 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 
 use crate::app::client_api::Client;
+use crate::minecraft::game_dir::GameDir;
 pub use revisions::install_target;
 pub use staging::stage_addons;
 
@@ -87,43 +87,6 @@ pub struct SubscribedItem {
     pub id: u32,
     #[serde(rename = "type")]
     pub item_type: ItemType,
-}
-
-/// The launcher's data directory and the branch whose game directory holds the items.
-pub struct GameDir {
-    data: PathBuf,
-    branch: String,
-}
-
-impl GameDir {
-    pub fn new(data: impl Into<PathBuf>, branch: impl Into<String>) -> Self {
-        Self {
-            data: data.into(),
-            branch: branch.into(),
-        }
-    }
-
-    fn mods(&self) -> PathBuf {
-        self.data.join("gameDir").join(&self.branch).join("mods")
-    }
-
-    fn client(&self) -> PathBuf {
-        self.data
-            .join("gameDir")
-            .join(&self.branch)
-            .join("LiquidBounce")
-    }
-
-    fn subscriptions(&self) -> PathBuf {
-        self.client().join("marketplace.json")
-    }
-
-    fn item(&self, item_id: u32) -> PathBuf {
-        self.client()
-            .join("marketplace")
-            .join("items")
-            .join(item_id.to_string())
-    }
 }
 
 /// An edit made while the game runs. LiquidBounce writes its subscriptions back when it exits, so

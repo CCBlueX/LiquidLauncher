@@ -50,7 +50,7 @@ pub async fn stage_addons(
     build: &Build,
     progress: &impl ProgressReceiver,
 ) -> Result<()> {
-    let game = GameDir::new(data, &build.branch);
+    let game = GameDir::new(data);
     let addons: Vec<_> = subscriptions::read(&game)
         .await?
         .into_iter()

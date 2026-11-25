@@ -32,7 +32,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, debug_span, error, info, warn};
 use tokio::try_join;
-use crate::app::client_api_target::CLIENT_BRANCH;
+use crate::app::client_api_target::CLIENT_EDITION;
 
 /// API endpoint url
 pub const LAUNCHER_API: [&str; 3] = [
@@ -167,7 +167,7 @@ impl Client {
     ) -> Result<PaginatedResponse<Build>> {
         let offset = page.saturating_sub(1).saturating_mul(limit).to_string();
         let limit = limit.to_string();
-        let params = [("edition", CLIENT_BRANCH), ("offset", offset.as_str()), ("limit", &limit), ("release", "true")];
+        let params = [("edition", CLIENT_EDITION), ("offset", offset.as_str()), ("limit", &limit), ("release", "true")];
         self.request("builds", if nightly { &params[..3] } else { &params }).await
     }
 

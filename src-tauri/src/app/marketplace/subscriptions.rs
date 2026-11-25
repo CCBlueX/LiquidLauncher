@@ -158,7 +158,7 @@ mod tests {
     #[tokio::test]
     async fn concurrent_edits_all_land() {
         let data = scratch("concurrent");
-        let game = GameDir::new(&data, "nextgen");
+        let game = GameDir::new(&data);
         let subscribed: Vec<_> = (1..=8)
             .map(|id| json!({ "name": format!("Theme {id}"), "id": id, "type": "Theme" }))
             .collect();
@@ -181,7 +181,7 @@ mod tests {
     #[tokio::test]
     async fn edits_keep_unknown_types_fields_and_entries() {
         let data = scratch("subscriptions");
-        let game = GameDir::new(&data, "nextgen");
+        let game = GameDir::new(&data);
 
         let history = json!({ "name": "history", "value": [1, 2] });
         let script = json!({
