@@ -17,6 +17,7 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+pub mod attach;
 pub mod auth;
 pub mod game_dir;
 pub mod instance;

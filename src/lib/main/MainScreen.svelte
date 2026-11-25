@@ -23,7 +23,7 @@
     let instances = [];
     let instance = null;
     let launching = false;
-    $: starting = launching || instances.some(listed => listed.state === "starting");
+    $: starting = launching || instances.some(listed => listed.state === "starting" || listed.state === "attaching");
 
     let logs = {};
     let logShown = null;
@@ -107,6 +107,7 @@
             dateDay: new Date(build.date).toLocaleDateString(),
             changelog: changelog.changelog
         };
+        refreshInstances();
         await updateMods();
     }
 
@@ -178,18 +179,26 @@
 
         if (starting) return;
 
+        const target = instance;
+        const verb = target ? "attach" : "start";
+
         try {
             launching = true;
-            progressState = { max: 0, value: 0, text: "Starting client...", speed: 0 };
+            progressState = { max: 0, value: 0, text: target ? "Attaching client..." : "Starting client...", speed: 0 };
 
-            await authenticate();
-            await checkMemory();
-            const id = await launchClient();
+            let id;
+            if (target) {
+                id = await attachClient(target.pid);
+            } else {
+                await authenticate();
+                await checkMemory();
+                id = await launchClient();
+            }
             await refreshInstances();
-            instance = instances.find(listed => listed.id === id) ?? null;
+            instance = instances.find(listed => listed.id === id) ?? instance;
         } catch (error) {
-            console.error("Failed to start client:", error);
-            logs[0] = [`Failed to start client: ${error}`];
+            console.error(`Failed to ${verb} client:`, error);
+            logs[0] = [`Failed to ${verb} client: ${error}`];
             logShown = 0;
         } finally {
             launching = false;
@@ -197,8 +206,15 @@
     }
 
     async function refreshInstances() {
-        instances = await invoke("list_instances");
-        instance = instances.find(listed => listed.id === instance?.id) ?? null;
+        try {
+            instances = await invoke("list_instances", { options });
+        } catch (e) {
+            console.error("Failed to list the running instances:", e);
+            return;
+        }
+        const isChosen = listed => instance
+            && ((listed.pid ?? -1) === instance.pid || (listed.id ?? -1) === instance.id);
+        instance = instances.find(isChosen) ?? null;
     }
 
     async function updateClientAccount() {
@@ -234,14 +250,23 @@
         }
     }
 
-    async function launchClient() {
-        await options.store();
-        return invoke("run_client", {
+    function clientArguments() {
+        return {
             client,
             buildId: versionState.currentBuild.buildId,
             options,
             mods: [...versionState.recommendedMods, ...versionState.customMods]
-        });
+        };
+    }
+
+    async function launchClient() {
+        await options.store();
+        return invoke("run_client", clientArguments());
+    }
+
+    async function attachClient(pid) {
+        await options.store();
+        return invoke("load_client", {...clientArguments(), pid});
     }
 
     async function terminateClient() {
@@ -315,10 +340,12 @@
         logShown = event.payload.id;
     });
 
-    onMount(async () => {
+    onMount(() => {
         updateClientAccount();
+        updateData();
         refreshInstances();
-        await updateData();
+        const timer = setInterval(() => document.hidden || refreshInstances(), 3000);
+        return () => clearInterval(timer);
     });
 </script>
 

@@ -183,6 +183,7 @@ pub fn gui_main() {
             request_mods,
             run_client,
             list_instances,
+            load_client,
             login_offline,
             login_microsoft_device_code,
             login_microsoft_webview,

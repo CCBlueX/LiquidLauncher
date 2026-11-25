@@ -21,7 +21,9 @@ use once_cell::sync::Lazy;
 use serde::Deserialize;
 use std::env::consts;
 use std::fmt::Display;
-use sysinfo::{MemoryRefreshKind, RefreshKind, System};
+use sysinfo::{
+    MemoryRefreshKind, Pid, ProcessRefreshKind, ProcessesToUpdate, RefreshKind, System,
+};
 
 use std::fs;
 use std::path::Path;
@@ -34,6 +36,19 @@ pub fn sys_memory() -> u64 {
     );
 
     sys.total_memory()
+}
+
+pub fn wait_for_exit(pid: u32) {
+    let pid = Pid::from_u32(pid);
+    let mut system = System::new();
+    system.refresh_processes_specifics(
+        ProcessesToUpdate::Some(&[pid]),
+        true,
+        ProcessRefreshKind::nothing(),
+    );
+    if let Some(process) = system.process(pid) {
+        process.wait();
+    }
 }
 
 pub const OS: OperatingSystem = if cfg!(target_os = "windows") {

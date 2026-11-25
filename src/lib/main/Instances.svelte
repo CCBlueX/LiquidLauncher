@@ -10,8 +10,13 @@
     const dispatch = createEventDispatcher();
     const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 150;
     const states = {
+        running: "Running",
+        blocked: "Blocked",
         starting: "Starting",
-        started: "Launched"
+        started: "Launched",
+        attaching: "Attaching",
+        attached: "Attached",
+        detaching: "Detaching"
     };
 
     function reveal(card, isChosen) {
@@ -27,15 +32,16 @@
 
 <fieldset>
     <legend>Instance</legend>
-    {#each [null, ...instances] as choice (choice?.id ?? 0)}
+    {#each [null, ...instances] as choice (choice ? choice.pid ?? `starting ${choice.id}` : 0)}
+        {@const isBlocked = choice?.state === "blocked"}
         {@const isChosen = choice === instance}
-        <div class="card" class:chosen={isChosen} use:reveal={isChosen}>
-            <label>
-                <input type="radio" name="instance" checked={isChosen} on:change={() => instance = choice}>
+        <div class="card" class:chosen={isChosen} class:blocked={isBlocked} class:own={choice?.id} use:reveal={isChosen}>
+            <label title={isBlocked ? "This JVM was started with attaching disabled" : choice?.directory}>
+                <input type="radio" name="instance" disabled={isBlocked} checked={isChosen} on:change={() => instance = choice}>
                 {#if choice}
-                    <span class="title">Minecraft {choice.version}</span>
+                    <span class="title">{choice.version ? `Minecraft ${choice.version}` : "Minecraft"}</span>
                     <span class="state">{states[choice.state]}</span>
-                    <span class="identity">{choice.username}</span>
+                    <span class="identity">{[choice.profile, choice.username].filter(Boolean).join(" · ")}</span>
                     {#if choice.pid}
                         <span class="pid">PID {choice.pid}</span>
                     {/if}
@@ -51,11 +57,13 @@
                     <span>1.7 - {mcVersion}</span>
                     <img class="chevron" src="img/icon/icon-next.svg" alt="">
                 </button>
-            {:else if isChosen}
+            {:else if isChosen && choice.lbVersion}
                 <div class="versions" transition:slide={{duration}}>
                     <img src="img/icon/icon-version-lb.png" alt="LiquidBounce">
                     <span>{choice.lbVersion}</span>
                 </div>
+            {:else if isChosen && choice.unsupported}
+                <p class="unsupported" transition:slide={{duration}}>{choice.unsupported}</p>
             {/if}
         </div>
     {/each}
@@ -101,6 +109,11 @@
         outline-offset: -2px;
     }
 
+    .card.blocked {
+        opacity: .6;
+        border-color: transparent;
+    }
+
     label {
         display: grid;
         grid-template-columns: minmax(0, 1fr) max-content;
@@ -109,6 +122,10 @@
         align-items: center;
         padding: 10px 12px;
         cursor: pointer;
+    }
+
+    .blocked label {
+        cursor: not-allowed;
     }
 
     input {
@@ -132,6 +149,10 @@
     .identity, .state, .pid {
         font-size: 10px;
         color: rgba(255, 255, 255, .5);
+    }
+
+    .own .state {
+        color: white;
     }
 
     .identity {
@@ -162,6 +183,12 @@
 
     div.versions {
         cursor: default;
+    }
+
+    .unsupported {
+        padding: 0 12px 12px;
+        font-size: 11px;
+        color: rgba(255, 255, 255, .7);
     }
 
     .versions img {

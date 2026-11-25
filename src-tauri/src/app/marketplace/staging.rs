@@ -38,7 +38,7 @@ use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
 ///
 /// Matches what LiquidBounce's own `AddonInstaller` writes, so a jar staged by either program is
 /// recognised by the other.
-const ADDON_PREFIX: &str = "liquidbounce-addon-";
+pub const ADDON_PREFIX: &str = "liquidbounce-addon-";
 
 /// Installs and copies into the mods directory, for the launched build, the newest revision of
 /// every subscribed add-on that fits it.

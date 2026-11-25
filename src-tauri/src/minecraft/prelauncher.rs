@@ -84,18 +84,7 @@ pub(crate) async fn launch(
         &None
     };
 
-    // Copy retrieve and copy mods from manifest
-    clear_mods(&data_directory).await?;
-    retrieve_and_copy_mods(
-        &data_directory,
-        &launch_manifest,
-        &launch_manifest.mods,
-        client,
-        retriever_account,
-        &launcher_data,
-    )
-    .await?;
-    retrieve_and_copy_mods(
+    setup_mods(
         &data_directory,
         &launch_manifest,
         &additional_mods,
@@ -104,14 +93,6 @@ pub(crate) async fn launch(
         &launcher_data,
     )
     .await?;
-
-    // Add-ons are ordinary Fabric mods and belong in the directory clear_mods just emptied.
-    // A failure here must not stop the game from starting.
-    if let Err(error) =
-        marketplace::stage_addons(client, &data_directory, build, &launcher_data).await
-    {
-        warn!("Failed to stage marketplace add-ons: {:?}", error);
-    }
 
     launcher_data.progress_update(ProgressUpdate::set_label("Loading version profile..."));
     let manifest_url = match subsystem {
@@ -183,6 +164,45 @@ pub(crate) async fn launch(
     Ok(())
 }
 
+pub(crate) async fn setup_mods(
+    data: &Path,
+    manifest: &LaunchManifest,
+    additional_mods: &[LoaderMod],
+    client: &Client,
+    client_account: &Option<ClientAccount>,
+    launcher_data: &LauncherData<Runner>,
+) -> Result<()> {
+    // Copy retrieve and copy mods from manifest
+    clear_mods(data).await?;
+    retrieve_and_copy_mods(
+        data,
+        manifest,
+        &manifest.mods,
+        client,
+        client_account,
+        launcher_data,
+    )
+    .await?;
+    retrieve_and_copy_mods(
+        data,
+        manifest,
+        additional_mods,
+        client,
+        client_account,
+        launcher_data,
+    )
+    .await?;
+
+    // Add-ons are ordinary Fabric mods and belong in the directory clear_mods just emptied.
+    // A failure here must not stop the game from starting.
+    if let Err(error) =
+        marketplace::stage_addons(client, data, &manifest.build, launcher_data).await
+    {
+        warn!("Failed to stage marketplace add-ons: {:?}", error);
+    }
+    Ok(())
+}
+
 pub(crate) async fn clear_mods(data: &Path) -> Result<()> {
     let mods_path = GameDir::new(data).mods();
 
@@ -208,7 +228,7 @@ pub fn custom_mods_directory(data: &Path, branch: &str, mc_version: &str) -> Pat
 pub async fn retrieve_and_copy_mods(
     data: &Path,
     manifest: &LaunchManifest,
-    mods: &Vec<LoaderMod>,
+    mods: &[LoaderMod],
     client: &Client,
     client_account: &Option<ClientAccount>,
     launcher_data: &LauncherData<Runner>,
@@ -270,7 +290,22 @@ pub async fn retrieve_and_copy_mods(
             current_mod.name
         )));
 
-        let current_mod_path = mod_cache_path.join(current_mod.source.get_path()?);
+        let current_mod_path = match &current_mod.source {
+            ModSource::Repository {
+                repository,
+                artifact,
+            } => {
+                repository_jar(data, manifest, repository, artifact, launcher_data, |a, b| {
+                    launcher_data.progress_update(ProgressUpdate::set_for_step(
+                        ProgressUpdateSteps::DownloadLiquidBounceMods,
+                        get_progress(mod_idx, a, b),
+                        max,
+                    ))
+                })
+                .await?
+            }
+            source => mod_cache_path.join(source.get_path()?),
+        };
 
         // Do we need to download the mod?
         if !current_mod_path.exists() {
@@ -353,33 +388,6 @@ pub async fn retrieve_and_copy_mods(
                         retrieved_bytes
                     }
                 }
-                ModSource::Repository {
-                    repository,
-                    artifact,
-                } => {
-                    launcher_data.log(&format!("Downloading mod {} from {}", artifact, repository));
-                    let repository_url =
-                        manifest.repositories.get(repository).ok_or_else(|| {
-                            LauncherError::InvalidVersionProfile(format!(
-                                "There is no repository specified with the name {}",
-                                repository
-                            ))
-                        })?;
-
-                    let retrieved_bytes = download_file(
-                        &format!("{}{}", repository_url, get_maven_artifact_path(artifact)?),
-                        |a, b| {
-                            launcher_data.progress_update(ProgressUpdate::set_for_step(
-                                ProgressUpdateSteps::DownloadLiquidBounceMods,
-                                get_progress(mod_idx, a, b),
-                                max,
-                            ));
-                        },
-                    )
-                    .await?;
-
-                    retrieved_bytes
-                }
                 _ => bail!("unsupported mod source: {:?}", current_mod.source),
             };
 
@@ -398,4 +406,39 @@ pub async fn retrieve_and_copy_mods(
     }
 
     Ok(())
+}
+
+pub(crate) async fn repository_jar(
+    data: &Path,
+    manifest: &LaunchManifest,
+    repository: &str,
+    artifact: &str,
+    progress: &impl ProgressReceiver,
+    on_progress: impl Fn(u64, u64),
+) -> Result<PathBuf> {
+    let maven_path = get_maven_artifact_path(artifact)?;
+    let path = data.join("mod_cache").join(&maven_path);
+    if path.exists() {
+        return Ok(path);
+    }
+
+    progress.log(&format!("Downloading {} from {}", artifact, repository));
+    let url = format!("{}{}", repository_url(manifest, repository)?, maven_path);
+    let contents = download_file(&url, on_progress).await?;
+
+    fs::create_dir_all(path.parent().context("a Maven path has a parent")?).await?;
+    fs::write(&path, contents)
+        .await
+        .with_context(|| format!("Failed to write {}", artifact))?;
+    Ok(path)
+}
+
+pub(crate) fn repository_url<'a>(manifest: &'a LaunchManifest, repository: &str) -> Result<&'a str> {
+    let url = manifest.repositories.get(repository).ok_or_else(|| {
+        LauncherError::InvalidVersionProfile(format!(
+            "There is no repository specified with the name {}",
+            repository
+        ))
+    })?;
+    Ok(url)
 }

@@ -39,7 +39,7 @@ use tracing::warn;
 use crate::app::client_api::Client;
 use crate::minecraft::game_dir::GameDir;
 pub use revisions::install_target;
-pub use staging::stage_addons;
+pub use staging::{stage_addons, ADDON_PREFIX};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ItemType {

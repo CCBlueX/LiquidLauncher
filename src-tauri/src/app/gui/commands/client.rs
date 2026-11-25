@@ -26,10 +26,15 @@ use std::{
 };
 use minecraft_auth::java::JavaAuthManager;
 use minecraft_auth::msa::constants::JAVA_TITLE_ID;
+use modloader::Error;
+use path_absolutize::Absolutize;
 use serde_json::json;
 use tauri::Window;
 use tokio::fs;
+use tokio::runtime::Builder;
+use tokio::select;
 use tokio::sync::oneshot;
+use tokio::task::spawn_blocking;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
@@ -39,10 +44,12 @@ use crate::app::client_api::{BlogPost, Build, Changelog, Client, JavaVendor, Pag
 use crate::app::client_api::LoaderMod;
 use crate::app::marketplace;
 use crate::app::modrinth::{self, CustomMod};
-use crate::app::options::Options;
+use crate::app::options::{Options, PremiumOptions};
 use crate::auth::{shared, ClientAccount};
+use crate::minecraft::attach;
 use crate::minecraft::game_dir::GameDir;
 use crate::minecraft::instance::{Instance, InstanceState};
+use crate::utils::wait_for_exit;
 use crate::{app::gui::{AppState, Runner, RunnerInstance, RunnerInstances}, minecraft::{
     auth::MinecraftAccount,
     launcher::{LauncherData, StartParameter},
@@ -280,33 +287,30 @@ fn output(runner: &Runner, line: &str) -> anyhow::Result<()> {
 fn add_runner(
     instances: &RunnerInstances,
     window: Window,
-    build: &Build,
-    username: &str,
+    mut instance: Instance,
 ) -> Result<(Runner, oneshot::Receiver<()>), String> {
     static NEXT_ID: AtomicU32 = AtomicU32::new(1);
 
     let mut runners = instances
         .lock()
         .map_err(|e| format!("unable to lock runner instances: {:?}", e))?;
-    let is_starting = |runner: &RunnerInstance| runner.instance.state == InstanceState::Starting;
-    if runners.values().any(is_starting) {
+    let is_busy = |runner: &RunnerInstance| runner.instance.state.is_busy();
+    if runners.values().any(is_busy) {
         return Err("another instance is still starting".to_string());
+    }
+    let is_attached = |runner: &RunnerInstance| runner.instance.pid == instance.pid;
+    if instance.pid.is_some() && runners.values().any(is_attached) {
+        return Err("LiquidBounce is already attached to the instance".to_string());
     }
 
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+    instance.id = Some(id);
     let (terminator, terminated) = oneshot::channel();
     runners.insert(
         id,
         RunnerInstance {
             terminator: Some(terminator),
-            instance: Instance {
-                id,
-                pid: None,
-                version: build.mc_version.clone(),
-                lb_version: build.lb_version.clone(),
-                username: username.to_owned(),
-                state: InstanceState::Starting,
-            },
+            instance,
         },
     );
 
@@ -363,22 +367,17 @@ pub(crate) async fn run_client(
     let (runner, terminator_rx) = add_runner(
         &app_state.runner_instances,
         window,
-        &launch_manifest.build,
-        &account_name,
+        Instance {
+            version: Some(launch_manifest.build.mc_version.clone()),
+            lb_version: Some(launch_manifest.build.lb_version.clone()),
+            username: Some(account_name.clone()),
+            state: InstanceState::Starting,
+            ..Default::default()
+        },
     )?;
     marketplace::game_started();
 
-    let client_account = if options.premium_options.skip_advertisement {
-        premium_account(&client, &data)
-            .await
-            .unwrap_or_else(|e| {
-                let message = format!("Failed to authenticate client account: {:?}", e);
-                let _ = handle_stderr(&runner, message.as_bytes());
-                None
-            })
-    } else {
-        None
-    };
+    let client_account = skip_account(&client, &options.premium_options, &data, &runner).await;
     let skip_advertisement = client_account.is_some();
 
     let id = runner.id;
@@ -407,7 +406,7 @@ pub(crate) async fn run_client(
     };
 
     thread::spawn(move || {
-        tokio::runtime::Builder::new_current_thread()
+        Builder::new_current_thread()
             .enable_all()
             .build()
             .unwrap()
@@ -438,35 +437,210 @@ pub(crate) async fn run_client(
                     }
 
                     let message = format!("An error occured:\n\n{:?}", e);
-                    runner
-                        .emit("client-error", json!({ "id": runner.id }))
-                        .unwrap();
-                    handle_stderr(&runner, message.as_bytes()).unwrap();
+                    client_failed(&runner, &message);
                 };
-                marketplace::game_exited(&GameDir::new(data)).await;
-
-                runner.instances.lock().unwrap().remove(&runner.id);
-                runner
-                    .emit("client-exited", json!({ "id": runner.id }))
-                    .unwrap()
+                client_exited(&runner, &GameDir::new(data)).await
             });
     });
 
     Ok(id)
 }
 
+async fn other_instances(options: &Options, build: Option<Build>) -> anyhow::Result<Vec<Instance>> {
+    let root = GameDir::root(&options.start_options.data_directory())
+        .absolutize()?
+        .into_owned();
+    Ok(spawn_blocking(move || Instance::all(&root, build.as_ref())).await?)
+}
+
 #[tauri::command]
 pub(crate) async fn list_instances(
+    options: Options,
     app_state: tauri::State<'_, AppState>,
 ) -> Result<Vec<Instance>, String> {
-    let instances = app_state
+    let build = builds::kept(&options, &app_state.build);
+    let others = other_instances(&options, build)
+        .await
+        .map_err(failed("list the running instances"))?;
+
+    let mut instances: Vec<_> = app_state
         .runner_instances
         .lock()
         .map_err(|e| format!("unable to lock runner instances: {:?}", e))?
         .values()
         .map(|runner| runner.instance.clone())
         .collect();
+
+    let others: Vec<_> = others
+        .into_iter()
+        .filter(|other| !instances.iter().any(|own| own.pid == other.pid))
+        .collect();
+    instances.extend(others);
     Ok(instances)
+}
+
+#[tauri::command]
+pub(crate) async fn load_client(
+    client: Client,
+    build_id: u32,
+    options: Options,
+    mods: Vec<LoaderMod>,
+    pid: u32,
+    window: Window,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<u32, String> {
+    let data = data_directory(&options).await?;
+
+    info!("Loading launch manifest...");
+    let launch_manifest = client.fetch_launch_manifest(build_id).await.map_err(|e| {
+        format!(
+            "failed to fetch launch manifest of build {}: {:?}",
+            build_id, e
+        )
+    })?;
+    let build = &launch_manifest.build;
+
+    let mut instance = other_instances(&options, Some(build.clone()))
+        .await
+        .map_err(failed("list the running instances"))?
+        .into_iter()
+        .find(|instance| instance.pid == Some(pid))
+        .ok_or("the instance is no longer running")?;
+    if instance.state == InstanceState::Blocked {
+        return Err("the instance was started with attaching disabled".to_string());
+    }
+    if let Some(unsupported) = instance.unsupported.take() {
+        return Err(unsupported);
+    }
+    instance.lb_version = Some(build.lb_version.clone());
+    instance.state = InstanceState::Attaching;
+
+    let (runner, release_rx) = add_runner(&app_state.runner_instances, window, instance)?;
+    marketplace::game_started();
+
+    let client_account = skip_account(&client, &options.premium_options, &data, &runner).await;
+
+    let id = runner.id;
+
+    thread::spawn(move || {
+        let runtime = Builder::new_current_thread().enable_all().build().unwrap();
+
+        runtime.block_on(async {
+            let launcher_data = LauncherData {
+                on_stdout: handle_stdout,
+                on_stderr: handle_stderr,
+                on_progress: handle_progress,
+                on_log: handle_log,
+                on_start: |_, _| {},
+                hide_window: |_| {},
+                data: Box::new(runner.clone()),
+                terminator: release_rx,
+            };
+
+            let loaded = attach::load(
+                pid,
+                &data,
+                &launch_manifest,
+                &mods,
+                &client,
+                &client_account,
+                &launcher_data,
+            )
+            .await;
+
+            match loaded {
+                Ok((loader, loaded)) => {
+                    for loaded_mod in &loaded.mods {
+                        let line = format!("Loaded {} ({})", loaded_mod.id, loaded_mod.framework);
+                        let _ = handle_log(&runner, &line);
+                    }
+                    for present in &loaded.present {
+                        let line = format!("{} is already loaded", present.id);
+                        let _ = handle_log(&runner, &line);
+                    }
+                    for note in &loaded.notes {
+                        let _ = handle_log(&runner, note);
+                    }
+                    runner.update(|instance| instance.state = InstanceState::Attached);
+
+                    let exit = spawn_blocking(move || wait_for_exit(pid));
+                    tokio::pin!(exit);
+                    let mut terminator = launcher_data.terminator;
+                    loop {
+                        select! {
+                            _ = &mut exit => break,
+                            _ = &mut terminator => {
+                                runner.update(|instance| instance.state = InstanceState::Detaching);
+                                match attach::unload(&loader).await {
+                                    Ok(notes) => {
+                                        for note in &notes {
+                                            let _ = handle_log(&runner, note);
+                                        }
+                                        break;
+                                    }
+                                    Err(e) => {
+                                        let message = format!("Failed to detach: {e}");
+                                        let _ = handle_stderr(&runner, message.as_bytes());
+                                        let (sender, receiver) = oneshot::channel();
+                                        terminator = receiver;
+                                        if let Some(own) = runner.instances.lock().unwrap().get_mut(&runner.id) {
+                                            own.terminator = Some(sender);
+                                        }
+                                        runner.update(|instance| instance.state = InstanceState::Attached);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    let message = match e.downcast_ref::<Error>() {
+                        Some(Error::Refused(message)) => message.clone(),
+                        _ => format!("An error occured:\n\n{:?}", e),
+                    };
+                    client_failed(&runner, &message);
+                }
+            }
+            client_exited(&runner, &GameDir::new(&data)).await
+        });
+
+        runtime.shutdown_background();
+    });
+
+    Ok(id)
+}
+
+fn client_failed(runner: &Runner, message: &str) {
+    runner
+        .emit("client-error", json!({ "id": runner.id }))
+        .unwrap();
+    handle_stderr(runner, message.as_bytes()).unwrap();
+}
+
+async fn client_exited(runner: &Runner, game: &GameDir) {
+    marketplace::game_exited(game).await;
+
+    runner.instances.lock().unwrap().remove(&runner.id);
+    runner
+        .emit("client-exited", json!({ "id": runner.id }))
+        .unwrap()
+}
+
+async fn skip_account(
+    client: &Client,
+    options: &PremiumOptions,
+    data: &Path,
+    runner: &Runner,
+) -> Option<ClientAccount> {
+    if !options.skip_advertisement {
+        return None;
+    }
+
+    premium_account(client, data).await.unwrap_or_else(|e| {
+        let message = format!("Failed to authenticate client account: {:?}", e);
+        let _ = handle_stderr(runner, message.as_bytes());
+        None
+    })
 }
 
 async fn premium_account(client: &Client, data: &Path) -> anyhow::Result<Option<ClientAccount>> {

@@ -19,8 +19,10 @@
 
 use crate::error::LauncherError;
 use anyhow::Result;
+use quick_xml::de::from_str;
+use serde::Deserialize;
 
-pub fn get_maven_artifact_path(artifact_id: &String) -> Result<String> {
+pub fn get_maven_artifact_path(artifact_id: &str) -> Result<String> {
     let split = artifact_id.split(':').collect::<Vec<_>>();
 
     if split.len() != 3 {
@@ -37,4 +39,53 @@ pub fn get_maven_artifact_path(artifact_id: &String) -> Result<String> {
         name = split[1],
         ver = split[2]
     ))
+}
+
+#[derive(Deserialize)]
+struct Metadata {
+    versioning: Versioning,
+}
+
+#[derive(Deserialize)]
+struct Versioning {
+    versions: Versions,
+}
+
+#[derive(Deserialize)]
+struct Versions {
+    #[serde(default)]
+    version: Vec<String>,
+}
+
+pub fn maven_versions(metadata: &str) -> Result<Vec<String>> {
+    let metadata: Metadata = from_str(metadata)?;
+    Ok(metadata.versioning.versions.version)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lists_the_versions_of_an_artifact() -> Result<()> {
+        let versions = maven_versions(
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+            <metadata>
+              <groupId>net.ccbluex</groupId>
+              <artifactId>modloader</artifactId>
+              <versioning>
+                <latest>0.2.0</latest>
+                <release>0.2.0</release>
+                <versions>
+                  <version>0.1.0</version>
+                  <version>0.2.0</version>
+                </versions>
+                <lastUpdated>20261125101112</lastUpdated>
+              </versioning>
+            </metadata>"#,
+        )?;
+
+        assert_eq!(versions, ["0.1.0", "0.2.0"]);
+        Ok(())
+    }
 }

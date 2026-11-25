@@ -10,6 +10,8 @@
     export let instance = null;
     export let canLaunch = true;
 
+    $: isAttached = ["attaching", "attached", "detaching"].includes(instance?.state);
+
     const dispatch = createEventDispatcher();
 
     function parseChangelog(text) {
@@ -38,16 +40,21 @@
         <Instances {instances} {lbVersion} {mcVersion} bind:instance on:showVersionSelect />
     </div>
 
-    {#if instance}
+    {#if instance?.id}
         <div class="running-button-wrapper">
-            <ButtonLaunchArea text="Terminate" active={true} on:click={() => dispatch("terminate")} /> 
-            <ButtonLaunchArea text="Log" active={false} on:click={() => dispatch("showClientLog")} />  
+            <ButtonLaunchArea
+                    text={isAttached ? "Detach" : "Terminate"}
+                    active={true}
+                    disabled={instance.state === "detaching"}
+                    on:click={() => dispatch("terminate")}
+            />
+            <ButtonLaunchArea text="Log" active={false} on:click={() => dispatch("showClientLog")} />
         </div>
     {:else}
         <ButtonLaunchArea
-                text="Launch LiquidBounce"
+                text={instance ? "Attach LiquidBounce" : "Launch LiquidBounce"}
                 active={false}
-                disabled={!canLaunch}
+                disabled={!canLaunch || !!instance?.unsupported}
                 on:click={() => dispatch("launch")}
         />
     {/if}

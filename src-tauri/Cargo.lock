@@ -2634,14 +2634,17 @@ dependencies = [
  "futures",
  "md5",
  "minecraft-auth",
+ "modloader",
  "oauth2",
  "once_cell",
  "os_info",
  "path-absolutize",
+ "quick-xml 0.42.0",
  "rand",
  "regex",
  "reqwest",
  "sanitize-filename",
+ "semver",
  "serde",
  "serde_json",
  "sha1",
@@ -2798,6 +2801,21 @@ checksum = "4b18443e9c262bfe8fa82f51666e2642c53393f7e5c27b3e1aeab922cff5b9d8"
 dependencies = [
  "libc",
  "wasi",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "modloader"
+version = "0.1.0"
+source = "git+https://github.com/CCBlueX/ModLoader#86dceef0550214b356e392524b2caa8c6aeb0d69"
+dependencies = [
+ "libc",
+ "same-file",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "tempfile",
+ "thiserror 2.0.21",
  "windows-sys 0.61.2",
 ]
 
@@ -3680,6 +3698,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41b1177fdf999d2321d3fb46ff47159d9c1fb9ad66a4879f8c50a0b504615e9b"
 dependencies = [
  "memchr",
+ "serde",
 ]
 
 [[package]]

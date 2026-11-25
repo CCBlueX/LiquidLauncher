@@ -17,22 +17,39 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::path::PathBuf;
+
 use serde::Serialize;
 
-#[derive(Serialize, Clone, Copy, PartialEq)]
+#[derive(Serialize, Debug, Clone, Copy, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum InstanceState {
+    #[default]
+    Running,
+    Blocked,
     Starting,
     Started,
+    Attaching,
+    Attached,
+    Detaching,
 }
 
-#[derive(Serialize, Clone)]
+impl InstanceState {
+    pub fn is_busy(self) -> bool {
+        matches!(self, Self::Starting | Self::Attaching)
+    }
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Instance {
-    pub id: u32,
+    pub id: Option<u32>,
     pub pid: Option<u32>,
-    pub version: String,
-    pub lb_version: String,
-    pub username: String,
+    pub version: Option<String>,
+    pub lb_version: Option<String>,
+    pub directory: Option<PathBuf>,
+    pub profile: Option<String>,
+    pub username: Option<String>,
     pub state: InstanceState,
+    pub unsupported: Option<String>,
 }
