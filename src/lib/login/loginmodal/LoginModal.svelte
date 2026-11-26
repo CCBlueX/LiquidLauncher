@@ -1,4 +1,5 @@
 <script>
+    import {invoke} from "@tauri-apps/api/core";
     import SignIn from "../../accounts/SignIn.svelte";
 
     export let options;
@@ -6,7 +7,9 @@
 
 <div class="modal">
     <div class="title">Sign in to play</div>
-    <SignIn bind:options />
+    {#await invoke("offline_login_hidden") then hidden}
+        <SignIn bind:options offline={!hidden} />
+    {/await}
 </div>
 
 <style>

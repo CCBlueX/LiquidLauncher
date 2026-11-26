@@ -11,10 +11,11 @@
     import {uniqueNamesGenerator, adjectives, animals, NumberDictionary} from "unique-names-generator";
 
     export let options;
+    export let offline = true;
 
     const dispatch = createEventDispatcher();
 
-    const types = ["Microsoft", "Offline", "Session"];
+    const types = offline ? ["Microsoft", "Offline", "Session"] : ["Microsoft", "Session"];
     let type = "Microsoft";
     // "form" | "webview" | "deviceCode" | "noMinecraft"
     let view = "form";

@@ -17,6 +17,7 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::env;
 use std::sync::{Arc, Mutex};
 
 use serde_json::json;
@@ -147,6 +148,12 @@ pub(crate) async fn remove_account(
     accounts::remove(&data_directory(&options).await?, &id)
         .await
         .map_err(error_text)
+}
+
+/// Set `LIQUIDLAUNCHER_HIDE_OFFLINE_LOGIN=1` to leave Offline out of the login screen.
+#[tauri::command]
+pub(crate) fn offline_login_hidden() -> bool {
+    env::var("LIQUIDLAUNCHER_HIDE_OFFLINE_LOGIN").is_ok_and(|value| value == "1")
 }
 
 async fn save(
