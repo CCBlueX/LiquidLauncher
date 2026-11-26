@@ -84,7 +84,7 @@ windows-sys = { version = "^0.61", features = ["Win32_System_SystemInformation",
 
 # Wayland blur, until tauri-apps/window-vibrancy has it
 [target.'cfg(target_os = "linux")'.dependencies]
-window-vibrancy = { git = "https://github.com/1zun4/window-tweaks", rev = "7f7abc4fd1e597e494555fb915d4dd0de743fc0a" }
+window-vibrancy = { git = "https://github.com/1zun4/window-vibrancy", rev = "7f7abc4fd1e597e494555fb915d4dd0de743fc0a" }
 
 [dev-dependencies]
 tempfile = "3"
