@@ -2639,7 +2639,6 @@ dependencies = [
  "os_info",
  "path-absolutize",
  "rand",
- "raw-window-handle",
  "regex",
  "reqwest",
  "sanitize-filename",
@@ -2667,8 +2666,7 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
  "void",
- "wayland-client",
- "wayland-protocols",
+ "window-vibrancy 0.8.1 (git+https://github.com/1zun4/window-tweaks?rev=822beb5d49555b5921416da8e9a91b24ace02f24)",
  "windows-sys 0.61.2",
 ]
 
@@ -4891,7 +4889,7 @@ dependencies = [
  "url",
  "webkit2gtk",
  "webview2-com",
- "window-vibrancy",
+ "window-vibrancy 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "windows 0.62.2",
 ]
 
@@ -5975,6 +5973,7 @@ checksum = "d8eab23fefc9e41f8e841df4a9c707e8a8c4ed26e944ef69297184de2785e3be"
 dependencies = [
  "dlib",
  "log",
+ "once_cell",
  "pkg-config",
 ]
 
@@ -6147,6 +6146,24 @@ dependencies = [
  "objc2-quartz-core",
  "raw-window-handle",
  "windows-sys 0.61.2",
+ "windows-version",
+]
+
+[[package]]
+name = "window-vibrancy"
+version = "0.8.1"
+source = "git+https://github.com/1zun4/window-tweaks?rev=822beb5d49555b5921416da8e9a91b24ace02f24#822beb5d49555b5921416da8e9a91b24ace02f24"
+dependencies = [
+ "objc2",
+ "objc2-app-kit",
+ "objc2-core-foundation",
+ "objc2-foundation",
+ "objc2-quartz-core",
+ "raw-window-handle",
+ "wayland-backend",
+ "wayland-client",
+ "wayland-protocols",
+ "windows-sys 0.60.2",
  "windows-version",
 ]
 
