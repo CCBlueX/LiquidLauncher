@@ -17,17 +17,19 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use anyhow::anyhow;
 use backon::{ExponentialBuilder, Retryable};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::{
     sync::{Arc, Mutex},
     thread,
 };
 use minecraft_auth::java::JavaAuthManager;
 use minecraft_auth::msa::constants::JAVA_TITLE_ID;
-use tauri::{Emitter, Window};
+use serde_json::json;
+use tauri::Window;
 use tokio::fs;
+use tokio::sync::oneshot;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
@@ -40,7 +42,8 @@ use crate::app::modrinth::{self, CustomMod};
 use crate::app::options::Options;
 use crate::auth::{shared, ClientAccount};
 use crate::minecraft::game_dir::GameDir;
-use crate::{app::gui::{AppState, RunnerInstance, ShareableWindow}, minecraft::{
+use crate::minecraft::instance::{Instance, InstanceState};
+use crate::{app::gui::{AppState, Runner, RunnerInstance, RunnerInstances}, minecraft::{
     auth::MinecraftAccount,
     launcher::{LauncherData, StartParameter},
     prelauncher,
@@ -234,57 +237,86 @@ pub(crate) async fn delete_custom_mod(
     Ok(())
 }
 
-fn handle_stdout(window: &ShareableWindow, data: &[u8]) -> anyhow::Result<()> {
+fn handle_stdout(runner: &Runner, data: &[u8]) -> anyhow::Result<()> {
     let data = String::from_utf8(data.to_vec())?;
     if data.is_empty() {
         return Ok(()); // ignore empty lines
     }
 
     info!("{}", data.strip_suffix("\n").unwrap_or(&data));
-    window
-        .lock()
-        .map_err(|_| anyhow!("Window lock is poisoned"))?
-        .emit("process-output", data)?;
-    Ok(())
+    output(runner, &data)
 }
 
-fn handle_stderr(window: &ShareableWindow, data: &[u8]) -> anyhow::Result<()> {
+fn handle_stderr(runner: &Runner, data: &[u8]) -> anyhow::Result<()> {
     let data = String::from_utf8(data.to_vec())?;
     if data.is_empty() {
         return Ok(()); // ignore empty lines
     }
 
     error!("{}", data.strip_suffix("\n").unwrap_or(&data));
-    window
-        .lock()
-        .map_err(|_| anyhow!("Window lock is poisoned"))?
-        .emit("process-output", data)?;
-    Ok(())
+    output(runner, &data)
 }
 
-fn handle_progress(
-    window: &ShareableWindow,
-    progress_update: ProgressUpdate,
-) -> anyhow::Result<()> {
-    window
-        .lock()
-        .map_err(|_| anyhow!("Window lock is poisoned"))?
-        .emit("progress-update", &progress_update)?;
+fn handle_progress(runner: &Runner, progress_update: ProgressUpdate) -> anyhow::Result<()> {
+    runner.emit("progress-update", &progress_update)?;
 
     // Check if progress update is label update
     if let ProgressUpdate::SetLabel(label) = progress_update {
-        handle_log(window, &label)?;
+        handle_log(runner, &label)?;
     }
     Ok(())
 }
 
-fn handle_log(window: &ShareableWindow, msg: &str) -> anyhow::Result<()> {
+fn handle_log(runner: &Runner, msg: &str) -> anyhow::Result<()> {
     info!("{}", msg);
-
-    if let Ok(k) = window.lock() {
-        let _ = k.emit("process-output", msg);
-    }
+    let _ = output(runner, msg);
     Ok(())
+}
+
+fn output(runner: &Runner, line: &str) -> anyhow::Result<()> {
+    runner.emit("process-output", json!({ "id": runner.id, "line": line }))
+}
+
+fn add_runner(
+    instances: &RunnerInstances,
+    window: Window,
+    build: &Build,
+    username: &str,
+) -> Result<(Runner, oneshot::Receiver<()>), String> {
+    static NEXT_ID: AtomicU32 = AtomicU32::new(1);
+
+    let mut runners = instances
+        .lock()
+        .map_err(|e| format!("unable to lock runner instances: {:?}", e))?;
+    let is_starting = |runner: &RunnerInstance| runner.instance.state == InstanceState::Starting;
+    if runners.values().any(is_starting) {
+        return Err("another instance is still starting".to_string());
+    }
+
+    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+    let (terminator, terminated) = oneshot::channel();
+    runners.insert(
+        id,
+        RunnerInstance {
+            terminator: Some(terminator),
+            instance: Instance {
+                id,
+                pid: None,
+                version: build.mc_version.clone(),
+                lb_version: build.lb_version.clone(),
+                username: username.to_owned(),
+                state: InstanceState::Starting,
+            },
+        },
+    );
+
+    let runner = Runner {
+        id,
+        // A shared mutex for the window object.
+        window: Arc::new(Mutex::new(window)),
+        instances: instances.clone(),
+    };
+    Ok((runner, terminated))
 }
 
 #[tauri::command]
@@ -295,9 +327,7 @@ pub(crate) async fn run_client(
     mods: Vec<LoaderMod>,
     window: Window,
     app_state: tauri::State<'_, AppState>,
-) -> Result<(), String> {
-    // A shared mutex for the window object.
-    let shareable_window: ShareableWindow = Arc::new(Mutex::new(window));
+) -> Result<u32, String> {
     let data = data_directory(&options).await?;
 
     let minecraft_account = options
@@ -322,29 +352,6 @@ pub(crate) async fn run_client(
     // Random XUID
     let xuid = Uuid::new_v4().to_string();
 
-    let runner_instance = &app_state.runner_instance;
-
-    if runner_instance
-        .lock()
-        .map_err(|e| format!("unable to lock runner instance: {:?}", e))?
-        .is_some()
-    {
-        return Err("client is already running".to_string());
-    }
-
-    let client_account = if options.premium_options.skip_advertisement {
-        premium_account(&client, &data)
-            .await
-            .unwrap_or_else(|e| {
-                let message = format!("Failed to authenticate client account: {:?}", e);
-                let _ = handle_stderr(&shareable_window, message.as_bytes());
-                None
-            })
-    } else {
-        None
-    };
-    let skip_advertisement = client_account.is_some();
-
     info!("Loading launch manifest...");
     let launch_manifest = client.fetch_launch_manifest(build_id).await.map_err(|e| {
         format!(
@@ -353,16 +360,28 @@ pub(crate) async fn run_client(
         )
     })?;
 
-    let (terminator_tx, terminator_rx) = tokio::sync::oneshot::channel();
-
-    *runner_instance
-        .lock()
-        .map_err(|e| format!("unable to lock runner instance: {:?}", e))? = Some(RunnerInstance {
-        terminator: terminator_tx,
-    });
-
-    let copy_of_runner_instance = runner_instance.clone();
+    let (runner, terminator_rx) = add_runner(
+        &app_state.runner_instances,
+        window,
+        &launch_manifest.build,
+        &account_name,
+    )?;
     marketplace::game_started();
+
+    let client_account = if options.premium_options.skip_advertisement {
+        premium_account(&client, &data)
+            .await
+            .unwrap_or_else(|e| {
+                let message = format!("Failed to authenticate client account: {:?}", e);
+                let _ = handle_stderr(&runner, message.as_bytes());
+                None
+            })
+    } else {
+        None
+    };
+    let skip_advertisement = client_account.is_some();
+
+    let id = runner.id;
 
     let parameters = StartParameter {
         java_distribution: options.start_options.java_distribution,
@@ -400,8 +419,14 @@ pub(crate) async fn run_client(
                     on_stderr: handle_stderr,
                     on_progress: handle_progress,
                     on_log: handle_log,
-                    hide_window: |w| w.lock().unwrap().hide().unwrap(),
-                    data: Box::new(shareable_window.clone()),
+                    on_start: |runner, pid| {
+                        runner.update(|instance| {
+                            instance.pid = Some(pid);
+                            instance.state = InstanceState::Started;
+                        })
+                    },
+                    hide_window: |runner| runner.window.lock().unwrap().hide().unwrap(),
+                    data: Box::new(runner.clone()),
                     terminator: terminator_rx,
                 };
 
@@ -409,32 +434,39 @@ pub(crate) async fn run_client(
                     prelauncher::launch(launch_manifest, parameters, mods, launcher_data).await
                 {
                     if !keep_launcher_open {
-                        shareable_window.lock().unwrap().show().unwrap();
+                        runner.window.lock().unwrap().show().unwrap();
                     }
 
                     let message = format!("An error occured:\n\n{:?}", e);
-                    shareable_window
-                        .lock()
-                        .unwrap()
-                        .emit("client-error", ())
+                    runner
+                        .emit("client-error", json!({ "id": runner.id }))
                         .unwrap();
-                    handle_stderr(&shareable_window, message.as_bytes()).unwrap();
+                    handle_stderr(&runner, message.as_bytes()).unwrap();
                 };
                 marketplace::game_exited(&GameDir::new(data)).await;
 
-                *copy_of_runner_instance
-                    .lock()
-                    .map_err(|e| format!("unable to lock runner instance: {:?}", e))
-                    .unwrap() = None;
-                shareable_window
-                    .lock()
-                    .unwrap()
-                    .emit("client-exited", ())
+                runner.instances.lock().unwrap().remove(&runner.id);
+                runner
+                    .emit("client-exited", json!({ "id": runner.id }))
                     .unwrap()
             });
     });
 
-    Ok(())
+    Ok(id)
+}
+
+#[tauri::command]
+pub(crate) async fn list_instances(
+    app_state: tauri::State<'_, AppState>,
+) -> Result<Vec<Instance>, String> {
+    let instances = app_state
+        .runner_instances
+        .lock()
+        .map_err(|e| format!("unable to lock runner instances: {:?}", e))?
+        .values()
+        .map(|runner| runner.instance.clone())
+        .collect();
+    Ok(instances)
 }
 
 async fn premium_account(client: &Client, data: &Path) -> anyhow::Result<Option<ClientAccount>> {
@@ -447,15 +479,20 @@ async fn premium_account(client: &Client, data: &Path) -> anyhow::Result<Option<
 }
 
 #[tauri::command]
-pub(crate) async fn terminate(app_state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let mut lck = app_state
-        .runner_instance
+pub(crate) async fn terminate(
+    id: u32,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let terminator = app_state
+        .runner_instances
         .lock()
-        .map_err(|e| format!("unable to lock runner instance: {:?}", e))?;
+        .map_err(|e| format!("unable to lock runner instances: {:?}", e))?
+        .get_mut(&id)
+        .and_then(|runner| runner.terminator.take());
 
-    if let Some(inst) = lck.take() {
-        info!("Sending sigterm");
-        inst.terminator.send(()).unwrap();
+    if let Some(terminator) = terminator {
+        info!("Stopping instance {id}");
+        let _ = terminator.send(());
     }
     Ok(())
 }

@@ -17,20 +17,23 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
-#[cfg(target_os = "linux")]
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use commands::*;
 #[cfg(windows)]
 use os_info::Version;
+use serde::Serialize;
+use serde_json::json;
 #[cfg(target_os = "macos")]
 use tauri::window::EffectState;
 #[cfg(any(windows, target_os = "macos"))]
 use tauri::window::{Effect, EffectsBuilder};
-use tauri::{Manager, Window};
+use tauri::{Emitter, Manager, Window};
 #[cfg(target_os = "linux")]
 use tauri::{WebviewWindow, WindowEvent};
+use tokio::sync::oneshot;
 #[cfg(target_os = "linux")]
 use tracing::info;
 #[cfg(any(windows, target_os = "macos"))]
@@ -39,15 +42,43 @@ use tracing::warn;
 use window_vibrancy::{apply_wayland_blur, RoundedRect};
 
 use crate::app::builds::KeptBuild;
+use crate::minecraft::instance::Instance;
 
 pub type ShareableWindow = Arc<Mutex<Window>>;
 
 pub struct RunnerInstance {
-    pub terminator: tokio::sync::oneshot::Sender<()>,
+    pub terminator: Option<oneshot::Sender<()>>,
+    pub instance: Instance,
+}
+
+pub type RunnerInstances = Arc<Mutex<BTreeMap<u32, RunnerInstance>>>;
+
+#[derive(Clone)]
+pub struct Runner {
+    pub id: u32,
+    pub window: ShareableWindow,
+    pub instances: RunnerInstances,
+}
+
+impl Runner {
+    pub fn emit(&self, event: &str, payload: impl Serialize + Clone) -> Result<()> {
+        self.window
+            .lock()
+            .map_err(|_| anyhow!("Window lock is poisoned"))?
+            .emit(event, payload)?;
+        Ok(())
+    }
+
+    pub fn update(&self, change: impl FnOnce(&mut Instance)) {
+        if let Some(runner) = self.instances.lock().unwrap().get_mut(&self.id) {
+            change(&mut runner.instance);
+        }
+        let _ = self.emit("client-running", json!({ "id": self.id }));
+    }
 }
 
 pub struct AppState {
-    pub runner_instance: Arc<Mutex<Option<RunnerInstance>>>,
+    pub runner_instances: RunnerInstances,
     /// The build that launches, as fetched last.
     pub build: KeptBuild,
 }
@@ -55,7 +86,7 @@ pub struct AppState {
 impl AppState {
     pub fn new() -> Self {
         Self {
-            runner_instance: Arc::new(Mutex::new(None)),
+            runner_instances: RunnerInstances::default(),
             build: Mutex::new(None),
         }
     }
@@ -151,6 +182,7 @@ pub fn gui_main() {
             get_java_distributions,
             request_mods,
             run_client,
+            list_instances,
             login_offline,
             login_microsoft_device_code,
             login_microsoft_webview,

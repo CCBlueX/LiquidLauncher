@@ -131,7 +131,7 @@ impl Queued {
 #[derive(Default)]
 struct Session {
     /// From the start of a launch until the game exits.
-    running: bool,
+    running: usize,
     queued: Queued,
 }
 
@@ -148,11 +148,11 @@ fn queued() -> Queued {
 }
 
 pub fn game_started() {
-    session().running = true;
+    session().running += 1;
 }
 
 pub fn game_running() -> bool {
-    session().running
+    session().running > 0
 }
 
 /// Applies what was edited while the game ran. Called once it exited or failed to start; calling
@@ -160,7 +160,10 @@ pub fn game_running() -> bool {
 pub async fn game_exited(game: &GameDir) {
     let queued = {
         let mut session = session();
-        session.running = false;
+        session.running = session.running.saturating_sub(1);
+        if session.running > 0 {
+            return;
+        }
         std::mem::take(&mut session.queued)
     };
 
@@ -178,10 +181,11 @@ pub async fn game_exited(game: &GameDir) {
 /// Queues `edit` while the game runs, and tells whether it did.
 fn queue_while_running(item_id: u32, edit: impl FnOnce() -> Edit) -> bool {
     let mut session = session();
-    if session.running {
+    let running = session.running > 0;
+    if running {
         session.queued.push(item_id, edit());
     }
-    session.running
+    running
 }
 
 /// Subscribes to `item` and installs `revision`, or, while the game runs, once it exited. Undoes a

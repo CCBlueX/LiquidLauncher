@@ -35,13 +35,13 @@ use tauri::{Listener, Manager, Url, WebviewUrl, WebviewWindowBuilder, WindowEven
 use tokio::time::{sleep, Instant};
 use tracing::{debug, info};
 
-use super::gui::ShareableWindow;
+use super::gui::{Runner, ShareableWindow};
 
 const MAX_DOWNLOAD_ATTEMPTS: u8 = 2;
 
 pub async fn open_download_page(
     url: &str,
-    launcher_data: &LauncherData<ShareableWindow>,
+    launcher_data: &LauncherData<Runner>,
 ) -> Result<String> {
     let download_page: Url = url.parse()
         .context("Failed to parse download page URL")?;
@@ -64,7 +64,7 @@ pub async fn open_download_page(
             count, MAX_DOWNLOAD_ATTEMPTS
         )));
 
-        match show_webview(download_page.clone(), &launcher_data.data).await {
+        match show_webview(download_page.clone(), &launcher_data.data.window).await {
             Ok(pid) => break pid,
             Err(e) => {
                 launcher_data.log(&format!("Failed to open download page: {:?}", e));
