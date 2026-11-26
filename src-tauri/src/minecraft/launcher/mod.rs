@@ -47,6 +47,7 @@ use crate::{
 use crate::app::options::MinecraftInstallationOptions;
 use self::assets::setup_assets;
 use self::client_jar::setup_client_jar;
+use self::options::setup_options;
 use self::jre::load_jre;
 use self::libraries::setup_libraries;
 
@@ -56,6 +57,7 @@ mod assets;
 mod client_jar;
 mod jre;
 mod libraries;
+mod options;
 
 pub struct LauncherData<D: Send + Sync> {
     pub(crate) on_stdout: fn(&D, &[u8]) -> Result<()>,
@@ -190,7 +192,7 @@ pub async fn launch<D: Send + Sync>(
     }
 
     // Check if json has client download (or doesn't require one)
-    setup_client_jar(
+    let client_jar = setup_client_jar(
         &client_folder,
         &natives_folder,
         &version_profile,
@@ -199,6 +201,10 @@ pub async fn launch<D: Send + Sync>(
     )
     .await
     .context("Failed to setup client JAR")?;
+
+    if let Err(error) = setup_options(&game_dir, &client_jar, &launching_parameter.language).await {
+        warn!("Failed to set the game language: {error:#}");
+    }
 
     // Libraries
     setup_libraries(
@@ -346,6 +352,8 @@ pub struct StartParameter {
     pub client_account: Option<ClientAccount>,
     pub skip_advertisement: bool,
     pub vanilla_integration: MinecraftInstallationOptions,
+    /// Minecraft's code for the launcher language, `de_de`.
+    pub language: String,
 }
 
 fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(

@@ -324,6 +324,7 @@ pub(crate) async fn run_client(
     build_id: u32,
     options: Options,
     mods: Vec<LoaderMod>,
+    language: String,
     window: Window,
     app_state: tauri::State<'_, AppState>,
 ) -> Result<u32, String> {
@@ -403,6 +404,7 @@ pub(crate) async fn run_client(
         client_account,
         skip_advertisement,
         vanilla_integration: options.start_options.installation,
+        language,
     };
 
     thread::spawn(move || {

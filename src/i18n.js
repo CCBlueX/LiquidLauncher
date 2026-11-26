@@ -4,8 +4,12 @@ import en from "./locales/en.json";
 import de from "./locales/de.json";
 import zhCN from "./locales/zh-CN.json";
 
-/** Each language named in itself, as the language setting lists them. */
-export const languages = { en: "English", de: "Deutsch", "zh-CN": "简体中文" };
+/** Each language named in itself, as the language setting lists them, with Minecraft's code for it. */
+export const languages = {
+    en: { name: "English", minecraft: "en_us" },
+    de: { name: "Deutsch", minecraft: "de_de" },
+    "zh-CN": { name: "简体中文", minecraft: "zh_cn" },
+};
 
 addMessages("en", en);
 addMessages("de", de);

@@ -13,7 +13,8 @@
     import Settings from "./settings/Settings.svelte";
     import FirstRunWarning from "./FirstRunWarning.svelte";
     import {onMount} from "svelte";
-    import {_, date} from "svelte-i18n";
+    import {_, date, locale} from "svelte-i18n";
+    import {languages} from "../../i18n.js";
 
     export let client;
     export let options;
@@ -240,7 +241,8 @@
             client,
             buildId: versionState.currentBuild.buildId,
             options,
-            mods: [...versionState.recommendedMods, ...versionState.customMods]
+            mods: [...versionState.recommendedMods, ...versionState.customMods],
+            language: languages[$locale].minecraft
         });
     }
 
