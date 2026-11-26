@@ -17,21 +17,59 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
+use anyhow::{anyhow, Result};
 use commands::*;
-use tauri::Window;
+use serde::Serialize;
+use serde_json::json;
+use tauri::{Emitter, Window};
+use tokio::sync::oneshot;
 
 use crate::app::builds::KeptBuild;
+use crate::minecraft::instance::Instance;
 
 pub type ShareableWindow = Arc<Mutex<Window>>;
 
 pub struct RunnerInstance {
-    pub terminator: tokio::sync::oneshot::Sender<()>,
+    /// Kills the game. Gone once used.
+    pub terminator: Option<oneshot::Sender<()>>,
+    /// As `list_instances` shows it.
+    pub instance: Instance,
+}
+
+/// By the id their events carry.
+pub type RunnerInstances = Arc<Mutex<BTreeMap<u32, RunnerInstance>>>;
+
+/// What the callbacks of one start get.
+#[derive(Clone)]
+pub struct Runner {
+    pub id: u32,
+    pub window: ShareableWindow,
+    pub instances: RunnerInstances,
+}
+
+impl Runner {
+    pub fn emit(&self, event: &str, payload: impl Serialize + Clone) -> Result<()> {
+        self.window
+            .lock()
+            .map_err(|_| anyhow!("Window lock is poisoned"))?
+            .emit(event, payload)?;
+        Ok(())
+    }
+
+    /// Changes how the instance is listed and has the frontend list again.
+    pub fn update(&self, change: impl FnOnce(&mut Instance)) {
+        if let Some(runner) = self.instances.lock().unwrap().get_mut(&self.id) {
+            change(&mut runner.instance);
+        }
+        let _ = self.emit("client-running", json!({ "id": self.id }));
+    }
 }
 
 pub struct AppState {
-    pub runner_instance: Arc<Mutex<Option<RunnerInstance>>>,
+    pub runner_instances: RunnerInstances,
     /// The build that launches, as fetched last.
     pub build: KeptBuild,
 }
@@ -39,7 +77,7 @@ pub struct AppState {
 impl AppState {
     pub fn new() -> Self {
         Self {
-            runner_instance: Arc::new(Mutex::new(None)),
+            runner_instances: RunnerInstances::default(),
             build: Mutex::new(None),
         }
     }
@@ -68,6 +106,7 @@ pub fn gui_main() {
             get_java_distributions,
             request_mods,
             run_client,
+            list_instances,
             login_offline,
             login_microsoft_device_code,
             login_microsoft_webview,

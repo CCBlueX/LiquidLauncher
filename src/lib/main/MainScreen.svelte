@@ -18,16 +18,24 @@
     export let options;
     export let error;
 
-    let running = false;
     let clientAccount = null;
 
-    let logShown = false;
+    // The instances the launcher started, as the backend lists them.
+    let instances = [];
+    // The chosen one of them, null to start a new instance.
+    let instance = null;
+    // From the click until the backend lists the instance as starting.
+    let launching = false;
+    $: starting = launching || instances.some(listed => listed.state === "starting");
+
+    // Lines by the id of their instance; 0 has what failed before an instance got one.
+    let logs = {};
+    let logShown = null;
     let settingsShown = false;
     let settingsTab = "General";
     let launchVersionWarningShown = false;
     let firstRunWarningShown = false;
     let launchVersionWarningCountdown = 0;
-    let log = [];
 
     let versionState = {
         currentBuild: null,
@@ -172,23 +180,29 @@
             return;
         }
 
-        if (running) return;
-
-        log = [];
+        if (starting) return;
 
         try {
-            running = true;
+            launching = true;
             progressState = { max: 0, value: 0, text: "Starting client...", speed: 0 };
 
             await authenticate();
             await checkMemory();
-            await launchClient();
+            const id = await launchClient();
+            await refreshInstances();
+            instance = instances.find(listed => listed.id === id) ?? null;
         } catch (error) {
             console.error("Failed to start client:", error);
-            log = [...log, `Failed to start client: ${error}`];
-            running = false;
-            logShown = true;
+            logs[0] = [`Failed to start client: ${error}`];
+            logShown = 0;
+        } finally {
+            launching = false;
         }
+    }
+
+    async function refreshInstances() {
+        instances = await invoke("list_instances");
+        instance = instances.find(listed => listed.id === instance?.id) ?? null;
     }
 
     async function updateClientAccount() {
@@ -219,7 +233,6 @@
             );
 
             if (!confirmed) {
-                running = false;
                 throw new Error("Memory warning declined");
             }
         }
@@ -227,7 +240,7 @@
 
     async function launchClient() {
         await options.store();
-        await invoke("run_client", {
+        return invoke("run_client", {
             client,
             buildId: versionState.currentBuild.buildId,
             options,
@@ -236,7 +249,13 @@
     }
 
     async function terminateClient() {
-        await invoke("terminate");
+        await invoke("terminate", { id: instance.id });
+    }
+
+    function hideLog() {
+        // An instance that is gone has no card left to open its log from.
+        if (!instances.some(listed => listed.id === logShown)) delete logs[logShown];
+        logShown = null;
     }
 
     function showSettings(tab) {
@@ -266,7 +285,8 @@
     }
 
     listen("process-output", (event) => {
-        log = [...log, event.payload];
+        const { id, line } = event.payload;
+        logs[id] = [...(logs[id] ?? []), line];
     });
 
     listen("progress-update", (event) => {
@@ -287,17 +307,22 @@
         }
     });
 
-    listen("client-exited", () => {
-        running = false;
+    listen("client-running", refreshInstances);
+
+    listen("client-exited", (event) => {
+        const { id } = event.payload;
+        if (logShown !== id) delete logs[id];
+        refreshInstances();
         updateClientAccount();
     });
 
-    listen("client-error", () => {
-        logShown = true;
+    listen("client-error", (event) => {
+        logShown = event.payload.id;
     });
 
     onMount(async () => {
         updateClientAccount();
+        refreshInstances();
         await updateData();
     });
 </script>
@@ -321,8 +346,8 @@
     />
 {/if}
 
-{#if logShown}
-    <ClientLog messages={log} on:hideClientLog={() => logShown = false} />
+{#if logShown !== null}
+    <ClientLog messages={logs[logShown] ?? []} on:hideClientLog={hideLog} />
 {/if}
 
 {#if settingsShown}
@@ -345,11 +370,11 @@
 {/if}
 
 <VerticalFlexWrapper
-        blur={settingsShown || logShown || launchVersionWarningShown || firstRunWarningShown}
+        blur={settingsShown || logShown !== null || launchVersionWarningShown || firstRunWarningShown}
 >
     <MainHeader
             account={options.start.account}
-            {running}
+            running={starting}
             {progressState}
             on:showSettings={() => showSettings("General")}
     />
@@ -366,10 +391,11 @@
                 }}
                 mcVersion={versionState.currentBuild?.mcVersion || "Loading..."}
                 lbVersion={versionState.currentBuild?.lbVersion || "Loading..."}
-                canLaunch={!!versionState.currentBuild}
-                {running}
+                canLaunch={!!versionState.currentBuild && !starting}
+                {instances}
+                bind:instance
                 on:showVersionSelect={() => showSettings("Client")}
-                on:showClientLog={() => logShown = true}
+                on:showClientLog={() => logShown = instance.id}
                 on:launch={runClientWithWarning}
                 on:terminate={terminateClient}
         />

@@ -132,11 +132,11 @@ pub(crate) async fn client_account_logout(
 }
 
 fn ensure_client_stopped(app_state: &AppState) -> Result<(), String> {
-    let running = app_state
-        .runner_instance
+    let running = !app_state
+        .runner_instances
         .lock()
-        .map_err(|e| format!("unable to lock runner instance: {:?}", e))?
-        .is_some();
+        .map_err(|e| format!("unable to lock runner instances: {:?}", e))?
+        .is_empty();
 
     if running {
         return Err("close LiquidBounce first, it would overwrite the account when it exits".to_string());

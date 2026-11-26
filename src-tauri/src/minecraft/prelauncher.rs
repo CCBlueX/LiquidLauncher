@@ -25,7 +25,7 @@ use tokio::fs;
 use tracing::*;
 
 use crate::app::client_api::{Client, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
-use crate::app::gui::ShareableWindow;
+use crate::app::gui::Runner;
 use crate::app::marketplace;
 use crate::app::webview::open_download_page;
 use crate::auth::ClientAccount;
@@ -49,7 +49,7 @@ pub(crate) async fn launch(
     launch_manifest: LaunchManifest,
     launching_parameter: StartParameter,
     additional_mods: Vec<LoaderMod>,
-    launcher_data: LauncherData<ShareableWindow>,
+    launcher_data: LauncherData<Runner>,
 ) -> Result<()> {
     // Starts the speed meter, kills it when the launch is completed.
     let _speed_meter = launcher_data.start_speed_meter();
@@ -211,7 +211,7 @@ pub async fn retrieve_and_copy_mods(
     mods: &Vec<LoaderMod>,
     client: &Client,
     client_account: &Option<ClientAccount>,
-    launcher_data: &LauncherData<ShareableWindow>,
+    launcher_data: &LauncherData<Runner>,
 ) -> Result<()> {
     let mod_cache_path = data.join("mod_cache");
     let mod_custom_path =

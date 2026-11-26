@@ -62,6 +62,8 @@ pub struct LauncherData<D: Send + Sync> {
     pub(crate) on_stderr: fn(&D, &[u8]) -> Result<()>,
     pub(crate) on_progress: fn(&D, ProgressUpdate) -> Result<()>,
     pub(crate) on_log: fn(&D, &str) -> Result<()>,
+    /// Gets the process id of the game once it runs.
+    pub(crate) on_start: fn(&D, u32),
     pub(crate) hide_window: fn(&D),
     pub(crate) data: Box<D>,
     pub(crate) terminator: tokio::sync::oneshot::Receiver<()>,
@@ -293,6 +295,9 @@ pub async fn launch<D: Send + Sync>(
     launcher_data.progress_update(ProgressUpdate::set_to_max());
 
     let mut running_task = java_runtime.execute(mapped, &game_dir).await?;
+    if let Some(pid) = running_task.id() {
+        (launcher_data.on_start)(&launcher_data.data, pid);
+    }
 
     launcher_data.progress_update(ProgressUpdate::set_label("Running..."));
 
