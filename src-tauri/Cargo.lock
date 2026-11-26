@@ -2666,7 +2666,7 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
  "void",
- "window-vibrancy 0.8.1 (git+https://github.com/1zun4/window-vibrancy?rev=7f7abc4fd1e597e494555fb915d4dd0de743fc0a)",
+ "window-vibrancy 0.8.1 (git+https://github.com/1zun4/window-vibrancy?rev=52bc5fba2fb8c3bd2297eb6ef075ab108dbfe7e9)",
  "windows-sys 0.61.2",
 ]
 
@@ -6152,7 +6152,7 @@ dependencies = [
 [[package]]
 name = "window-vibrancy"
 version = "0.8.1"
-source = "git+https://github.com/1zun4/window-vibrancy?rev=7f7abc4fd1e597e494555fb915d4dd0de743fc0a#7f7abc4fd1e597e494555fb915d4dd0de743fc0a"
+source = "git+https://github.com/1zun4/window-vibrancy?rev=52bc5fba2fb8c3bd2297eb6ef075ab108dbfe7e9#52bc5fba2fb8c3bd2297eb6ef075ab108dbfe7e9"
 dependencies = [
  "objc2",
  "objc2-app-kit",
