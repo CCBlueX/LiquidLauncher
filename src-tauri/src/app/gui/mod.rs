@@ -45,7 +45,6 @@ impl AppState {
     }
 }
 
-mod backdrop;
 mod commands;
 
 /// Runs the GUI and returns when the window is closed.
@@ -59,8 +58,60 @@ pub fn gui_main() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(AppState::new())
         .setup(|app| {
-            if let Some(window) = app.get_webview_window("main") {
-                backdrop::apply(&window);
+            let Some(window) = app.get_webview_window("main") else {
+                return Ok(());
+            };
+
+            // Acrylic lags while the window is dragged before Windows 11 22H2.
+            #[cfg(windows)]
+            {
+                use tauri::window::{Effect, EffectsBuilder};
+
+                let acrylic = matches!(
+                    os_info::get().version(),
+                    os_info::Version::Semantic(_, _, build) if *build >= 22621
+                );
+                let effect = if acrylic {
+                    Effect::Acrylic
+                } else {
+                    Effect::Blur
+                };
+                if let Err(error) = window.set_effects(EffectsBuilder::new().effect(effect).build())
+                {
+                    tracing::warn!("Failed to blur the window: {error}");
+                }
+            }
+
+            // Inside the rounded corners of `.window.rounded` in Window.svelte, again on every resize.
+            #[cfg(target_os = "linux")]
+            {
+                let blur = |window: &tauri::WebviewWindow| -> anyhow::Result<()> {
+                    let size = window
+                        .inner_size()?
+                        .to_logical::<u32>(window.scale_factor()?);
+                    let rect = window_vibrancy::RoundedRect {
+                        width: size.width,
+                        height: size.height,
+                        radius: 8,
+                    };
+                    window_vibrancy::apply_wayland_blur(window, Some(rect))?;
+                    Ok(())
+                };
+                match blur(&window) {
+                    Ok(()) => {
+                        let resized = window.clone();
+                        window.on_window_event(move |event| {
+                            if matches!(
+                                event,
+                                tauri::WindowEvent::Resized(_)
+                                    | tauri::WindowEvent::ScaleFactorChanged { .. }
+                            ) {
+                                let _ = blur(&resized);
+                            }
+                        });
+                    }
+                    Err(error) => tracing::info!("No window blur: {error:#}"),
+                }
             }
             Ok(())
         })
