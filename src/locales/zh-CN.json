@@ -80,7 +80,7 @@
       "concurrentDownloads": "并发下载数",
       "connectionsSuffix": " 个连接",
       "keepLauncherOpen": "保持启动器运行",
-      "signOut": "退出 Minecraft 账户",
+      "signOut": "退出 Minecraft 账号",
       "clearData": "清除数据",
       "dataCleared": "数据已清除。",
       "clearDataFailed": "清除数据失败：{error}",
@@ -108,14 +108,14 @@
     },
     "premium": {
       "skipAds": "跳过广告",
-      "accountInformation": "账户信息",
-      "noPremium": "此账户似乎未关联 Premium。请在账户管理页面进行关联。",
-      "manageAccount": "管理账户",
+      "accountInformation": "账号信息",
+      "noPremium": "此账号似乎未关联 Premium。请在账号管理页面进行关联。",
+      "manageAccount": "管理账号",
       "logout": "退出登录",
       "description": "升级 Premium 不仅能支持客户端的持续开发，还能获得披风，并可跳过启动器中的广告。",
-      "login": "使用 LiquidBounce 账户登录",
-      "loginFailed": "客户端账户验证失败：{error}",
-      "logoutFailed": "退出客户端账户失败：{error}"
+      "login": "使用 LiquidBounce 账号登录",
+      "loginFailed": "客户端账号验证失败：{error}",
+      "logoutFailed": "退出客户端账号失败：{error}"
     },
     "liquidBounceAccount": {
       "username": "用户名",
@@ -147,8 +147,8 @@
     "releases": "{count, plural, other {# 个正式版}}"
   },
   "marketplace": {
-    "title": "{type, select, Addon {附加组件} Theme {主题} Script {脚本} other {项目}}",
-    "type": "{type, select, Addon {附加组件} Theme {主题} Script {脚本} other {项目}}",
+    "title": "{type, select, Addon {附加组件} Theme {主题} Script {脚本} other {物品}}",
+    "type": "{type, select, Addon {附加组件} Theme {主题} Script {脚本} other {物品}}",
     "empty": "{type, select, Addon {还没有附加组件。} Theme {还没有主题。} Script {还没有脚本。} other {还没有任何内容。}}",
     "search": "{type, select, Addon {搜索附加组件} Theme {搜索主题} Script {搜索脚本} other {搜索}}",
     "noMatch": "{type, select, Addon {没有与“{query}”匹配的附加组件。} Theme {没有与“{query}”匹配的主题。} Script {没有与“{query}”匹配的脚本。} other {没有与“{query}”匹配的内容。}}",
@@ -236,7 +236,7 @@
     "qrAlt": "用于 Microsoft 登录的二维码",
     "usernameLength": "用户名长度必须为 1 到 16 个字符。",
     "usernameCharacters": "用户名只能包含字母、数字和下划线。",
-    "microsoftFailed": "Microsoft 身份验证失败。\n\n{error}\n\n如果无法解决此问题，请使用离线登录，然后尝试通过客户端内置的账户管理器登录。"
+    "microsoftFailed": "Microsoft 身份验证失败。\n\n{error}\n\n如果无法解决此问题，请使用离线登录，然后尝试通过客户端内置的账号管理器登录。"
   },
   "account": {
     "offline": "离线"

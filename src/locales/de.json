@@ -236,7 +236,7 @@
     "qrAlt": "QR-Code zur Anmeldung mit Microsoft",
     "usernameLength": "Der Benutzername muss zwischen 1 und 16 Zeichen lang sein.",
     "usernameCharacters": "Der Benutzername darf nur Buchstaben, Zahlen und Unterstriche enthalten.",
-    "microsoftFailed": "Die Microsoft-Anmeldung ist fehlgeschlagen.\n\n{error}\n\nFalls du das Problem nicht lösen kannst, melde dich offline an und versuche es über den Account-Manager im Client."
+    "microsoftFailed": "Die Microsoft-Anmeldung ist fehlgeschlagen.\n\n{error}\n\nFalls du das Problem nicht lösen kannst, melde dich offline an und versuche es über die Kontoverwaltung im Client."
   },
   "account": {
     "offline": "Offline"

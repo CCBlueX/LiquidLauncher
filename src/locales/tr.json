@@ -1,0 +1,304 @@
+{
+  "common": {
+    "loading": "Yükleniyor...",
+    "tryAgain": "Tekrar dene",
+    "back": "Geri",
+    "browse": "Göz at",
+    "install": "Yükle",
+    "installing": "Yükleniyor",
+    "installed": "Yüklü",
+    "remove": "Kaldır",
+    "undo": "Geri al",
+    "selected": "Seçili",
+    "showMore": "Daha fazla göster",
+    "close": "Kapat",
+    "update": "Güncelle",
+    "updating": "Güncelleniyor",
+    "cancel": "İptal",
+    "continue": "Devam",
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "settings": "Ayarlar",
+    "copied": "Kopyalandı!",
+    "copyToClipboard": "Panoya kopyala"
+  },
+  "errors": {
+    "options": "Başlatıcı seçenekleri yüklenemedi",
+    "api": "LiquidBounce API ile bağlantı kurulamadı",
+    "system": "Sisteminizde bir yapılandırma sorunu var gibi görünüyor.\n\n{error}"
+  },
+  "update": {
+    "failedTitle": "Başlatıcı güncellenemedi",
+    "failed": "Başlatıcı kendini güncelleyemedi, bir sonraki açılışta tekrar deneyecek.\n\n{error}"
+  },
+  "main": {
+    "welcome": "Tekrar hoş geldiniz, {name}.",
+    "lowMemory": "İstemciyi {memory} MB'tan az bellekle başlatmak üzeresiniz. Bu, performans sorunlarına yol açabilir. Devam etmek istiyor musunuz?",
+    "startFailed": "İstemci başlatılamadı: {error}"
+  },
+  "progress": {
+    "startingClient": "İstemci başlatılıyor...",
+    "refreshingSession": "Minecraft oturumu yenileniyor...",
+    "updatingLauncher": "Başlatıcı v{version} sürümüne güncelleniyor...",
+    "installingUpdate": "Güncelleme yükleniyor...",
+    "loadingVersionManifest": "Sürüm listesi yükleniyor...",
+    "loadingVersionProfile": "Sürüm profili yükleniyor...",
+    "installingAddon": "Eklenti yükleniyor: {name}",
+    "copiedCustomMod": "Özel mod kopyalandı: {name}",
+    "downloadingRecommendedMod": "Önerilen mod indiriliyor: {name}",
+    "openingModDownloadPage": "Mod indirme sayfası açılıyor: {name}",
+    "openingDownloadPage": "İndirme sayfası açılıyor... (Deneme {attempt}/{attempts})",
+    "downloadingMod": "Mod indiriliyor: {name}",
+    "launchingBuild": "{commit} başlatılıyor...",
+    "settingUp": "Hazırlanıyor...",
+    "checkingJre": "JRE denetleniyor...",
+    "downloadingJre": "JRE indiriliyor...",
+    "downloadingClient": "İstemci indiriliyor...",
+    "checkingLibraries": "Kütüphaneler denetleniyor...",
+    "downloadingLibrary": "Kütüphane indiriliyor: {name}",
+    "extractingNatives": "Yerel dosyalar çıkarılıyor...",
+    "checkingAssets": "Varlıklar denetleniyor...",
+    "downloadingAsset": "Varlık nesnesi indiriliyor: {hash}",
+    "launching": "Başlatılıyor...",
+    "running": "Çalışıyor..."
+  },
+  "settings": {
+    "general": {
+      "language": "Dil",
+      "systemLanguage": "Sistem varsayılanı",
+      "jvmDistribution": "JVM dağıtımı",
+      "automatic": "Otomatik",
+      "manual": "Manuel",
+      "custom": "Özel",
+      "distribution": "Dağıtım",
+      "customJvmPath": "Özel JVM yolu",
+      "customJvmPlaceholder": "Java konumunu seçin",
+      "customJvmWindowTitle": "Özel Java seçin",
+      "dataLocation": "Veri konumu",
+      "dataLocationWindowTitle": "Özel veri klasörü seçin",
+      "memory": "Bellek",
+      "concurrentDownloads": "Eş zamanlı indirmeler",
+      "connectionsSuffix": " bağlantı",
+      "keepLauncherOpen": "Başlatıcıyı açık tut",
+      "signOut": "Minecraft hesabından çıkış yap",
+      "clearData": "Verileri temizle",
+      "dataCleared": "Veriler temizlendi.",
+      "clearDataFailed": "Veriler temizlenemedi: {error}",
+      "logoutFailed": "Çıkış düzgün yapılamadı. Lütfen tekrar deneyin."
+    },
+    "client": {
+      "build": "Sürüm"
+    },
+    "title": "Ayarlar",
+    "tabs": {
+      "general": "Genel",
+      "minecraft": "Minecraft",
+      "client": "İstemci",
+      "premium": "Premium"
+    },
+    "minecraft": {
+      "description": "Bu, başka bir Minecraft kurulumundaki dünyaları, kaynak paketlerini ve gölgelendirici paketlerini kullanmanızı sağlar.",
+      "directory": "Minecraft klasörü",
+      "autoDetect": "Otomatik algıla",
+      "directoryWindowTitle": "Minecraft klasörünü seçin",
+      "linkWorlds": "Dünyaları bağla ({count, number})",
+      "linkResourcePacks": "Kaynak paketlerini bağla ({count, number})",
+      "linkShaderPacks": "Gölgelendirici paketlerini bağla ({count, number})",
+      "notFound": "Vanilla Minecraft kurulumu bulunamadı."
+    },
+    "premium": {
+      "skipAds": "Reklamları atla",
+      "accountInformation": "Hesap bilgileri",
+      "noPremium": "Bu hesapla ilişkili bir Premium yok gibi görünüyor. Lütfen hesap yönetimi sayfasından bağlayın.",
+      "manageAccount": "Hesabı yönet",
+      "logout": "Çıkış yap",
+      "description": "Premium'a geçerek istemcinin gelişimini desteklemekle kalmaz, ayrıca bir pelerin ve başlatıcıdaki reklamları atlama imkânı kazanırsınız.",
+      "login": "LiquidBounce hesabıyla giriş yap",
+      "loginFailed": "İstemci hesabı doğrulanamadı: {error}",
+      "logoutFailed": "İstemci hesabından çıkış yapılamadı: {error}"
+    },
+    "liquidBounceAccount": {
+      "username": "Kullanıcı adı",
+      "donatorPerks": "Bağışçı avantajları",
+      "active": "Etkin",
+      "inactive": "Etkin değil"
+    },
+    "message": {
+      "clearSearch": "Aramayı temizle"
+    },
+    "itemRow": {
+      "removeNamed": "Kaldır: {name}"
+    },
+    "directorySelector": {
+      "select": "Klasör seç",
+      "open": "Klasörü aç"
+    },
+    "fileSelector": {
+      "select": "Dosya seç"
+    }
+  },
+  "builds": {
+    "title": "Sürümler",
+    "showNightly": "Nightly sürümleri göster",
+    "latest": "En yeni",
+    "latestRelease": "En yeni kararlı sürüm",
+    "latestNightly": "En yeni nightly",
+    "builds": "{count, plural, one {# sürüm} other {# sürüm}}",
+    "releases": "{count, plural, one {# kararlı sürüm} other {# kararlı sürüm}}"
+  },
+  "marketplace": {
+    "title": "{type, select, Addon {Eklentiler} Theme {Temalar} Script {Betikler} other {Öğeler}}",
+    "type": "{type, select, Addon {Eklenti} Theme {Tema} Script {Betik} other {Öğe}}",
+    "empty": "{type, select, Addon {Henüz eklenti yok.} Theme {Henüz tema yok.} Script {Henüz betik yok.} other {Henüz bir şey yok.}}",
+    "search": "{type, select, Addon {Eklenti ara} Theme {Tema ara} Script {Betik ara} other {Ara}}",
+    "noMatch": "{type, select, Addon {“{query}” ile eşleşen eklenti yok.} Theme {“{query}” ile eşleşen tema yok.} Script {“{query}” ile eşleşen betik yok.} other {“{query}” ile eşleşen bir şey yok.}}",
+    "nonePublished": "{type, select, Addon {Henüz yayımlanmış eklenti yok.} Theme {Henüz yayımlanmış tema yok.} Script {Henüz yayımlanmış betik yok.} other {Henüz yayımlanmış bir şey yok.}}",
+    "byAuthor": "{type} · {author}",
+    "downloads": "{count, plural, one {# indirme} other {# indirme}}",
+    "notFor": "{version} için değil",
+    "offline": "Mağaza denetlenemedi: {error}",
+    "restart": "{count, plural, one {# değişikliği} other {# değişikliği}} uygulamak için LiquidBounce'u yeniden başlatın.",
+    "removeQuestion": "{name} kaldırılsın mı? {names} onsuz {count, plural, one {çalışmaz} other {çalışmaz}}.",
+    "screenshots": "Ekran görüntüleri",
+    "versions": "Sürümler",
+    "neededBy": "Gerektirenler",
+    "viewFullSize": "Tam boyutta görüntüle",
+    "previousScreenshot": "Önceki ekran görüntüsü",
+    "nextScreenshot": "Sonraki ekran görüntüsü"
+  },
+  "mods": {
+    "title": "Modlar - {target}",
+    "addFile": "Dosya ekle",
+    "addFileWindowTitle": "Yüklenecek özel modu seçin",
+    "browse": "Göz at",
+    "recommended": "Önerilen",
+    "unknownVersion": "Bilinmeyen sürüm",
+    "updateAvailable": "{version} mevcut",
+    "installFailed": "Mod yüklenemedi: {error}",
+    "deleteFailed": "Mod silinemedi: {error}",
+    "remove": "Modu kaldır",
+    "searchPlaceholder": "Modrinth modlarında ara",
+    "hitLine": "{author} · {downloads, plural, one {# indirme} other {# indirme}}",
+    "noMatch": "“{query}” ile eşleşen mod yok."
+  },
+  "facts": {
+    "blatantOrCloset": {
+      "title": "Blatant veya Closet hile - siz karar verin!",
+      "description": "LiquidBounce, birçok yerleşik blatant ve closet hileyle gelir; bu da onu mükemmel bir hepsi bir arada istemci yapar."
+    },
+    "multiVersion": {
+      "title": "Çoklu sürüm desteği",
+      "description": "Yerleşik sürüm değiştirici sayesinde oyunu yeniden başlatmadan farklı Minecraft sürümleri arasında kolayca geçiş yapabilirsiniz!"
+    },
+    "multiServer": {
+      "title": "Çoklu sunucu desteği",
+      "description": "LiquidBounce, birçok farklı sunucu için özellikler ve bypass'lar sunar."
+    },
+    "autoConfig": {
+      "title": "Otomatik yapılandırma sistemi",
+      "description": "LiquidBounce'un otomatik yapılandırma sistemi, bilinen bir sunucuya girdiğinizde en iyi ayarları sizin için otomatik olarak uygular."
+    },
+    "customizable": {
+      "title": "Özelleştirilebilir",
+      "description": "LiquidBounce'un arayüzü tamamen özelleştirilebilir. Tüm arayüzü istediğiniz gibi değiştirebilirsiniz."
+    },
+    "downloads": {
+      "title": "Toplam {count, number} indirme",
+      "description": "LiquidBounce, tüm zamanların en popüler hile istemcilerinden biridir."
+    },
+    "openSource": {
+      "title": "Ücretsiz ve açık kaynak",
+      "description": "LiquidBounce'un kaynak kodu herkese açıktır."
+    },
+    "scriptApi": {
+      "title": "ScriptAPI",
+      "description": "LiquidBounce'un Script API'si, kullanıcıların kendi modüllerini ve komutlarını yazmasını sağlar."
+    }
+  },
+  "login": {
+    "title": "Giriş yap",
+    "microsoft": "Microsoft ile giriş",
+    "microsoftDevice": "Microsoft cihaz girişi",
+    "or": "veya",
+    "username": "Kullanıcı adı",
+    "offline": "Çevrimdışı giriş",
+    "microsoftTitle": "Microsoft ile oturum açma",
+    "finishInPopup": "Oturum açmayı açılır pencerede tamamlayın.",
+    "codeTitle": "Kodla oturum açın",
+    "copy": "KOPYALA",
+    "copied": "KOPYALANDI",
+    "openBefore": "Herhangi bir cihazda",
+    "openAfter": "adresini açın ve yukarıdaki kodu girin.",
+    "scanTitle": "Kodu tarayın",
+    "scanDescription": "Kodu önceden doldurulmuş sayfayı açar.",
+    "waiting": "Onay bekleniyor",
+    "requestingCode": "Oturum açma kodu isteniyor…",
+    "qrAlt": "Microsoft ile oturum açmak için QR kodu",
+    "usernameLength": "Kullanıcı adı 1 ile 16 karakter arasında olmalıdır.",
+    "usernameCharacters": "Kullanıcı adı yalnızca harf, rakam ve alt çizgi içerebilir.",
+    "microsoftFailed": "Microsoft kimlik doğrulaması başarısız oldu.\n\n{error}\n\nBu sorunu çözemezseniz çevrimdışı girişi kullanın ve istemcinin yerleşik hesap yöneticisi üzerinden giriş yapmayı deneyin."
+  },
+  "account": {
+    "offline": "Çevrimdışı"
+  },
+  "launch": {
+    "instance": "Örnek",
+    "newInstance": "Yeni örnek",
+    "state": {
+      "starting": "Başlatılıyor",
+      "started": "Başlatıldı"
+    },
+    "terminate": "Sonlandır",
+    "log": "Günlük",
+    "launch": "LiquidBounce'u başlat"
+  },
+  "errorScreen": {
+    "title": "Hata oluştu",
+    "unknown": "Bilinmeyen hata",
+    "details": "Teknik ayrıntılar:",
+    "quickHelp": "Hızlı yardım",
+    "contactSupport": "Destekle iletişime geç"
+  },
+  "firstRun": {
+    "title": "LiquidBounce'a hoş geldiniz!",
+    "description": "İlk başlatmada veya LiquidBounce için yeni bir güncelleme olduğunda bir indirme penceresi açılır. İstemci için reklam geliri bu şekilde elde edilir. Reklam görmek istemiyorsanız LiquidBounce Premium satın alabilirsiniz. LiquidBounce'u kullanma ipuçları için hızlı başlangıç kılavuzuna da göz atabilirsiniz.",
+    "quickStart": "Hızlı başlangıç kılavuzu"
+  },
+  "versionWarning": {
+    "title": "Desteklenmeyen bir sürümü başlatmak üzeresiniz!",
+    "description": "Seçilen LiquidBounce sürümü artık resmî olarak desteklenmiyor. 1.7 ve sonraki tüm Minecraft sürümleriyle çalışan en yeni sürüme geçmenizi öneririz.",
+    "switch": "En yeni sürüme geç",
+    "launchAnyway": "Yine de başlat",
+    "launchAnywayIn": "Yine de başlat ({seconds})"
+  },
+  "insecure": {
+    "title": "Güvenlik uyarısı",
+    "message": "LiquidLauncher güvenli (HTTPS) API uç noktasına bağlanamadı, ancak güvenli olmayan (HTTP) bir uç noktaya bağlantı kurabildi.",
+    "risks": "Güvenlik riskleri:",
+    "riskUnencrypted": "Bağlantınız şifrelenmemiştir ve ağınızdaki başkaları tarafından görülebilir",
+    "riskIntercepted": "Gönderilen ve alınan veriler kötü niyetli kişilerce ele geçirilebilir veya değiştirilebilir",
+    "riskCredentials": "Bu bağlantı üzerinden gönderilen giriş bilgileriniz ele geçirilebilir",
+    "recommendation": "Öneri:",
+    "recommendationText": "Bu sorun genellikle ağ kısıtlamalarından veya SSL sertifikası sorunlarından kaynaklanır. Güvenli bir bağlantı kurmak için Cloudflare WARP gibi bir VPN kullanmanızı öneririz.",
+    "getWarp": "Cloudflare WARP'ı edinin",
+    "allow": "Güvenli olmayan bağlantıya izin ver"
+  },
+  "log": {
+    "title": "İstemci günlüğü",
+    "upload": "Günlüğü yükle",
+    "autoScroll": "Otomatik kaydır",
+    "search": "Ara",
+    "filters": {
+      "error": "Hata",
+      "warn": "Uyarı",
+      "info": "Bilgi",
+      "debug": "Hata ayıklama"
+    },
+    "uploadConfirm": "Bu oturumun tüm günlüğü yüklenecek. Özel sohbet mesajları gibi hassas bilgiler içerebilir. Devam etmek istediğinizden emin misiniz?",
+    "uploadFailed": "Günlük yüklenemedi: {error}",
+    "uploaded": "Günlüğünüz şu adreste:"
+  },
+  "news": {
+    "readMore": "Devamını oku"
+  }
+}

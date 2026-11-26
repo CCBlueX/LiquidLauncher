@@ -1,0 +1,304 @@
+{
+  "common": {
+    "loading": "Загрузка...",
+    "tryAgain": "Повторить",
+    "back": "Назад",
+    "browse": "Обзор",
+    "install": "Установить",
+    "installing": "Установка",
+    "installed": "Установлено",
+    "remove": "Удалить",
+    "undo": "Отменить",
+    "selected": "Выбрано",
+    "showMore": "Показать ещё",
+    "close": "Закрыть",
+    "update": "Обновить",
+    "updating": "Обновление",
+    "cancel": "Отмена",
+    "continue": "Продолжить",
+    "previous": "Назад",
+    "next": "Далее",
+    "settings": "Настройки",
+    "copied": "Скопировано!",
+    "copyToClipboard": "Копировать в буфер обмена"
+  },
+  "errors": {
+    "options": "Не удалось загрузить настройки лаунчера",
+    "api": "Не удалось подключиться к API LiquidBounce",
+    "system": "Похоже, в вашей системе есть проблема с конфигурацией.\n\n{error}"
+  },
+  "update": {
+    "failedTitle": "Не удалось обновить лаунчер",
+    "failed": "Лаунчер не смог обновиться и попробует снова при следующем запуске.\n\n{error}"
+  },
+  "main": {
+    "welcome": "С возвращением, {name}.",
+    "lowMemory": "Вы собираетесь запустить клиент, выделив меньше {memory} MB памяти. Это может снизить производительность. Продолжить?",
+    "startFailed": "Не удалось запустить клиент: {error}"
+  },
+  "progress": {
+    "startingClient": "Запуск клиента...",
+    "refreshingSession": "Обновление сессии Minecraft...",
+    "updatingLauncher": "Обновление лаунчера до v{version}...",
+    "installingUpdate": "Установка обновления...",
+    "loadingVersionManifest": "Загрузка манифеста версий...",
+    "loadingVersionProfile": "Загрузка профиля версии...",
+    "installingAddon": "Установка дополнения {name}",
+    "copiedCustomMod": "Скопирован свой мод {name}",
+    "downloadingRecommendedMod": "Скачивание рекомендуемого мода {name}",
+    "openingModDownloadPage": "Открытие страницы загрузки мода {name}",
+    "openingDownloadPage": "Открытие страницы загрузки... (попытка {attempt}/{attempts})",
+    "downloadingMod": "Скачивание мода {name}",
+    "launchingBuild": "Запуск {commit}...",
+    "settingUp": "Подготовка...",
+    "checkingJre": "Проверка JRE...",
+    "downloadingJre": "Скачивание JRE...",
+    "downloadingClient": "Скачивание клиента...",
+    "checkingLibraries": "Проверка библиотек...",
+    "downloadingLibrary": "Скачивание библиотеки {name}",
+    "extractingNatives": "Распаковка нативных библиотек...",
+    "checkingAssets": "Проверка ресурсов...",
+    "downloadingAsset": "Скачивание ресурса {hash}",
+    "launching": "Запуск...",
+    "running": "Работает..."
+  },
+  "settings": {
+    "general": {
+      "language": "Язык",
+      "systemLanguage": "Как в системе",
+      "jvmDistribution": "Дистрибутив JVM",
+      "automatic": "Автоматически",
+      "manual": "Вручную",
+      "custom": "Свой",
+      "distribution": "Дистрибутив",
+      "customJvmPath": "Свой путь к JVM",
+      "customJvmPlaceholder": "Выберите расположение Java",
+      "customJvmWindowTitle": "Выбор своей Java",
+      "dataLocation": "Папка данных",
+      "dataLocationWindowTitle": "Выбор папки данных",
+      "memory": "Память",
+      "concurrentDownloads": "Параллельные загрузки",
+      "connectionsSuffix": " соединений",
+      "keepLauncherOpen": "Не закрывать лаунчер",
+      "signOut": "Выйти из аккаунта Minecraft",
+      "clearData": "Очистить данные",
+      "dataCleared": "Данные очищены.",
+      "clearDataFailed": "Не удалось очистить данные: {error}",
+      "logoutFailed": "Не удалось корректно выйти. Попробуйте ещё раз."
+    },
+    "client": {
+      "build": "Сборка"
+    },
+    "title": "Настройки",
+    "tabs": {
+      "general": "Общие",
+      "minecraft": "Minecraft",
+      "client": "Клиент",
+      "premium": "Premium"
+    },
+    "minecraft": {
+      "description": "Позволяет использовать миры, наборы ресурсов и шейдеры из другой установки Minecraft.",
+      "directory": "Папка Minecraft",
+      "autoDetect": "Найти автоматически",
+      "directoryWindowTitle": "Выбор папки Minecraft",
+      "linkWorlds": "Связать миры ({count, number})",
+      "linkResourcePacks": "Связать наборы ресурсов ({count, number})",
+      "linkShaderPacks": "Связать шейдеры ({count, number})",
+      "notFound": "Ванильная установка Minecraft не найдена."
+    },
+    "premium": {
+      "skipAds": "Пропускать рекламу",
+      "accountInformation": "Данные аккаунта",
+      "noPremium": "К этому аккаунту не привязан Premium. Привяжите его на странице управления аккаунтом.",
+      "manageAccount": "Управление аккаунтом",
+      "logout": "Выйти",
+      "description": "Оформив Premium, вы не только поддерживаете развитие клиента, но и получаете плащ и возможность пропускать рекламу в лаунчере.",
+      "login": "Войти через аккаунт LiquidBounce",
+      "loginFailed": "Не удалось войти в аккаунт клиента: {error}",
+      "logoutFailed": "Не удалось выйти из аккаунта клиента: {error}"
+    },
+    "liquidBounceAccount": {
+      "username": "Имя пользователя",
+      "donatorPerks": "Бонусы донатера",
+      "active": "Активны",
+      "inactive": "Неактивны"
+    },
+    "message": {
+      "clearSearch": "Очистить поиск"
+    },
+    "itemRow": {
+      "removeNamed": "Удалить {name}"
+    },
+    "directorySelector": {
+      "select": "Выбрать папку",
+      "open": "Открыть папку"
+    },
+    "fileSelector": {
+      "select": "Выбрать файл"
+    }
+  },
+  "builds": {
+    "title": "Сборки",
+    "showNightly": "Показывать nightly-сборки",
+    "latest": "Последняя",
+    "latestRelease": "Последний релиз",
+    "latestNightly": "Последняя nightly",
+    "builds": "{count, plural, one {# сборка} few {# сборки} many {# сборок} other {# сборки}}",
+    "releases": "{count, plural, one {# релиз} few {# релиза} many {# релизов} other {# релиза}}"
+  },
+  "marketplace": {
+    "title": "{type, select, Addon {Дополнения} Theme {Темы} Script {Скрипты} other {Элементы}}",
+    "type": "{type, select, Addon {Дополнение} Theme {Тема} Script {Скрипт} other {Элемент}}",
+    "empty": "{type, select, Addon {Дополнений пока нет.} Theme {Тем пока нет.} Script {Скриптов пока нет.} other {Пока ничего нет.}}",
+    "search": "{type, select, Addon {Поиск дополнений} Theme {Поиск тем} Script {Поиск скриптов} other {Поиск}}",
+    "noMatch": "{type, select, Addon {Нет дополнений по запросу «{query}».} Theme {Нет тем по запросу «{query}».} Script {Нет скриптов по запросу «{query}».} other {Ничего не найдено по запросу «{query}».}}",
+    "nonePublished": "{type, select, Addon {Дополнения ещё не опубликованы.} Theme {Темы ещё не опубликованы.} Script {Скрипты ещё не опубликованы.} other {Пока ничего не опубликовано.}}",
+    "byAuthor": "{type} от {author}",
+    "downloads": "{count, plural, one {# загрузка} few {# загрузки} many {# загрузок} other {# загрузки}}",
+    "notFor": "Не для {version}",
+    "offline": "Не удалось проверить маркетплейс: {error}",
+    "restart": "Перезапустите LiquidBounce, чтобы применить {count, plural, one {# изменение} few {# изменения} many {# изменений} other {# изменения}}.",
+    "removeQuestion": "Удалить {name}? Без него {count, plural, one {перестанет} few {перестанут} many {перестанут} other {перестанут}} работать: {names}.",
+    "screenshots": "Скриншоты",
+    "versions": "Версии",
+    "neededBy": "Требуется для",
+    "viewFullSize": "Открыть в полном размере",
+    "previousScreenshot": "Предыдущий скриншот",
+    "nextScreenshot": "Следующий скриншот"
+  },
+  "mods": {
+    "title": "Моды — {target}",
+    "addFile": "Добавить файл",
+    "addFileWindowTitle": "Выберите свой мод для установки",
+    "browse": "Обзор",
+    "recommended": "Рекомендуемые",
+    "unknownVersion": "Неизвестная версия",
+    "updateAvailable": "Доступна {version}",
+    "installFailed": "Не удалось установить мод: {error}",
+    "deleteFailed": "Не удалось удалить мод: {error}",
+    "remove": "Удалить мод",
+    "searchPlaceholder": "Поиск модов на Modrinth",
+    "hitLine": "от {author} · {downloads, plural, one {# загрузка} few {# загрузки} many {# загрузок} other {# загрузки}}",
+    "noMatch": "Нет модов по запросу «{query}»."
+  },
+  "facts": {
+    "blatantOrCloset": {
+      "title": "Blatant или Closet — решать вам!",
+      "description": "В LiquidBounce встроено множество blatant- и closet-читов, что делает его идеальным клиентом «всё в одном»."
+    },
+    "multiVersion": {
+      "title": "Поддержка разных версий",
+      "description": "Встроенный переключатель версий позволяет легко менять версию Minecraft без перезапуска игры!"
+    },
+    "multiServer": {
+      "title": "Поддержка разных серверов",
+      "description": "LiquidBounce предлагает функции и обходы для множества серверов."
+    },
+    "autoConfig": {
+      "title": "Система автоконфигов",
+      "description": "Система автоконфигов LiquidBounce сама применит лучшие настройки при входе на известный сервер."
+    },
+    "customizable": {
+      "title": "Гибкая настройка",
+      "description": "Интерфейс LiquidBounce полностью настраивается. Можно заменить весь интерфейс по своему вкусу."
+    },
+    "downloads": {
+      "title": "{count, number} загрузок",
+      "description": "LiquidBounce — один из самых популярных чит-клиентов всех времён."
+    },
+    "openSource": {
+      "title": "Бесплатный и с открытым кодом",
+      "description": "Исходный код LiquidBounce находится в открытом доступе."
+    },
+    "scriptApi": {
+      "title": "ScriptAPI",
+      "description": "Script API в LiquidBounce позволяет писать собственные модули и команды."
+    }
+  },
+  "login": {
+    "title": "Вход",
+    "microsoft": "Вход через Microsoft",
+    "microsoftDevice": "Вход через Microsoft на устройстве",
+    "or": "или",
+    "username": "Имя пользователя",
+    "offline": "Офлайн-вход",
+    "microsoftTitle": "Вход в Microsoft",
+    "finishInPopup": "Завершите вход во всплывающем окне.",
+    "codeTitle": "Вход по коду",
+    "copy": "КОПИРОВАТЬ",
+    "copied": "СКОПИРОВАНО",
+    "openBefore": "Откройте",
+    "openAfter": "на любом устройстве и введите код выше.",
+    "scanTitle": "Отсканируйте код",
+    "scanDescription": "Откроет страницу с уже введённым кодом.",
+    "waiting": "Ожидание подтверждения",
+    "requestingCode": "Запрос кода для входа…",
+    "qrAlt": "QR-код для входа через Microsoft",
+    "usernameLength": "Имя пользователя должно содержать от 1 до 16 символов.",
+    "usernameCharacters": "Имя пользователя может содержать только буквы, цифры и подчёркивания.",
+    "microsoftFailed": "Не удалось войти через Microsoft.\n\n{error}\n\nЕсли не получается решить проблему, войдите офлайн и попробуйте войти через встроенный менеджер аккаунтов клиента."
+  },
+  "account": {
+    "offline": "Офлайн"
+  },
+  "launch": {
+    "instance": "Экземпляр",
+    "newInstance": "Новый экземпляр",
+    "state": {
+      "starting": "Запуск",
+      "started": "Запущен"
+    },
+    "terminate": "Завершить",
+    "log": "Лог",
+    "launch": "Запустить LiquidBounce"
+  },
+  "errorScreen": {
+    "title": "Произошла ошибка",
+    "unknown": "Неизвестная ошибка",
+    "details": "Технические подробности:",
+    "quickHelp": "Быстрая помощь",
+    "contactSupport": "Связаться с поддержкой"
+  },
+  "firstRun": {
+    "title": "Добро пожаловать в LiquidBounce!",
+    "description": "При первом запуске или выходе нового обновления LiquidBounce появится окно загрузки. Так мы получаем доход от рекламы для клиента. Если вы не хотите видеть рекламу, можно купить LiquidBounce Premium. Также загляните в руководство по быстрому старту — там есть советы по использованию LiquidBounce.",
+    "quickStart": "Быстрый старт"
+  },
+  "versionWarning": {
+    "title": "Вы собираетесь запустить неподдерживаемую версию!",
+    "description": "Выбранная версия LiquidBounce больше официально не поддерживается. Рекомендуем перейти на новейшую версию, которая работает со всеми версиями Minecraft начиная с 1.7.",
+    "switch": "Перейти на новейшую версию",
+    "launchAnyway": "Всё равно запустить",
+    "launchAnywayIn": "Всё равно запустить ({seconds})"
+  },
+  "insecure": {
+    "title": "Предупреждение безопасности",
+    "message": "LiquidLauncher не может подключиться к защищённому (HTTPS) API, но смог подключиться к незащищённому (HTTP).",
+    "risks": "Риски:",
+    "riskUnencrypted": "Ваше соединение не зашифровано и может быть видно другим в вашей сети",
+    "riskIntercepted": "Отправляемые и получаемые данные могут быть перехвачены или изменены злоумышленниками",
+    "riskCredentials": "Ваши данные для входа могут быть скомпрометированы при передаче через это соединение",
+    "recommendation": "Рекомендация:",
+    "recommendationText": "Обычно причина в сетевых ограничениях или проблемах с SSL-сертификатом. Рекомендуем использовать VPN, например Cloudflare WARP, для защищённого соединения.",
+    "getWarp": "Скачать Cloudflare WARP",
+    "allow": "Разрешить незащищённое соединение"
+  },
+  "log": {
+    "title": "Лог клиента",
+    "upload": "Выгрузить лог",
+    "autoScroll": "Автопрокрутка",
+    "search": "Поиск",
+    "filters": {
+      "error": "Ошибка",
+      "warn": "Предупр.",
+      "info": "Инфо",
+      "debug": "Отладка"
+    },
+    "uploadConfirm": "Будет выгружен весь лог этой сессии. Он может содержать личные данные, например приватные сообщения в чате. Продолжить?",
+    "uploadFailed": "Не удалось выгрузить лог: {error}",
+    "uploaded": "Ваш лог доступен по ссылке:"
+  },
+  "news": {
+    "readMore": "Подробнее"
+  }
+}

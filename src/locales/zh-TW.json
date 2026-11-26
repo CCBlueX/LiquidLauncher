@@ -1,0 +1,304 @@
+{
+  "common": {
+    "loading": "載入中...",
+    "tryAgain": "重試",
+    "back": "返回",
+    "browse": "瀏覽",
+    "install": "安裝",
+    "installing": "正在安裝",
+    "installed": "已安裝",
+    "remove": "移除",
+    "undo": "復原",
+    "selected": "已選取",
+    "showMore": "顯示更多",
+    "close": "關閉",
+    "update": "更新",
+    "updating": "正在更新",
+    "cancel": "取消",
+    "continue": "繼續",
+    "previous": "上一個",
+    "next": "下一個",
+    "settings": "設定",
+    "copied": "已複製！",
+    "copyToClipboard": "複製到剪貼簿"
+  },
+  "errors": {
+    "options": "無法載入啟動器設定",
+    "api": "無法連線到 LiquidBounce API",
+    "system": "你的系統設定似乎有問題。\n\n{error}"
+  },
+  "update": {
+    "failedTitle": "啟動器更新失敗",
+    "failed": "啟動器無法自動更新，將在下次啟動時重試。\n\n{error}"
+  },
+  "main": {
+    "welcome": "歡迎回來，{name}。",
+    "lowMemory": "你即將以少於 {memory} MB 的記憶體啟動客戶端，這可能會造成效能問題。是否繼續？",
+    "startFailed": "啟動客戶端失敗：{error}"
+  },
+  "progress": {
+    "startingClient": "正在啟動客戶端...",
+    "refreshingSession": "正在重新整理 Minecraft 工作階段...",
+    "updatingLauncher": "正在將啟動器更新至 v{version}...",
+    "installingUpdate": "正在安裝更新...",
+    "loadingVersionManifest": "正在載入版本清單...",
+    "loadingVersionProfile": "正在載入版本設定檔...",
+    "installingAddon": "正在安裝附加元件 {name}",
+    "copiedCustomMod": "已複製自訂模組 {name}",
+    "downloadingRecommendedMod": "正在下載推薦模組 {name}",
+    "openingModDownloadPage": "正在開啟模組 {name} 的下載頁面",
+    "openingDownloadPage": "正在開啟下載頁面...（第 {attempt}/{attempts} 次嘗試）",
+    "downloadingMod": "正在下載模組 {name}",
+    "launchingBuild": "正在啟動 {commit}...",
+    "settingUp": "正在準備...",
+    "checkingJre": "正在檢查 JRE...",
+    "downloadingJre": "正在下載 JRE...",
+    "downloadingClient": "正在下載客戶端...",
+    "checkingLibraries": "正在檢查函式庫...",
+    "downloadingLibrary": "正在下載函式庫 {name}",
+    "extractingNatives": "正在解壓縮原生函式庫...",
+    "checkingAssets": "正在檢查資源檔案...",
+    "downloadingAsset": "正在下載資源物件 {hash}",
+    "launching": "正在啟動...",
+    "running": "執行中..."
+  },
+  "settings": {
+    "general": {
+      "language": "語言",
+      "systemLanguage": "系統預設",
+      "jvmDistribution": "JVM 發行版",
+      "automatic": "自動",
+      "manual": "手動",
+      "custom": "自訂",
+      "distribution": "發行版",
+      "customJvmPath": "自訂 JVM 路徑",
+      "customJvmPlaceholder": "選擇 Java 包裝器位置",
+      "customJvmWindowTitle": "選擇自訂 Java 包裝器",
+      "dataLocation": "資料位置",
+      "dataLocationWindowTitle": "選擇自訂資料資料夾",
+      "memory": "記憶體",
+      "concurrentDownloads": "同時下載數",
+      "connectionsSuffix": " 個連線",
+      "keepLauncherOpen": "保持啟動器執行",
+      "signOut": "登出 Minecraft 帳號",
+      "clearData": "清除資料",
+      "dataCleared": "資料已清除。",
+      "clearDataFailed": "清除資料失敗：{error}",
+      "logoutFailed": "登出失敗，請重試。"
+    },
+    "client": {
+      "build": "建置"
+    },
+    "title": "設定",
+    "tabs": {
+      "general": "一般",
+      "minecraft": "Minecraft",
+      "client": "客戶端",
+      "premium": "Premium"
+    },
+    "minecraft": {
+      "description": "這樣你就能使用另一個 Minecraft 安裝中的世界、資源包和光影包。",
+      "directory": "Minecraft 資料夾",
+      "autoDetect": "自動偵測",
+      "directoryWindowTitle": "選擇 Minecraft 資料夾",
+      "linkWorlds": "連結世界（{count, number}）",
+      "linkResourcePacks": "連結資源包（{count, number}）",
+      "linkShaderPacks": "連結光影包（{count, number}）",
+      "notFound": "找不到 Minecraft 原版安裝。"
+    },
+    "premium": {
+      "skipAds": "略過廣告",
+      "accountInformation": "帳號資訊",
+      "noPremium": "此帳號似乎未綁定 Premium。請在帳號管理頁面進行綁定。",
+      "manageAccount": "管理帳號",
+      "logout": "登出",
+      "description": "升級 Premium 不僅能支持客戶端的持續開發，還能獲得披風，並可略過啟動器中的廣告。",
+      "login": "使用 LiquidBounce 帳號登入",
+      "loginFailed": "客戶端帳號驗證失敗：{error}",
+      "logoutFailed": "登出客戶端帳號失敗：{error}"
+    },
+    "liquidBounceAccount": {
+      "username": "使用者名稱",
+      "donatorPerks": "贊助者福利",
+      "active": "已啟用",
+      "inactive": "未啟用"
+    },
+    "message": {
+      "clearSearch": "清除搜尋"
+    },
+    "itemRow": {
+      "removeNamed": "移除 {name}"
+    },
+    "directorySelector": {
+      "select": "選擇資料夾",
+      "open": "開啟資料夾"
+    },
+    "fileSelector": {
+      "select": "選擇檔案"
+    }
+  },
+  "builds": {
+    "title": "建置",
+    "showNightly": "顯示每夜建置",
+    "latest": "最新",
+    "latestRelease": "最新正式版",
+    "latestNightly": "最新每夜建置",
+    "builds": "{count, plural, other {# 個建置}}",
+    "releases": "{count, plural, other {# 個正式版}}"
+  },
+  "marketplace": {
+    "title": "{type, select, Addon {附加元件} Theme {主題} Script {腳本} other {物品}}",
+    "type": "{type, select, Addon {附加元件} Theme {主題} Script {腳本} other {物品}}",
+    "empty": "{type, select, Addon {還沒有附加元件。} Theme {還沒有主題。} Script {還沒有腳本。} other {還沒有任何內容。}}",
+    "search": "{type, select, Addon {搜尋附加元件} Theme {搜尋主題} Script {搜尋腳本} other {搜尋}}",
+    "noMatch": "{type, select, Addon {沒有與「{query}」相符的附加元件。} Theme {沒有與「{query}」相符的主題。} Script {沒有與「{query}」相符的腳本。} other {沒有與「{query}」相符的內容。}}",
+    "nonePublished": "{type, select, Addon {還沒有發布任何附加元件。} Theme {還沒有發布任何主題。} Script {還沒有發布任何腳本。} other {還沒有發布任何內容。}}",
+    "byAuthor": "{author} 的{type}",
+    "downloads": "{count, plural, other {# 次下載}}",
+    "notFor": "不適用於 {version}",
+    "offline": "無法檢查市場：{error}",
+    "restart": "重新啟動 LiquidBounce 以套用 {count, plural, other {# 項變更}}。",
+    "removeQuestion": "要移除 {name} 嗎？沒有它，{names} 將無法正常運作。",
+    "screenshots": "螢幕截圖",
+    "versions": "版本",
+    "neededBy": "依賴它的項目",
+    "viewFullSize": "檢視原始大小",
+    "previousScreenshot": "上一張截圖",
+    "nextScreenshot": "下一張截圖"
+  },
+  "mods": {
+    "title": "模組 - {target}",
+    "addFile": "新增檔案",
+    "addFileWindowTitle": "選擇要安裝的自訂模組",
+    "browse": "瀏覽",
+    "recommended": "推薦",
+    "unknownVersion": "未知版本",
+    "updateAvailable": "{version} 可用",
+    "installFailed": "安裝模組失敗：{error}",
+    "deleteFailed": "刪除模組失敗：{error}",
+    "remove": "移除模組",
+    "searchPlaceholder": "搜尋 Modrinth 模組",
+    "hitLine": "作者：{author} · {downloads, plural, other {# 次下載}}",
+    "noMatch": "沒有與「{query}」相符的模組。"
+  },
+  "facts": {
+    "blatantOrCloset": {
+      "title": "明目張膽還是低調作弊，由你決定！",
+      "description": "LiquidBounce 內建大量明目張膽和低調隱密的作弊功能，是完美的一站式客戶端。"
+    },
+    "multiVersion": {
+      "title": "多版本支援",
+      "description": "透過內建的版本切換器，你無需重新啟動遊戲就能輕鬆切換不同的 Minecraft 版本！"
+    },
+    "multiServer": {
+      "title": "多伺服器支援",
+      "description": "LiquidBounce 為眾多伺服器提供功能與繞過方案。"
+    },
+    "autoConfig": {
+      "title": "自動設定檔系統",
+      "description": "加入知名伺服器時，LiquidBounce 的自動設定檔系統會自動為你套用最佳設定。"
+    },
+    "customizable": {
+      "title": "高度可自訂",
+      "description": "LiquidBounce 的介面完全可自訂，你可以依喜好更換整個介面。"
+    },
+    "downloads": {
+      "title": "累計 {count, number} 次下載",
+      "description": "LiquidBounce 是史上最受歡迎的作弊客戶端之一。"
+    },
+    "openSource": {
+      "title": "免費且開源",
+      "description": "LiquidBounce 的原始碼公開可用。"
+    },
+    "scriptApi": {
+      "title": "腳本 API",
+      "description": "LiquidBounce 的腳本 API 讓使用者可以編寫自己的模組和指令。"
+    }
+  },
+  "login": {
+    "title": "登入",
+    "microsoft": "Microsoft 登入",
+    "microsoftDevice": "Microsoft 裝置登入",
+    "or": "或",
+    "username": "使用者名稱",
+    "offline": "離線登入",
+    "microsoftTitle": "Microsoft 登入",
+    "finishInPopup": "請在彈出視窗中完成登入。",
+    "codeTitle": "使用代碼登入",
+    "copy": "複製",
+    "copied": "已複製",
+    "openBefore": "在任意裝置上開啟",
+    "openAfter": "並輸入上方的代碼。",
+    "scanTitle": "掃描 QR 碼",
+    "scanDescription": "開啟已自動填好代碼的頁面。",
+    "waiting": "正在等待確認",
+    "requestingCode": "正在要求登入代碼…",
+    "qrAlt": "用於 Microsoft 登入的 QR 碼",
+    "usernameLength": "使用者名稱長度必須為 1 到 16 個字元。",
+    "usernameCharacters": "使用者名稱只能包含字母、數字和底線。",
+    "microsoftFailed": "Microsoft 驗證失敗。\n\n{error}\n\n如果無法解決此問題，請使用離線登入，再嘗試透過客戶端內建的帳號管理器登入。"
+  },
+  "account": {
+    "offline": "離線"
+  },
+  "launch": {
+    "instance": "實例",
+    "newInstance": "新實例",
+    "state": {
+      "starting": "正在啟動",
+      "started": "已啟動"
+    },
+    "terminate": "終止",
+    "log": "日誌",
+    "launch": "啟動 LiquidBounce"
+  },
+  "errorScreen": {
+    "title": "發生錯誤",
+    "unknown": "未知錯誤",
+    "details": "技術細節：",
+    "quickHelp": "快速說明",
+    "contactSupport": "聯絡支援"
+  },
+  "firstRun": {
+    "title": "歡迎使用 LiquidBounce！",
+    "description": "首次啟動或 LiquidBounce 有新版本時，會彈出一個下載視窗。這是我們為客戶端取得廣告收入的方式。如果你不想看到廣告，可以購買 LiquidBounce Premium。你也可以查看快速入門指南，了解 LiquidBounce 的使用技巧。",
+    "quickStart": "快速入門指南"
+  },
+  "versionWarning": {
+    "title": "你即將啟動一個不受支援的版本！",
+    "description": "所選的 LiquidBounce 版本已不再獲得官方支援。我們建議切換到最新版本，它支援 1.7 及以上的所有 Minecraft 版本。",
+    "switch": "切換到最新版本",
+    "launchAnyway": "仍要啟動",
+    "launchAnywayIn": "仍要啟動（{seconds}）"
+  },
+  "insecure": {
+    "title": "安全性警告",
+    "message": "LiquidLauncher 無法連線到安全的（HTTPS）API 端點，但可以連線到不安全的（HTTP）端點。",
+    "risks": "安全性風險：",
+    "riskUnencrypted": "你的連線未加密，網路上的其他人可能看到其內容",
+    "riskIntercepted": "收發的資料可能被惡意人士攔截或竄改",
+    "riskCredentials": "若透過此連線傳輸，你的登入憑證可能外洩",
+    "recommendation": "建議：",
+    "recommendationText": "此問題通常由網路限制或 SSL 憑證問題引起。我們建議使用 Cloudflare WARP 等 VPN 來建立安全連線。",
+    "getWarp": "取得 Cloudflare WARP",
+    "allow": "允許不安全連線"
+  },
+  "log": {
+    "title": "客戶端日誌",
+    "upload": "上傳日誌",
+    "autoScroll": "自動捲動",
+    "search": "搜尋",
+    "filters": {
+      "error": "錯誤",
+      "warn": "警告",
+      "info": "資訊",
+      "debug": "除錯"
+    },
+    "uploadConfirm": "本次工作階段的完整日誌將被上傳，其中可能包含私人聊天訊息等敏感資訊。確定要繼續嗎？",
+    "uploadFailed": "上傳日誌失敗：{error}",
+    "uploaded": "你的日誌可透過以下網址存取："
+  },
+  "news": {
+    "readMore": "閱讀更多"
+  }
+}
