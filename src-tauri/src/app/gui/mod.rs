@@ -190,7 +190,7 @@ pub fn gui_main() {
             add_offline,
             add_session,
             remove_account,
-            offline_login_hidden,
+            offline_login_allowed,
             client_account,
             client_account_authenticate,
             client_account_logout,

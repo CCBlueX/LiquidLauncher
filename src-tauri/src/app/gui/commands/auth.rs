@@ -150,10 +150,10 @@ pub(crate) async fn remove_account(
         .map_err(error_text)
 }
 
-/// Set `LIQUIDLAUNCHER_HIDE_OFFLINE_LOGIN=1` to leave Offline out of the login screen.
+/// `LIQUIDLAUNCHER_ALLOW_OFFLINE=0` leaves Offline out of the login screen.
 #[tauri::command]
-pub(crate) fn offline_login_hidden() -> bool {
-    env::var("LIQUIDLAUNCHER_HIDE_OFFLINE_LOGIN").is_ok_and(|value| value == "1")
+pub(crate) fn offline_login_allowed() -> bool {
+    env::var("LIQUIDLAUNCHER_ALLOW_OFFLINE").map_or(true, |value| value != "0")
 }
 
 async fn save(

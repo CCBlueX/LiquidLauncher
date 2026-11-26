@@ -7,8 +7,8 @@
 
 <div class="modal">
     <div class="title">Sign in to play</div>
-    {#await invoke("offline_login_hidden") then hidden}
-        <SignIn bind:options offline={!hidden} />
+    {#await invoke("offline_login_allowed") then offline}
+        <SignIn bind:options {offline} />
     {/await}
 </div>
 
