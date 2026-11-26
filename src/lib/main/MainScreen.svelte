@@ -20,15 +20,11 @@
 
     let clientAccount = null;
 
-    // The instances the launcher started, as the backend lists them.
     let instances = [];
-    // The chosen one of them, null to start a new instance.
     let instance = null;
-    // From the click until the backend lists the instance as starting.
     let launching = false;
     $: starting = launching || instances.some(listed => listed.state === "starting");
 
-    // Lines by the id of their instance; 0 has what failed before an instance got one.
     let logs = {};
     let logShown = null;
     let settingsShown = false;
@@ -253,7 +249,6 @@
     }
 
     function hideLog() {
-        // An instance that is gone has no card left to open its log from.
         if (!instances.some(listed => listed.id === logShown)) delete logs[logShown];
         logShown = null;
     }

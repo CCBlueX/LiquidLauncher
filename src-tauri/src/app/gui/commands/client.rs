@@ -277,8 +277,6 @@ fn output(runner: &Runner, line: &str) -> anyhow::Result<()> {
     runner.emit("process-output", json!({ "id": runner.id, "line": line }))
 }
 
-/// Lists a game that starts with `build`. One starts at a time: they share the downloads and the
-/// mods folder.
 fn add_runner(
     instances: &RunnerInstances,
     window: Window,
@@ -314,6 +312,7 @@ fn add_runner(
 
     let runner = Runner {
         id,
+        // A shared mutex for the window object.
         window: Arc::new(Mutex::new(window)),
         instances: instances.clone(),
     };
@@ -456,7 +455,6 @@ pub(crate) async fn run_client(
     Ok(id)
 }
 
-/// The instances the launcher started, oldest first.
 #[tauri::command]
 pub(crate) async fn list_instances(
     app_state: tauri::State<'_, AppState>,

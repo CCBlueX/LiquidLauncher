@@ -62,7 +62,6 @@ pub struct LauncherData<D: Send + Sync> {
     pub(crate) on_stderr: fn(&D, &[u8]) -> Result<()>,
     pub(crate) on_progress: fn(&D, ProgressUpdate) -> Result<()>,
     pub(crate) on_log: fn(&D, &str) -> Result<()>,
-    /// Gets the process id of the game once it runs.
     pub(crate) on_start: fn(&D, u32),
     pub(crate) hide_window: fn(&D),
     pub(crate) data: Box<D>,

@@ -17,8 +17,6 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-//! A Minecraft instance the launcher started, as the frontend lists it.
-
 use serde::Serialize;
 
 #[derive(Serialize, Clone, Copy, PartialEq)]
@@ -31,9 +29,7 @@ pub enum InstanceState {
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Instance {
-    /// Its events carry it.
     pub id: u32,
-    /// None while the launcher still prepares the start.
     pub pid: Option<u32>,
     pub version: String,
     pub lb_version: String,

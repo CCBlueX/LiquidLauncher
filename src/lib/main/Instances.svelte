@@ -2,9 +2,7 @@
     import { createEventDispatcher } from "svelte";
     import { slide } from "svelte/transition";
 
-    /** The instances the launcher started, as the backend lists them. */
     export let instances = [];
-    /** The chosen one of them, null to start a new instance. */
     export let instance = null;
     export let lbVersion;
     export let mcVersion;
@@ -16,12 +14,10 @@
         started: "Launched"
     };
 
-    /** Keeps the chosen card in sight of a list that scrolls. */
     function reveal(card, isChosen) {
         const update = isChosen => {
             if (!isChosen) return;
             card.scrollIntoView({ block: "nearest" });
-            // Again once it has opened: it grows below what was in sight.
             setTimeout(() => card.scrollIntoView({ block: "nearest" }), duration);
         };
         update(isChosen);

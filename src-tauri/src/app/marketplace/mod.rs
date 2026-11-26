@@ -130,7 +130,7 @@ impl Queued {
 
 #[derive(Default)]
 struct Session {
-    /// The games running, each from the start of its launch until it exits.
+    /// From the start of a launch until the game exits.
     running: usize,
     queued: Queued,
 }
@@ -155,7 +155,8 @@ pub fn game_running() -> bool {
     session().running > 0
 }
 
-/// Applies what was edited while games ran, once the last of them exited or failed to start.
+/// Applies what was edited while the game ran. Called once it exited or failed to start; calling
+/// it again does nothing.
 pub async fn game_exited(game: &GameDir) {
     let queued = {
         let mut session = session();

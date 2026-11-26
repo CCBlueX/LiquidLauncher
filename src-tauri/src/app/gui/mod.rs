@@ -33,16 +33,12 @@ use crate::minecraft::instance::Instance;
 pub type ShareableWindow = Arc<Mutex<Window>>;
 
 pub struct RunnerInstance {
-    /// Kills the game. Gone once used.
     pub terminator: Option<oneshot::Sender<()>>,
-    /// As `list_instances` shows it.
     pub instance: Instance,
 }
 
-/// By the id their events carry.
 pub type RunnerInstances = Arc<Mutex<BTreeMap<u32, RunnerInstance>>>;
 
-/// What the callbacks of one start get.
 #[derive(Clone)]
 pub struct Runner {
     pub id: u32,
@@ -59,7 +55,6 @@ impl Runner {
         Ok(())
     }
 
-    /// Changes how the instance is listed and has the frontend list again.
     pub fn update(&self, change: impl FnOnce(&mut Instance)) {
         if let Some(runner) = self.instances.lock().unwrap().get_mut(&self.id) {
             change(&mut runner.instance);
