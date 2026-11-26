@@ -32,20 +32,25 @@ export function matchLanguage(tag, codes) {
 }
 
 let request = 0;
+const published = new Set();
 
-/** Switches to the language closest to `tag`, downloading it first. English stays when that fails. */
+/**
+ * Switches to the language closest to `tag`. A published language is downloaded first, which also
+ * brings fixes for a bundled one; when that fails, a bundled copy still works.
+ */
 export async function useLanguage(tag) {
     const current = ++request;
-    const code = matchLanguage(tag, get(languages).map(language => language.code));
-    if (!get(dictionary)[code]) {
+    const offered = get(languages);
+    const code = matchLanguage(tag, offered.map(language => language.code));
+    if (offered.find(language => language.code === code)?.sha256 && !published.has(code)) {
         try {
             addMessages(code, await invoke("get_translation", { code }));
+            published.add(code);
         } catch (error) {
             console.error(`Failed to load the ${code} translation:`, error);
-            return;
         }
     }
-    if (current === request) locale.set(code);
+    if (current === request && get(dictionary)[code]) locale.set(code);
 }
 
 /** `Sep 26`, with the year when it is not this one. */

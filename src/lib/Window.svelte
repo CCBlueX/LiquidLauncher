@@ -115,7 +115,8 @@
 
     async function setupLanguages() {
         const downloaded = await invoke("get_languages");
-        languages.set([...bundled, ...downloaded.filter(language => !bundled.some(({code}) => code === language.code))]);
+        const unlisted = bundled.filter(language => !downloaded.some(({code}) => code === language.code));
+        languages.set([...unlisted, ...downloaded]);
         await useLanguage(options.launcher.language ?? systemLocale);
     }
 
