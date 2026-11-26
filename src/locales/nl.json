@@ -1,0 +1,304 @@
+{
+  "common": {
+    "loading": "Laden...",
+    "tryAgain": "Opnieuw proberen",
+    "back": "Terug",
+    "browse": "Bladeren",
+    "install": "Installeren",
+    "installing": "Installeren",
+    "installed": "Geïnstalleerd",
+    "remove": "Verwijderen",
+    "undo": "Ongedaan maken",
+    "selected": "Geselecteerd",
+    "showMore": "Meer tonen",
+    "close": "Sluiten",
+    "update": "Updaten",
+    "updating": "Updaten",
+    "cancel": "Annuleren",
+    "continue": "Doorgaan",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "settings": "Instellingen",
+    "copied": "Gekopieerd!",
+    "copyToClipboard": "Naar klembord kopiëren"
+  },
+  "errors": {
+    "options": "Kan de launcherinstellingen niet laden",
+    "api": "Kan geen verbinding maken met de LiquidBounce-API",
+    "system": "Er lijkt een probleem te zijn met de configuratie van je systeem.\n\n{error}"
+  },
+  "update": {
+    "failedTitle": "Launcher-update mislukt",
+    "failed": "De launcher kon zichzelf niet updaten en probeert het opnieuw bij de volgende start.\n\n{error}"
+  },
+  "main": {
+    "welcome": "Welkom terug, {name}.",
+    "lowMemory": "Je start de client met minder dan {memory} MB RAM. Dit kan prestatieproblemen veroorzaken. Wil je doorgaan?",
+    "startFailed": "Kan de client niet starten: {error}"
+  },
+  "progress": {
+    "startingClient": "Client starten...",
+    "refreshingSession": "Minecraft-sessie vernieuwen...",
+    "updatingLauncher": "Launcher updaten naar v{version}...",
+    "installingUpdate": "Update installeren...",
+    "loadingVersionManifest": "Versiemanifest laden...",
+    "loadingVersionProfile": "Versieprofiel laden...",
+    "installingAddon": "Add-on {name} installeren",
+    "copiedCustomMod": "Eigen mod {name} gekopieerd",
+    "downloadingRecommendedMod": "Aanbevolen mod {name} downloaden",
+    "openingModDownloadPage": "Downloadpagina voor mod {name} openen",
+    "openingDownloadPage": "Downloadpagina openen... (poging {attempt}/{attempts})",
+    "downloadingMod": "Mod {name} downloaden",
+    "launchingBuild": "{commit} starten...",
+    "settingUp": "Voorbereiden...",
+    "checkingJre": "JRE controleren...",
+    "downloadingJre": "JRE downloaden...",
+    "downloadingClient": "Client downloaden...",
+    "checkingLibraries": "Libraries controleren...",
+    "downloadingLibrary": "Library {name} downloaden",
+    "extractingNatives": "Natives uitpakken...",
+    "checkingAssets": "Assets controleren...",
+    "downloadingAsset": "Asset {hash} downloaden",
+    "launching": "Starten...",
+    "running": "Actief..."
+  },
+  "settings": {
+    "general": {
+      "language": "Taal",
+      "systemLanguage": "Systeemtaal",
+      "jvmDistribution": "JVM-distributie",
+      "automatic": "Automatisch",
+      "manual": "Handmatig",
+      "custom": "Eigen",
+      "distribution": "Distributie",
+      "customJvmPath": "Eigen JVM-pad",
+      "customJvmPlaceholder": "Locatie van de Java-wrapper kiezen",
+      "customJvmWindowTitle": "Eigen Java-wrapper kiezen",
+      "dataLocation": "Gegevenslocatie",
+      "dataLocationWindowTitle": "Eigen gegevensmap kiezen",
+      "memory": "RAM",
+      "concurrentDownloads": "Gelijktijdige downloads",
+      "connectionsSuffix": " verbindingen",
+      "keepLauncherOpen": "Launcher open laten",
+      "signOut": "Uitloggen bij Minecraft-account",
+      "clearData": "Gegevens wissen",
+      "dataCleared": "Gegevens gewist.",
+      "clearDataFailed": "Kan gegevens niet wissen: {error}",
+      "logoutFailed": "Uitloggen is mislukt. Probeer het opnieuw."
+    },
+    "client": {
+      "build": "Build"
+    },
+    "title": "Instellingen",
+    "tabs": {
+      "general": "Algemeen",
+      "minecraft": "Minecraft",
+      "client": "Client",
+      "premium": "Premium"
+    },
+    "minecraft": {
+      "description": "Hiermee kun je werelden, resourcepacks en shaderpacks uit een andere Minecraft-installatie gebruiken.",
+      "directory": "Minecraft-map",
+      "autoDetect": "Automatisch detecteren",
+      "directoryWindowTitle": "Minecraft-map kiezen",
+      "linkWorlds": "Werelden koppelen ({count, number})",
+      "linkResourcePacks": "Resourcepacks koppelen ({count, number})",
+      "linkShaderPacks": "Shaderpacks koppelen ({count, number})",
+      "notFound": "Geen vanilla-installatie van Minecraft gevonden."
+    },
+    "premium": {
+      "skipAds": "Advertenties overslaan",
+      "accountInformation": "Accountgegevens",
+      "noPremium": "Er lijkt geen Premium aan dit account gekoppeld te zijn. Koppel het op de pagina voor accountbeheer.",
+      "manageAccount": "Account beheren",
+      "logout": "Uitloggen",
+      "description": "Met Premium steun je niet alleen de verdere ontwikkeling van de client, maar krijg je ook een cape en kun je de advertenties in de launcher overslaan.",
+      "login": "Inloggen met LiquidBounce-account",
+      "loginFailed": "Kan niet inloggen met het clientaccount: {error}",
+      "logoutFailed": "Kan niet uitloggen bij het clientaccount: {error}"
+    },
+    "liquidBounceAccount": {
+      "username": "Gebruikersnaam",
+      "donatorPerks": "Donatorperks",
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "message": {
+      "clearSearch": "Zoekopdracht wissen"
+    },
+    "itemRow": {
+      "removeNamed": "{name} verwijderen"
+    },
+    "directorySelector": {
+      "select": "Map kiezen",
+      "open": "Map openen"
+    },
+    "fileSelector": {
+      "select": "Bestand kiezen"
+    }
+  },
+  "builds": {
+    "title": "Builds",
+    "showNightly": "Nightly builds tonen",
+    "latest": "Nieuwste",
+    "latestRelease": "Nieuwste release",
+    "latestNightly": "Nieuwste nightly",
+    "builds": "{count, plural, one {# build} other {# builds}}",
+    "releases": "{count, plural, one {# release} other {# releases}}"
+  },
+  "marketplace": {
+    "title": "{type, select, Addon {Add-ons} Theme {Themes} Script {Scripts} other {Items}}",
+    "type": "{type, select, Addon {Add-on} Theme {Theme} Script {Script} other {Item}}",
+    "empty": "{type, select, Addon {Nog geen add-ons.} Theme {Nog geen themes.} Script {Nog geen scripts.} other {Nog niets.}}",
+    "search": "{type, select, Addon {Add-ons zoeken} Theme {Themes zoeken} Script {Scripts zoeken} other {Zoeken}}",
+    "noMatch": "{type, select, Addon {Geen add-ons gevonden voor ‘{query}’.} Theme {Geen themes gevonden voor ‘{query}’.} Script {Geen scripts gevonden voor ‘{query}’.} other {Niets gevonden voor ‘{query}’.}}",
+    "nonePublished": "{type, select, Addon {Nog geen add-ons gepubliceerd.} Theme {Nog geen themes gepubliceerd.} Script {Nog geen scripts gepubliceerd.} other {Nog niets gepubliceerd.}}",
+    "byAuthor": "{type} door {author}",
+    "downloads": "{count, plural, one {# download} other {# downloads}}",
+    "notFor": "Niet voor {version}",
+    "offline": "Kan de marketplace niet controleren: {error}",
+    "restart": "Herstart LiquidBounce om {count, plural, one {# wijziging} other {# wijzigingen}} toe te passen.",
+    "removeQuestion": "{name} verwijderen? Zonder {name} {count, plural, one {werkt} other {werken}} {names} niet meer.",
+    "screenshots": "Screenshots",
+    "versions": "Versies",
+    "neededBy": "Nodig voor",
+    "viewFullSize": "Op volledige grootte bekijken",
+    "previousScreenshot": "Vorige screenshot",
+    "nextScreenshot": "Volgende screenshot"
+  },
+  "mods": {
+    "title": "Mods - {target}",
+    "addFile": "Bestand toevoegen",
+    "addFileWindowTitle": "Kies een eigen mod om te installeren",
+    "browse": "Bladeren",
+    "recommended": "Aanbevolen",
+    "unknownVersion": "Onbekende versie",
+    "updateAvailable": "{version} beschikbaar",
+    "installFailed": "Kan mod niet installeren: {error}",
+    "deleteFailed": "Kan mod niet verwijderen: {error}",
+    "remove": "Mod verwijderen",
+    "searchPlaceholder": "Modrinth-mods zoeken",
+    "hitLine": "door {author} · {downloads, plural, one {# download} other {# downloads}}",
+    "noMatch": "Geen mods gevonden voor ‘{query}’."
+  },
+  "facts": {
+    "blatantOrCloset": {
+      "title": "Blatant of closet cheaten – jij kiest!",
+      "description": "LiquidBounce heeft veel ingebouwde blatant en closet cheats, en is daarmee de perfecte alles-in-één-client."
+    },
+    "multiVersion": {
+      "title": "Ondersteuning voor meerdere versies",
+      "description": "Met de ingebouwde versiewisselaar wissel je eenvoudig tussen Minecraft-versies zonder het spel opnieuw te starten!"
+    },
+    "multiServer": {
+      "title": "Ondersteuning voor veel servers",
+      "description": "LiquidBounce biedt functies en bypasses voor veel verschillende servers."
+    },
+    "autoConfig": {
+      "title": "Auto-configsysteem",
+      "description": "Het auto-configsysteem van LiquidBounce past automatisch de beste instellingen toe wanneer je een bekende server betreedt."
+    },
+    "customizable": {
+      "title": "Aanpasbaar",
+      "description": "De interface van LiquidBounce is volledig aanpasbaar. Je kunt de hele interface naar wens vervangen."
+    },
+    "downloads": {
+      "title": "{count, number} downloads in totaal",
+      "description": "LiquidBounce is een van de populairste hacked clients aller tijden."
+    },
+    "openSource": {
+      "title": "Gratis & open source",
+      "description": "De broncode van LiquidBounce is openbaar beschikbaar."
+    },
+    "scriptApi": {
+      "title": "Script-API",
+      "description": "Met de Script-API van LiquidBounce kun je je eigen modules en commando's schrijven."
+    }
+  },
+  "login": {
+    "title": "Inloggen",
+    "microsoft": "Inloggen met Microsoft",
+    "microsoftDevice": "Inloggen met Microsoft-apparaatcode",
+    "or": "of",
+    "username": "Gebruikersnaam",
+    "offline": "Offline inloggen",
+    "microsoftTitle": "Inloggen bij Microsoft",
+    "finishInPopup": "Rond het inloggen af in het pop-upvenster.",
+    "codeTitle": "Inloggen met een code",
+    "copy": "KOPIËREN",
+    "copied": "GEKOPIEERD",
+    "openBefore": "Open",
+    "openAfter": "op een willekeurig apparaat en voer de code hierboven in.",
+    "scanTitle": "Scan de code",
+    "scanDescription": "Opent de pagina met de code al ingevuld.",
+    "waiting": "Wachten op bevestiging",
+    "requestingCode": "Inlogcode aanvragen…",
+    "qrAlt": "QR-code om in te loggen met Microsoft",
+    "usernameLength": "De gebruikersnaam moet tussen 1 en 16 tekens lang zijn.",
+    "usernameCharacters": "De gebruikersnaam mag alleen letters, cijfers en underscores bevatten.",
+    "microsoftFailed": "Inloggen bij Microsoft is mislukt.\n\n{error}\n\nLukt het niet om dit op te lossen, log dan offline in en probeer het via de accountmanager in de client."
+  },
+  "account": {
+    "offline": "Offline"
+  },
+  "launch": {
+    "instance": "Instantie",
+    "newInstance": "Nieuwe instantie",
+    "state": {
+      "starting": "Starten",
+      "started": "Gestart"
+    },
+    "terminate": "Beëindigen",
+    "log": "Log",
+    "launch": "LiquidBounce starten"
+  },
+  "errorScreen": {
+    "title": "Er is een fout opgetreden",
+    "unknown": "Onbekende fout",
+    "details": "Technische details:",
+    "quickHelp": "Snelle hulp",
+    "contactSupport": "Contact met support"
+  },
+  "firstRun": {
+    "title": "Welkom bij LiquidBounce!",
+    "description": "Bij de eerste start of wanneer er een nieuwe update van LiquidBounce is, verschijnt er een downloadvenster. Zo verdienen we advertentie-inkomsten voor de client. Wil je geen advertenties zien, dan kun je LiquidBounce Premium kopen. Bekijk ook de snelstartgids voor tips over het gebruik van LiquidBounce.",
+    "quickStart": "Snelstartgids"
+  },
+  "versionWarning": {
+    "title": "Je staat op het punt een niet-ondersteunde versie te starten!",
+    "description": "De gekozen versie van LiquidBounce wordt niet meer officieel ondersteund. We raden aan over te stappen op de nieuwste versie, die werkt met alle Minecraft-versies vanaf 1.7.",
+    "switch": "Overstappen op de nieuwste versie",
+    "launchAnyway": "Toch starten",
+    "launchAnywayIn": "Toch starten ({seconds})"
+  },
+  "insecure": {
+    "title": "Beveiligingswaarschuwing",
+    "message": "LiquidLauncher kan geen verbinding maken met het beveiligde (HTTPS) API-eindpunt, maar wel met een onbeveiligd (HTTP) eindpunt.",
+    "risks": "Beveiligingsrisico's:",
+    "riskUnencrypted": "Je verbinding is niet versleuteld en kan zichtbaar zijn voor anderen op je netwerk",
+    "riskIntercepted": "Verzonden en ontvangen gegevens kunnen door kwaadwillenden worden onderschept of gewijzigd",
+    "riskCredentials": "Je inloggegevens kunnen worden buitgemaakt als ze via deze verbinding worden verzonden",
+    "recommendation": "Aanbeveling:",
+    "recommendationText": "Dit probleem komt vaak door netwerkbeperkingen of problemen met SSL-certificaten. We raden een VPN zoals Cloudflare WARP aan om een beveiligde verbinding te maken.",
+    "getWarp": "Cloudflare WARP downloaden",
+    "allow": "Onbeveiligde verbinding toestaan"
+  },
+  "log": {
+    "title": "Clientlog",
+    "upload": "Log uploaden",
+    "autoScroll": "Automatisch scrollen",
+    "search": "Zoeken",
+    "filters": {
+      "error": "Fout",
+      "warn": "Waarschuwing",
+      "info": "Info",
+      "debug": "Debug"
+    },
+    "uploadConfirm": "De volledige log van deze sessie wordt geüpload. Deze kan gevoelige informatie bevatten, zoals privéchatberichten. Weet je zeker dat je wilt doorgaan?",
+    "uploadFailed": "Kan log niet uploaden: {error}",
+    "uploaded": "Je log is beschikbaar via de volgende URL:"
+  },
+  "news": {
+    "readMore": "Lees meer"
+  }
+}

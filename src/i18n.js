@@ -1,19 +1,21 @@
 import { addMessages, date, dictionary, init, locale } from "svelte-i18n";
 import { derived, get, writable } from "svelte/store";
 import { invoke } from "@tauri-apps/api/core";
-import en from "./locales/en.json";
-import zhCN from "./locales/zh-CN.json";
+import metadata from "./locales/languages.json";
 
-export const english = { code: "en", name: "English", minecraft: "en_us" };
+const catalogs = import.meta.glob(["./locales/*.json", "!./locales/languages.json"], { eager: true, import: "default" });
 
-/** Ship with the launcher; every other language is downloaded for this version. */
-export const bundled = [english, { code: "zh-CN", name: "简体中文", minecraft: "zh_cn" }];
+/** Every bundled language, named in itself, with Minecraft's code for it. */
+export const bundled = Object.entries(metadata).map(([code, { name, minecraft }]) => ({ code, name, minecraft }));
 
-/** The languages to offer, each named in itself, with Minecraft's code for it. */
+export const english = bundled.find(language => language.code === "en");
+
+/** The languages to offer: the bundled ones and those published for this version since. */
 export const languages = writable(bundled);
 
-addMessages("en", en);
-addMessages("zh-CN", zhCN);
+for (const [code, { catalog }] of Object.entries(metadata)) {
+    addMessages(code, catalogs[`./locales/${catalog ?? code}.json`]);
+}
 init({ fallbackLocale: "en", initialLocale: "en" });
 
 // Picks the CJK glyph variants the language expects.

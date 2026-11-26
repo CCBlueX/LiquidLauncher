@@ -1,0 +1,304 @@
+{
+  "common": {
+    "loading": "Завантаження...",
+    "tryAgain": "Повторити",
+    "back": "Назад",
+    "browse": "Огляд",
+    "install": "Встановити",
+    "installing": "Встановлення",
+    "installed": "Встановлено",
+    "remove": "Видалити",
+    "undo": "Скасувати",
+    "selected": "Вибрано",
+    "showMore": "Показати більше",
+    "close": "Закрити",
+    "update": "Оновити",
+    "updating": "Оновлення",
+    "cancel": "Скасувати",
+    "continue": "Продовжити",
+    "previous": "Назад",
+    "next": "Далі",
+    "settings": "Налаштування",
+    "copied": "Скопійовано!",
+    "copyToClipboard": "Копіювати в буфер обміну"
+  },
+  "errors": {
+    "options": "Не вдалося завантажити налаштування лаунчера",
+    "api": "Не вдалося підключитися до API LiquidBounce",
+    "system": "Схоже, у Вашій системі є проблема з конфігурацією.\n\n{error}"
+  },
+  "update": {
+    "failedTitle": "Не вдалося оновити лаунчер",
+    "failed": "Лаунчер не зміг оновитися і спробує знову під час наступного запуску.\n\n{error}"
+  },
+  "main": {
+    "welcome": "З поверненням, {name}.",
+    "lowMemory": "Ви збираєтеся запустити клієнт, виділивши менше {memory} MB пам'яті. Це може знизити продуктивність. Продовжити?",
+    "startFailed": "Не вдалося запустити клієнт: {error}"
+  },
+  "progress": {
+    "startingClient": "Запуск клієнта...",
+    "refreshingSession": "Оновлення сесії Minecraft...",
+    "updatingLauncher": "Оновлення лаунчера до v{version}...",
+    "installingUpdate": "Встановлення оновлення...",
+    "loadingVersionManifest": "Завантаження маніфесту версій...",
+    "loadingVersionProfile": "Завантаження профілю версії...",
+    "installingAddon": "Встановлення аддона {name}",
+    "copiedCustomMod": "Скопійовано власний мод {name}",
+    "downloadingRecommendedMod": "Завантаження рекомендованого мода {name}",
+    "openingModDownloadPage": "Відкриття сторінки завантаження мода {name}",
+    "openingDownloadPage": "Відкриття сторінки завантаження... (спроба {attempt}/{attempts})",
+    "downloadingMod": "Завантаження мода {name}",
+    "launchingBuild": "Запуск {commit}...",
+    "settingUp": "Підготовка...",
+    "checkingJre": "Перевірка JRE...",
+    "downloadingJre": "Завантаження JRE...",
+    "downloadingClient": "Завантаження клієнта...",
+    "checkingLibraries": "Перевірка бібліотек...",
+    "downloadingLibrary": "Завантаження бібліотеки {name}",
+    "extractingNatives": "Розпакування нативних бібліотек...",
+    "checkingAssets": "Перевірка ресурсів...",
+    "downloadingAsset": "Завантаження ресурсу {hash}",
+    "launching": "Запуск...",
+    "running": "Працює..."
+  },
+  "settings": {
+    "general": {
+      "language": "Мова",
+      "systemLanguage": "Як у системі",
+      "jvmDistribution": "Дистрибутив JVM",
+      "automatic": "Автоматично",
+      "manual": "Вручну",
+      "custom": "Власний",
+      "distribution": "Дистрибутив",
+      "customJvmPath": "Власний шлях до JVM",
+      "customJvmPlaceholder": "Виберіть розташування Java",
+      "customJvmWindowTitle": "Вибір власної Java",
+      "dataLocation": "Папка даних",
+      "dataLocationWindowTitle": "Вибір папки даних",
+      "memory": "Пам'ять",
+      "concurrentDownloads": "Паралельні завантаження",
+      "connectionsSuffix": " з'єднань",
+      "keepLauncherOpen": "Не закривати лаунчер",
+      "signOut": "Вийти з акаунта Minecraft",
+      "clearData": "Очистити дані",
+      "dataCleared": "Дані очищено.",
+      "clearDataFailed": "Не вдалося очистити дані: {error}",
+      "logoutFailed": "Не вдалося коректно вийти. Спробуйте ще раз."
+    },
+    "client": {
+      "build": "Збірка"
+    },
+    "title": "Налаштування",
+    "tabs": {
+      "general": "Загальні",
+      "minecraft": "Minecraft",
+      "client": "Клієнт",
+      "premium": "Premium"
+    },
+    "minecraft": {
+      "description": "Дозволяє використовувати світи, ресурспаки і шейдери з іншої інсталяції Minecraft.",
+      "directory": "Папка Minecraft",
+      "autoDetect": "Знайти автоматично",
+      "directoryWindowTitle": "Вибір папки Minecraft",
+      "linkWorlds": "Зв'язати світи ({count, number})",
+      "linkResourcePacks": "Зв'язати ресурспаки ({count, number})",
+      "linkShaderPacks": "Зв'язати шейдери ({count, number})",
+      "notFound": "Ванільну інсталяцію Minecraft не знайдено."
+    },
+    "premium": {
+      "skipAds": "Пропускати рекламу",
+      "accountInformation": "Дані акаунта",
+      "noPremium": "До цього акаунта не прив'язано Premium. Прив'яжіть його на сторінці керування акаунтом.",
+      "manageAccount": "Керування акаунтом",
+      "logout": "Вийти",
+      "description": "Оформивши Premium, Ви не лише підтримуєте розвиток клієнта, а й отримуєте плащ і можливість пропускати рекламу в лаунчері.",
+      "login": "Увійти через акаунт LiquidBounce",
+      "loginFailed": "Не вдалося увійти в акаунт клієнта: {error}",
+      "logoutFailed": "Не вдалося вийти з акаунта клієнта: {error}"
+    },
+    "liquidBounceAccount": {
+      "username": "Ім'я користувача",
+      "donatorPerks": "Бонуси донатера",
+      "active": "Активні",
+      "inactive": "Неактивні"
+    },
+    "message": {
+      "clearSearch": "Очистити пошук"
+    },
+    "itemRow": {
+      "removeNamed": "Видалити {name}"
+    },
+    "directorySelector": {
+      "select": "Вибрати папку",
+      "open": "Відкрити папку"
+    },
+    "fileSelector": {
+      "select": "Вибрати файл"
+    }
+  },
+  "builds": {
+    "title": "Збірки",
+    "showNightly": "Показувати nightly-збірки",
+    "latest": "Остання",
+    "latestRelease": "Останній реліз",
+    "latestNightly": "Остання nightly",
+    "builds": "{count, plural, one {# збірка} few {# збірки} many {# збірок} other {# збірки}}",
+    "releases": "{count, plural, one {# реліз} few {# релізи} many {# релізів} other {# релізу}}"
+  },
+  "marketplace": {
+    "title": "{type, select, Addon {Аддони} Theme {Теми} Script {Скрипти} other {Елементи}}",
+    "type": "{type, select, Addon {Аддон} Theme {Тема} Script {Скрипт} other {Елемент}}",
+    "empty": "{type, select, Addon {Аддонів поки немає.} Theme {Тем поки немає.} Script {Скриптів поки немає.} other {Поки нічого немає.}}",
+    "search": "{type, select, Addon {Пошук аддонів} Theme {Пошук тем} Script {Пошук скриптів} other {Пошук}}",
+    "noMatch": "{type, select, Addon {Немає аддонів за запитом «{query}».} Theme {Немає тем за запитом «{query}».} Script {Немає скриптів за запитом «{query}».} other {Нічого не знайдено за запитом «{query}».}}",
+    "nonePublished": "{type, select, Addon {Аддони ще не опубліковано.} Theme {Теми ще не опубліковано.} Script {Скрипти ще не опубліковано.} other {Поки нічого не опубліковано.}}",
+    "byAuthor": "{type} від {author}",
+    "downloads": "{count, plural, one {# завантаження} few {# завантаження} many {# завантажень} other {# завантаження}}",
+    "notFor": "Не для {version}",
+    "offline": "Не вдалося перевірити маркетплейс: {error}",
+    "restart": "Перезапустіть LiquidBounce, щоб застосувати {count, plural, one {# зміну} few {# зміни} many {# змін} other {# зміни}}.",
+    "removeQuestion": "Видалити {name}? Без нього {count, plural, one {перестане} few {перестануть} many {перестануть} other {перестануть}} працювати: {names}.",
+    "screenshots": "Скриншоти",
+    "versions": "Версії",
+    "neededBy": "Потрібне для",
+    "viewFullSize": "Відкрити в повному розмірі",
+    "previousScreenshot": "Попередній скриншот",
+    "nextScreenshot": "Наступний скриншот"
+  },
+  "mods": {
+    "title": "Моди — {target}",
+    "addFile": "Додати файл",
+    "addFileWindowTitle": "Виберіть власний мод для встановлення",
+    "browse": "Огляд",
+    "recommended": "Рекомендовані",
+    "unknownVersion": "Невідома версія",
+    "updateAvailable": "Доступна {version}",
+    "installFailed": "Не вдалося встановити мод: {error}",
+    "deleteFailed": "Не вдалося видалити мод: {error}",
+    "remove": "Видалити мод",
+    "searchPlaceholder": "Пошук модів на Modrinth",
+    "hitLine": "від {author} · {downloads, plural, one {# завантаження} few {# завантаження} many {# завантажень} other {# завантаження}}",
+    "noMatch": "Немає модів за запитом «{query}»."
+  },
+  "facts": {
+    "blatantOrCloset": {
+      "title": "Blatant чи Closet — вирішувати Вам!",
+      "description": "У LiquidBounce вбудовано безліч blatant- і closet-читів, що робить його ідеальним клієнтом «все в одному»."
+    },
+    "multiVersion": {
+      "title": "Підтримка різних версій",
+      "description": "Вбудований перемикач версій дозволяє легко змінювати версію Minecraft без перезапуску гри!"
+    },
+    "multiServer": {
+      "title": "Підтримка різних серверів",
+      "description": "LiquidBounce пропонує функції та обходи для багатьох серверів."
+    },
+    "autoConfig": {
+      "title": "Система автоконфігів",
+      "description": "Система автоконфігів LiquidBounce сама застосує найкращі налаштування під час входу на відомий сервер."
+    },
+    "customizable": {
+      "title": "Гнучке налаштування",
+      "description": "Інтерфейс LiquidBounce повністю налаштовується. Можна замінити весь інтерфейс на свій смак."
+    },
+    "downloads": {
+      "title": "{count, number} завантажень",
+      "description": "LiquidBounce — один із найпопулярніших чит-клієнтів усіх часів."
+    },
+    "openSource": {
+      "title": "Безкоштовний і з відкритим кодом",
+      "description": "Вихідний код LiquidBounce у відкритому доступі."
+    },
+    "scriptApi": {
+      "title": "ScriptAPI",
+      "description": "Script API в LiquidBounce дозволяє писати власні модулі та команди."
+    }
+  },
+  "login": {
+    "title": "Вхід",
+    "microsoft": "Вхід через Microsoft",
+    "microsoftDevice": "Вхід через Microsoft на пристрої",
+    "or": "або",
+    "username": "Ім'я користувача",
+    "offline": "Офлайн-вхід",
+    "microsoftTitle": "Вхід у Microsoft",
+    "finishInPopup": "Завершіть вхід у спливаючому вікні.",
+    "codeTitle": "Вхід за кодом",
+    "copy": "КОПІЮВАТИ",
+    "copied": "СКОПІЙОВАНО",
+    "openBefore": "Відкрийте",
+    "openAfter": "на будь-якому пристрої та введіть код вище.",
+    "scanTitle": "Відскануйте код",
+    "scanDescription": "Відкриє сторінку з уже введеним кодом.",
+    "waiting": "Очікування підтвердження",
+    "requestingCode": "Запит коду для входу…",
+    "qrAlt": "QR-код для входу через Microsoft",
+    "usernameLength": "Ім'я користувача має містити від 1 до 16 символів.",
+    "usernameCharacters": "Ім'я користувача може містити лише літери, цифри та підкреслення.",
+    "microsoftFailed": "Не вдалося увійти через Microsoft.\n\n{error}\n\nЯкщо не вдається розв'язати проблему, увійдіть офлайн і спробуйте увійти через вбудований менеджер акаунтів клієнта."
+  },
+  "account": {
+    "offline": "Офлайн"
+  },
+  "launch": {
+    "instance": "Екземпляр",
+    "newInstance": "Новий екземпляр",
+    "state": {
+      "starting": "Запуск",
+      "started": "Запущено"
+    },
+    "terminate": "Завершити",
+    "log": "Лог",
+    "launch": "Запустити LiquidBounce"
+  },
+  "errorScreen": {
+    "title": "Сталася помилка",
+    "unknown": "Невідома помилка",
+    "details": "Технічні подробиці:",
+    "quickHelp": "Швидка допомога",
+    "contactSupport": "Зв'язатися з підтримкою"
+  },
+  "firstRun": {
+    "title": "Ласкаво просимо до LiquidBounce!",
+    "description": "Під час першого запуску або виходу нового оновлення LiquidBounce з'явиться вікно завантаження. Так ми отримуємо дохід від реклами для клієнта. Якщо Ви не хочете бачити рекламу, можна придбати LiquidBounce Premium. Також загляньте в посібник зі швидкого старту — там є поради щодо використання LiquidBounce.",
+    "quickStart": "Швидкий старт"
+  },
+  "versionWarning": {
+    "title": "Ви збираєтеся запустити непідтримувану версію!",
+    "description": "Вибрана версія LiquidBounce більше офіційно не підтримується. Радимо перейти на найновішу версію, яка працює з усіма версіями Minecraft починаючи з 1.7.",
+    "switch": "Перейти на найновішу версію",
+    "launchAnyway": "Все одно запустити",
+    "launchAnywayIn": "Все одно запустити ({seconds})"
+  },
+  "insecure": {
+    "title": "Попередження безпеки",
+    "message": "LiquidLauncher не може підключитися до захищеного (HTTPS) API, але зміг підключитися до незахищеного (HTTP).",
+    "risks": "Ризики:",
+    "riskUnencrypted": "Ваше з'єднання не зашифроване і може бути видиме іншим у Вашій мережі",
+    "riskIntercepted": "Надіслані та отримані дані можуть бути перехоплені або змінені зловмисниками",
+    "riskCredentials": "Ваші дані для входу можуть бути скомпрометовані під час передачі через це з'єднання",
+    "recommendation": "Рекомендація:",
+    "recommendationText": "Зазвичай причина в мережевих обмеженнях або проблемах із SSL-сертифікатом. Радимо використати VPN, наприклад Cloudflare WARP, для захищеного з'єднання.",
+    "getWarp": "Завантажити Cloudflare WARP",
+    "allow": "Дозволити незахищене з'єднання"
+  },
+  "log": {
+    "title": "Лог клієнта",
+    "upload": "Вивантажити лог",
+    "autoScroll": "Автопрокрутка",
+    "search": "Пошук",
+    "filters": {
+      "error": "Помилка",
+      "warn": "Попер.",
+      "info": "Інфо",
+      "debug": "Налагодження"
+    },
+    "uploadConfirm": "Буде вивантажено весь лог цієї сесії. Він може містити особисті дані, наприклад приватні повідомлення в чаті. Продовжити?",
+    "uploadFailed": "Не вдалося вивантажити лог: {error}",
+    "uploaded": "Ваш лог доступний за посиланням:"
+  },
+  "news": {
+    "readMore": "Докладніше"
+  }
+}
