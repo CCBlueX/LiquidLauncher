@@ -19,8 +19,22 @@
 
 use std::sync::{Arc, Mutex};
 
+#[cfg(target_os = "linux")]
+use anyhow::Result;
 use commands::*;
+#[cfg(windows)]
+use os_info::Version;
+#[cfg(windows)]
+use tauri::window::{Effect, EffectsBuilder};
 use tauri::{Manager, Window};
+#[cfg(target_os = "linux")]
+use tauri::{WebviewWindow, WindowEvent};
+#[cfg(target_os = "linux")]
+use tracing::info;
+#[cfg(windows)]
+use tracing::warn;
+#[cfg(target_os = "linux")]
+use window_vibrancy::{apply_wayland_blur, RoundedRect};
 
 use crate::app::builds::KeptBuild;
 
@@ -65,11 +79,9 @@ pub fn gui_main() {
             // Acrylic lags while the window is dragged before Windows 11 22H2.
             #[cfg(windows)]
             {
-                use tauri::window::{Effect, EffectsBuilder};
-
                 let acrylic = matches!(
                     os_info::get().version(),
-                    os_info::Version::Semantic(_, _, build) if *build >= 22621
+                    Version::Semantic(_, _, build) if *build >= 22621
                 );
                 let effect = if acrylic {
                     Effect::Acrylic
@@ -78,23 +90,23 @@ pub fn gui_main() {
                 };
                 if let Err(error) = window.set_effects(EffectsBuilder::new().effect(effect).build())
                 {
-                    tracing::warn!("Failed to blur the window: {error}");
+                    warn!("Failed to blur the window: {error}");
                 }
             }
 
             // Inside the rounded corners of `.window.rounded` in Window.svelte, again on every resize.
             #[cfg(target_os = "linux")]
             {
-                let blur = |window: &tauri::WebviewWindow| -> anyhow::Result<()> {
+                let blur = |window: &WebviewWindow| -> Result<()> {
                     let size = window
                         .inner_size()?
                         .to_logical::<u32>(window.scale_factor()?);
-                    let rect = window_vibrancy::RoundedRect {
+                    let rect = RoundedRect {
                         width: size.width,
                         height: size.height,
                         radius: 8,
                     };
-                    window_vibrancy::apply_wayland_blur(window, Some(rect))?;
+                    apply_wayland_blur(window, Some(rect))?;
                     Ok(())
                 };
                 match blur(&window) {
@@ -103,14 +115,13 @@ pub fn gui_main() {
                         window.on_window_event(move |event| {
                             if matches!(
                                 event,
-                                tauri::WindowEvent::Resized(_)
-                                    | tauri::WindowEvent::ScaleFactorChanged { .. }
+                                WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. }
                             ) {
                                 let _ = blur(&resized);
                             }
                         });
                     }
-                    Err(error) => tracing::info!("No window blur: {error:#}"),
+                    Err(error) => info!("No window blur: {error:#}"),
                 }
             }
             Ok(())
