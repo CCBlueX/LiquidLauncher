@@ -404,7 +404,7 @@
 {/if}
 
 {#if addAccountShown}
-    <SettingsContainer title="Add account" pinned on:hideSettings={() => addAccountShown = false}>
+    <SettingsContainer title="Add account" on:hideSettings={() => addAccountShown = false}>
         <SignIn bind:options on:added={accountAdded} />
     </SettingsContainer>
 {/if}

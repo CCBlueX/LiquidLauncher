@@ -18,6 +18,9 @@
         padding: 30px;
         border-radius: 12px;
         width: 320px;
+        display: flex;
+        flex-direction: column;
+        row-gap: 15px;
     }
 
     .title {

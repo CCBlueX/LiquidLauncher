@@ -26,7 +26,7 @@
     .wrapper {
         display: grid;
         grid-template-columns: max-content 1fr;
-        background-color: rgba(255, 255, 255, .06);
+        background-color: rgba(0, 0, 0, .26);
         padding: 8px;
         border-radius: 6px;
         column-gap: 14px;
@@ -48,6 +48,5 @@
         font-size: 16px;
         font-family: "Inter", sans-serif;
         color: white;
-        min-width: 0;
     }
 </style>
