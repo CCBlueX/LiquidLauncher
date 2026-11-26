@@ -8,6 +8,8 @@
     import ButtonClose from "../common/ButtonClose.svelte";
 
     export let account;
+    export let accounts;
+    export let accountsLocked;
     export let running;
     export let progressState;
 </script>
@@ -24,10 +26,13 @@
         {/if}
     </StatusBar>
     <Account
-            username={account?.name}
-            uuid={account?.id}
-            accountType={account?.type}
+            {account}
+            {accounts}
+            locked={accountsLocked}
             on:showSettings
+            on:addAccount
+            on:switchAccount
+            on:removeAccount
     />
     <ButtonClose />
 </TitleBar>

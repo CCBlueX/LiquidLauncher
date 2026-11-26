@@ -4,6 +4,8 @@
 
     export let title;
     export let fill = false;
+    // Fixed to the top, so the box stays put when its content changes height.
+    export let pinned = false;
 
     const dispatch = createEventDispatcher();
 
@@ -12,7 +14,7 @@
     }
 </script>
 
-<div class="container" class:fill in:fly={{ y: -10, duration: 200 }} out:fly={{ y: -10, duration: 200 }}>
+<div class="container" class:fill class:pinned in:fly={{ y: -10, duration: 200 }} out:fly={{ y: -10, duration: 200 }}>
     <div class="header">
         <div class="title">{title}</div>
         <button class="button-hide" on:click={handleHideClick}>
@@ -25,6 +27,8 @@
     <div class="settings">
         <slot />
     </div>
+
+    <slot name="footer" />
 </div>
 
 <style>
@@ -48,6 +52,11 @@
 
     .container.fill {
         height: calc(100% - 100px);
+    }
+
+    .container.pinned {
+        top: 50px;
+        transform: translateX(-50%);
     }
 
     .header {

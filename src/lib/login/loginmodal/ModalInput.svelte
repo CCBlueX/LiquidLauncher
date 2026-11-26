@@ -3,21 +3,30 @@
     export let placeholder;
     export let value;
 
-    export let characterLimit;
+    export let characterLimit = undefined;
+    export let password = false;
 </script>
 
 <div class="wrapper">
     <div class="icon">
         <img src="img/icon/icon-{icon}.svg" alt={icon}>
     </div>
-    <input class="input" type="text" placeholder={placeholder} maxlength={characterLimit} bind:value>
+    <input
+            class="input"
+            type={password ? "password" : "text"}
+            {placeholder}
+            maxlength={characterLimit}
+            {value}
+            on:input={(event) => value = event.target.value}
+            on:keydown
+    >
 </div>
 
 <style>
     .wrapper {
         display: grid;
         grid-template-columns: max-content 1fr;
-        background-color: rgba(0, 0, 0, .26);
+        background-color: rgba(255, 255, 255, .06);
         padding: 8px;
         border-radius: 6px;
         column-gap: 14px;
@@ -39,5 +48,6 @@
         font-size: 16px;
         font-family: "Inter", sans-serif;
         color: white;
+        min-width: 0;
     }
 </style>

@@ -13,6 +13,8 @@ use tokio::{
 };
 use tracing::debug;
 
+pub mod accounts;
+mod auth_manager;
 pub mod shared;
 
 const OAUTH_CLIENT_ID: &str = "J2hzqzCxch8hfOPRFNINOZV5Ma4X4BFdZpMjAVEW";

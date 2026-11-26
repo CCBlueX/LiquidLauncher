@@ -35,17 +35,6 @@
         }
     }
 
-    async function logout() {
-        try {
-            await invoke("logout", { accountData: options.start.account });
-            options.start.account = null;
-            await options.store();
-        } catch (error) {
-            console.error("Logout failed:", error);
-            alert("Failed to logout properly. Please try again.");
-        }
-    }
-
     function resetJavaDistribution() {
         if (options.start.javaDistribution.type === "custom") {
             options.start.javaDistribution.value = "";
@@ -129,12 +118,6 @@
     title="Keep launcher running"
     disabled={false}
     bind:value={options.launcher.keepLauncherOpen}
-/>
-
-<ButtonSetting
-    text="Sign out of Minecraft Account"
-    on:click={logout}
-    color="#4677FF"
 />
 
 <ButtonSetting text="Clear Data" on:click={clearData} color="#B83529" />

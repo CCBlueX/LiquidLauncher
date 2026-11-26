@@ -17,13 +17,14 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::io::ErrorKind;
+use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use oauth2::{AccessToken, RefreshToken};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{json, to_vec, Map, Value};
+use tempfile::NamedTempFile;
 use tokio::fs;
 
 use super::ClientAccount;
@@ -86,14 +87,7 @@ pub async fn write(data: &Path, account: Option<&ClientAccount>) -> Result<()> {
         }
     }
 
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).await?;
-    }
-
-    let temporary = path.with_extension("json.tmp");
-    fs::write(&temporary, serde_json::to_vec(&root)?).await?;
-    fs::rename(&temporary, &path).await?;
-    Ok(())
+    write_root(&path, &root).await
 }
 
 pub async fn renew(data: &Path, account: ClientAccount) -> Result<ClientAccount> {
@@ -106,7 +100,18 @@ fn path(data: &Path) -> PathBuf {
     GameDir::new(data).client().join("account.json")
 }
 
-async fn read_root(path: &Path) -> Result<Option<Value>> {
+/// Replaces the file in one step, so the client never reads half a file.
+pub(super) async fn write_root(path: &Path, root: &Value) -> Result<()> {
+    let parent = path.parent().context("The file has no parent directory")?;
+    fs::create_dir_all(parent).await?;
+
+    let mut file = NamedTempFile::new_in(parent)?;
+    file.write_all(&to_vec(root)?)?;
+    file.persist(path)?;
+    Ok(())
+}
+
+pub(super) async fn read_root(path: &Path) -> Result<Option<Value>> {
     let raw = match fs::read_to_string(path).await {
         Ok(raw) => raw,
         Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
@@ -114,6 +119,9 @@ async fn read_root(path: &Path) -> Result<Option<Value>> {
             return Err(error).with_context(|| format!("Failed to read {}", path.display()))
         }
     };
+    if raw.trim().is_empty() {
+        return Ok(None);
+    }
 
     serde_json::from_str(&raw)
         .map(Some)

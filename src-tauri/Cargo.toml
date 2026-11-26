@@ -70,10 +70,14 @@ reqwest = { version = "0.13.1", default-features = false, features = ["http2", "
 # oauth2 5.0.0 does not support reqwest 0.13 (10.08.2026 and still waiting)
 oauth2 = { git = "https://github.com/martijnberger/oauth2-rs.git", default-features = false, features = ["reqwest", "rustls"] }
 minecraft-auth = "0.1.1"
+# Device key of a Microsoft sign-in, converted for LiquidBounce's accounts.json
+p256 = { version = "0.13", default-features = false, features = ["arithmetic", "pkcs8", "alloc"] }
+base64 = "0.22"
 
 # Data serialization libs
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+tempfile = "3"
 
 # Machine architecture when the launcher itself runs emulated (Rosetta, x64 on Windows ARM)
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -85,9 +89,6 @@ windows-sys = { version = "^0.61", features = ["Win32_System_SystemInformation",
 # Wayland blur, until tauri-apps/window-vibrancy has it
 [target.'cfg(target_os = "linux")'.dependencies]
 window-vibrancy = { git = "https://github.com/1zun4/window-vibrancy", rev = "1c64824821ab2bea3b35bdff893ea382b672cf34" }
-
-[dev-dependencies]
-tempfile = "3"
 
 [features]
 # by default Tauri runs in production mode

@@ -12,6 +12,9 @@
     import ClientLog from "./log/ClientLog.svelte";
     import Settings from "./settings/Settings.svelte";
     import FirstRunWarning from "./FirstRunWarning.svelte";
+    import SettingsContainer from "../settings/SettingsContainer.svelte";
+    import SignIn from "../accounts/SignIn.svelte";
+    import {accounts, loadAccounts} from "../accounts/accounts.js";
     import {onMount} from "svelte";
 
     export let client;
@@ -28,6 +31,7 @@
     let logs = {};
     let logShown = null;
     let settingsShown = false;
+    let addAccountShown = false;
     let settingsTab = "General";
     let launchVersionWarningShown = false;
     let firstRunWarningShown = false;
@@ -258,6 +262,43 @@
         settingsShown = true;
     }
 
+    async function hideSettings() {
+        settingsShown = false;
+        await options.store();
+        // The data location may have changed, which has its own custom mods and accounts
+        loadAccounts(options);
+        await updateMods();
+    }
+
+    async function switchAccount(entry) {
+        try {
+            options.start.account = await invoke("select_account", {options, id: entry.id});
+            await options.store();
+        } catch (e) {
+            alert("Failed to switch account.\n\n" + e);
+        }
+        await loadAccounts(options);
+    }
+
+    async function removeAccount(entry) {
+        const confirmed = await confirm(
+            `Remove ${entry.name}? It disappears from LiquidBounce's account manager too.`
+        );
+        if (!confirmed) return;
+
+        try {
+            await invoke("remove_account", {options, id: entry.id});
+        } catch (e) {
+            alert("Failed to remove account.\n\n" + e);
+        }
+        await loadAccounts(options);
+    }
+
+    async function accountAdded() {
+        addAccountShown = false;
+        await loadAccounts(options);
+    }
+
     async function continueAfterFirstRun() {
         await hideFirstRunWarning();
         await runClient();
@@ -309,6 +350,8 @@
         if (logShown !== id) delete logs[id];
         refreshInstances();
         updateClientAccount();
+        // The client writes the list when it exits.
+        loadAccounts(options);
     });
 
     listen("client-error", (event) => {
@@ -316,6 +359,7 @@
     });
 
     onMount(async () => {
+        loadAccounts(options);
         updateClientAccount();
         refreshInstances();
         await updateData();
@@ -355,23 +399,29 @@
             on:updateData={updateData}
             on:updateModStates={updateModStates}
             on:updateMods={updateMods}
-            on:hide={async () => {
-                settingsShown = false;
-                await options.store();
-                // The data location may have changed, which has its own custom mods
-                await updateMods();
-            }}
+            on:hide={hideSettings}
     />
 {/if}
 
+{#if addAccountShown}
+    <SettingsContainer title="Add account" pinned on:hideSettings={() => addAccountShown = false}>
+        <SignIn bind:options on:added={accountAdded} />
+    </SettingsContainer>
+{/if}
+
 <VerticalFlexWrapper
-        blur={settingsShown || logShown !== null || launchVersionWarningShown || firstRunWarningShown}
+        blur={settingsShown || addAccountShown || logShown !== null || launchVersionWarningShown || firstRunWarningShown}
 >
     <MainHeader
             account={options.start.account}
+            accounts={$accounts}
+            accountsLocked={instances.length > 0}
             running={starting}
             {progressState}
             on:showSettings={() => showSettings("General")}
+            on:addAccount={() => addAccountShown = true}
+            on:switchAccount={(e) => switchAccount(e.detail)}
+            on:removeAccount={(e) => removeAccount(e.detail)}
     />
 
     <ContentWrapper>

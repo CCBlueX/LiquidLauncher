@@ -29,6 +29,7 @@
     .main-section-wrapper {
         display: grid;
         grid-template-columns: 1fr max-content;
+        align-items: center;
         flex: 1;
         padding: 0 50px;
         margin-bottom: 20px;
