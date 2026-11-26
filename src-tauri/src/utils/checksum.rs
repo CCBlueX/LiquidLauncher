@@ -19,9 +19,15 @@
 
 use anyhow::Result;
 use sha1::{Digest, Sha1};
+use sha2::{Digest as _, Sha256};
 use std::path::PathBuf;
 
 pub fn sha1sum(path: &PathBuf) -> Result<String> {
     let hash = Sha1::digest(std::fs::read(path)?);
     Ok(base16ct::lower::encode_string(&hash))
+}
+
+/// Lowercase hex.
+pub fn sha256(bytes: &[u8]) -> String {
+    base16ct::lower::encode_string(&Sha256::digest(bytes))
 }

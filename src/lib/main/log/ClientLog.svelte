@@ -7,6 +7,7 @@
     import TextSetting from "../../settings/TextSetting.svelte";
     import ButtonSetting from "../../settings/ButtonSetting.svelte"
     import LogMessage from "./LogMessage.svelte";
+    import { _ } from "svelte-i18n";
 
     export let messages;
 
@@ -14,10 +15,10 @@
     let query = "";
 
     const filters = [
-        { name: "Error", levels: ["FATAL", "ERROR"], color: "#ff4444", shown: true },
-        { name: "Warn", levels: ["WARN"], color: "#ff9800", shown: true },
-        { name: "Info", levels: ["INFO"], color: "#60b675", shown: true },
-        { name: "Debug", levels: ["DEBUG", "TRACE"], color: "rgba(255, 255, 255, 0.7)", shown: true },
+        { key: "error", levels: ["FATAL", "ERROR"], color: "#ff4444", shown: true },
+        { key: "warn", levels: ["WARN"], color: "#ff9800", shown: true },
+        { key: "info", levels: ["INFO"], color: "#60b675", shown: true },
+        { key: "debug", levels: ["DEBUG", "TRACE"], color: "rgba(255, 255, 255, 0.7)", shown: true },
     ];
 
     $: pattern = query ? new RegExp("(" + query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "i") : null;
@@ -55,7 +56,7 @@
     async function handleUploadSetting(e) {
         const log = messages.map(line => line.text).join("\n");
 
-        if (await confirm("The entire log of this session will be uploaded. It may contain sensitive information like private chat messages. Are you sure you want to proceed?") !== true) {
+        if (await confirm($_("log.uploadConfirm")) !== true) {
             return;
         }
 
@@ -67,30 +68,30 @@
         const responseData = await response.json().catch(() => ({ success: false, error: `HTTP ${response.status}` }));
 
         if (!response.ok || !responseData.success) {
-            alert(`Failed to upload log: ${responseData.error}`);
+            alert($_("log.uploadFailed", { values: { error: `${responseData.error}` } }));
             return;
         }
 
-        prompt("Your log is available at the following URL: ", responseData.url);
+        prompt($_("log.uploaded"), responseData.url);
     }
 </script>
 
 <div class="log" transition:fly={{ y: -10, duration: 200 }}>
     <div class="header">
-        <div class="title">Client log</div>
+        <div class="title">{$_("log.title")}</div>
         <div class="filters">
             <div class="search">
-                <TextSetting placeholder="Search" bind:value={query} />
+                <TextSetting placeholder={$_("log.search")} bind:value={query} />
             </div>
             {#each filters as filter}
                 <label class="filter" style:--color={filter.color}>
                     <input type="checkbox" bind:checked={filter.shown}>
-                    <span>{filter.name}</span>
+                    <span>{$_(`log.filters.${filter.key}`)}</span>
                 </label>
             {/each}
         </div>
         <button class="button-hide" on:click={() => dispatch("hideClientLog")}>
-            <img class="icon" src="img/icon/icon-button-close.svg" alt="hide">
+            <img class="icon" src="img/icon/icon-button-close.svg" alt={$_("common.close")}>
         </button>
     </div>
 
@@ -104,8 +105,8 @@
     </div>
 
     <div class="settings">
-        <ToggleSetting title="Auto scroll" disabled={false} bind:value={autoScroll} />
-        <ButtonSetting text="Upload log" color="#4677FF" small on:click={handleUploadSetting}></ButtonSetting>
+        <ToggleSetting title={$_("log.autoScroll")} disabled={false} bind:value={autoScroll} />
+        <ButtonSetting text={$_("log.upload")} color="#4677FF" small on:click={handleUploadSetting}></ButtonSetting>
     </div>
 </div>
 

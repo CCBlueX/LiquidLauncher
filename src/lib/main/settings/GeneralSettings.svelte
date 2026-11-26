@@ -8,6 +8,8 @@
     import LauncherVersion from "../../settings/LauncherVersion.svelte";
     import {onMount} from "svelte";
     import {invoke} from "@tauri-apps/api/core";
+    import {_} from "svelte-i18n";
+    import {languages} from "../../../i18n.js";
 
     export let client;
     export let options;
@@ -28,10 +30,10 @@
     async function clearData() {
         try {
             await invoke("clear_data", { options });
-            alert("Data cleared.");
+            alert($_("settings.general.dataCleared"));
         } catch (error) {
             console.error("Failed to clear data:", error);
-            alert(`Failed to clear data: ${error}`);
+            alert($_("settings.general.clearDataFailed", { values: { error: `${error}` } }));
         }
     }
 
@@ -42,7 +44,7 @@
             await options.store();
         } catch (error) {
             console.error("Logout failed:", error);
-            alert("Failed to logout properly. Please try again.");
+            alert($_("settings.general.logoutFailed"));
         }
     }
 
@@ -72,11 +74,20 @@
 </script>
 
 <SelectSetting
-    title="JVM Distribution"
+    title={$_("settings.general.language")}
     items={[
-        { value: "automatic", text: "Automatic" },
-        ...(distributions.length ? [{ value: "manual", text: "Manual" }] : []),
-        { value: "custom", text: "Custom" },
+        { value: null, text: $_("settings.general.systemLanguage") },
+        ...$languages.map(({ code, name }) => ({ value: code, text: name })),
+    ]}
+    bind:value={options.launcher.language}
+/>
+
+<SelectSetting
+    title={$_("settings.general.jvmDistribution")}
+    items={[
+        { value: "automatic", text: $_("settings.general.automatic") },
+        ...(distributions.length ? [{ value: "manual", text: $_("settings.general.manual") }] : []),
+        { value: "custom", text: $_("settings.general.custom") },
     ]}
     on:change={resetJavaDistribution}
     bind:value={options.start.javaDistribution.type}
@@ -84,7 +95,7 @@
 
 {#if options.start.javaDistribution.type === "manual"}
     <SelectSetting
-        title="Distribution"
+        title={$_("settings.general.distribution")}
         items={distributions.map(v => ({ value: v.vendor, text: v.name }))}
         bind:value={options.start.javaDistribution.value}
     />
@@ -92,23 +103,23 @@
 
 {#if options.start.javaDistribution.type === "custom"}
     <FileSelectorSetting
-        title="Custom JVM Path"
-        placeholder="Select Java wrapper location"
+        title={$_("settings.general.customJvmPath")}
+        placeholder={$_("settings.general.customJvmPlaceholder")}
         bind:value={options.start.javaDistribution.value}
         filters={[{ name: "java", extensions: [] }]}
-        windowTitle="Select custom Java wrapper"
+        windowTitle={$_("settings.general.customJvmWindowTitle")}
     />
 {/if}
 
 <DirectorySelectorSetting
-    title="Data Location"
+    title={$_("settings.general.dataLocation")}
     placeholder={defaultDataFolder}
     bind:value={options.start.customDataPath}
-    windowTitle="Select custom data directory"
+    windowTitle={$_("settings.general.dataLocationWindowTitle")}
 />
 
 <RangeSetting
-    title="Memory"
+    title={$_("settings.general.memory")}
     min={2048}
     max={systemMemory}
     bind:value={options.start.memory}
@@ -117,26 +128,26 @@
 />
 
 <RangeSetting
-    title="Concurrent Downloads"
+    title={$_("settings.general.concurrentDownloads")}
     min={1}
     max={50}
     bind:value={options.launcher.concurrentDownloads}
-    valueSuffix=" connections"
+    valueSuffix={$_("settings.general.connectionsSuffix")}
     step={1}
 />
 
 <ToggleSetting
-    title="Keep launcher running"
+    title={$_("settings.general.keepLauncherOpen")}
     disabled={false}
     bind:value={options.launcher.keepLauncherOpen}
 />
 
 <ButtonSetting
-    text="Sign out of Minecraft Account"
+    text={$_("settings.general.signOut")}
     on:click={logout}
     color="#4677FF"
 />
 
-<ButtonSetting text="Clear Data" on:click={clearData} color="#B83529" />
+<ButtonSetting text={$_("settings.general.clearData")} on:click={clearData} color="#B83529" />
 
 <LauncherVersion version={launcherVersion} />

@@ -255,9 +255,8 @@ fn handle_stderr(runner: &Runner, data: &[u8]) -> anyhow::Result<()> {
 fn handle_progress(runner: &Runner, progress_update: ProgressUpdate) -> anyhow::Result<()> {
     runner.emit("progress-update", &progress_update)?;
 
-    // Check if progress update is label update
     if let ProgressUpdate::SetLabel(label) = progress_update {
-        handle_log(runner, &label)?;
+        handle_log(runner, &label.to_string())?;
     }
     Ok(())
 }
@@ -325,6 +324,7 @@ pub(crate) async fn run_client(
     build_id: u32,
     options: Options,
     mods: Vec<LoaderMod>,
+    language: String,
     window: Window,
     app_state: tauri::State<'_, AppState>,
 ) -> Result<u32, String> {
@@ -404,6 +404,7 @@ pub(crate) async fn run_client(
         client_account,
         skip_advertisement,
         vanilla_integration: options.start_options.installation,
+        language,
     };
 
     thread::spawn(move || {
@@ -437,7 +438,7 @@ pub(crate) async fn run_client(
                         runner.window.lock().unwrap().show().unwrap();
                     }
 
-                    let message = format!("An error occured:\n\n{:?}", e);
+                    let message = format!("An error occurred:\n\n{:?}", e);
                     runner
                         .emit("client-error", json!({ "id": runner.id }))
                         .unwrap();

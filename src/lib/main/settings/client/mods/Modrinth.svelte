@@ -1,6 +1,7 @@
 <script>
     import { createEventDispatcher } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
+    import { _ } from "svelte-i18n";
     import ButtonSetting from "../../../../settings/ButtonSetting.svelte";
     import ItemRow from "../../../../settings/ItemRow.svelte";
     import Message from "../../../../settings/Message.svelte";
@@ -39,7 +40,7 @@
 <ListView
         bind:this={view}
         bind:query
-        placeholder="Search Modrinth mods"
+        placeholder={$_("mods.searchPlaceholder")}
         title="Modrinth"
         {request}
         on:back
@@ -48,13 +49,13 @@
     <svelte:fragment slot="aside" let:result>{result?.target ?? ""}</svelte:fragment>
 
     {#each result.hits as hit (hit.projectId)}
-        <ItemRow name={hit.title} description={hit.description} openable={false} status={hit.installed ? "Installed" : null}>
-            {hit.line}
+        <ItemRow name={hit.title} description={hit.description} openable={false} status={hit.installed ? $_("common.installed") : null}>
+            {$_("mods.hitLine", { values: { author: hit.author, downloads: hit.downloads } })}
             <svelte:fragment slot="side">
                 {#if !hit.installed}
                     <ButtonSetting
                             small
-                            text={busy.has(hit.projectId) ? "Installing" : "Install"}
+                            text={busy.has(hit.projectId) ? $_("common.installing") : $_("common.install")}
                             disabled={busy.has(hit.projectId)}
                             on:click={() => install(hit)}
                     />
@@ -62,8 +63,8 @@
             </svelte:fragment>
         </ItemRow>
     {:else}
-        {#if result.empty}
-            <Message title={result.empty} clearable on:clear={() => query = ""} />
+        {#if result.query}
+            <Message title={$_("mods.noMatch", { values: { query: result.query } })} clearable on:clear={() => query = ""} />
         {/if}
     {/each}
 </ListView>

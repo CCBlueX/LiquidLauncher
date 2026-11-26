@@ -1,0 +1,304 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "tryAgain": "Try again",
+    "back": "Back",
+    "browse": "Browse",
+    "install": "Install",
+    "installing": "Installing",
+    "installed": "Installed",
+    "remove": "Remove",
+    "undo": "Undo",
+    "selected": "Selected",
+    "showMore": "Show more",
+    "close": "Close",
+    "update": "Update",
+    "updating": "Updating",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "previous": "Previous",
+    "next": "Next",
+    "settings": "Settings",
+    "copied": "Copied!",
+    "copyToClipboard": "Copy to clipboard"
+  },
+  "errors": {
+    "options": "Failed to load launcher options",
+    "api": "Failed to establish connection with LiquidBounce API",
+    "system": "Looks like there is a configuration issue with your system.\n\n{error}"
+  },
+  "update": {
+    "failedTitle": "Launcher update failed",
+    "failed": "The launcher could not update itself and will try again on the next start.\n\n{error}"
+  },
+  "main": {
+    "welcome": "Welcome back, {name}.",
+    "lowMemory": "You are about to launch the client with less than {memory} MB of memory. This may cause performance issues. Do you want to continue?",
+    "startFailed": "Failed to start client: {error}"
+  },
+  "progress": {
+    "startingClient": "Starting client...",
+    "refreshingSession": "Refreshing Minecraft session...",
+    "updatingLauncher": "Updating launcher to v{version}...",
+    "installingUpdate": "Installing update...",
+    "loadingVersionManifest": "Loading version manifest...",
+    "loadingVersionProfile": "Loading version profile...",
+    "installingAddon": "Installing add-on {name}",
+    "copiedCustomMod": "Copied custom mod {name}",
+    "downloadingRecommendedMod": "Downloading recommended mod {name}",
+    "openingModDownloadPage": "Opening download page for mod {name}",
+    "openingDownloadPage": "Opening download page... (Attempt {attempt}/{attempts})",
+    "downloadingMod": "Downloading mod {name}",
+    "launchingBuild": "Launching {commit}...",
+    "settingUp": "Setting up...",
+    "checkingJre": "Checking for JRE...",
+    "downloadingJre": "Downloading JRE...",
+    "downloadingClient": "Downloading client...",
+    "checkingLibraries": "Checking libraries...",
+    "downloadingLibrary": "Downloading library {name}",
+    "extractingNatives": "Extracting natives...",
+    "checkingAssets": "Checking assets...",
+    "downloadingAsset": "Downloading asset object {hash}",
+    "launching": "Launching...",
+    "running": "Running..."
+  },
+  "settings": {
+    "general": {
+      "language": "Language",
+      "systemLanguage": "System default",
+      "jvmDistribution": "JVM Distribution",
+      "automatic": "Automatic",
+      "manual": "Manual",
+      "custom": "Custom",
+      "distribution": "Distribution",
+      "customJvmPath": "Custom JVM Path",
+      "customJvmPlaceholder": "Select Java wrapper location",
+      "customJvmWindowTitle": "Select custom Java wrapper",
+      "dataLocation": "Data Location",
+      "dataLocationWindowTitle": "Select custom data directory",
+      "memory": "Memory",
+      "concurrentDownloads": "Concurrent Downloads",
+      "connectionsSuffix": " connections",
+      "keepLauncherOpen": "Keep launcher running",
+      "signOut": "Sign out of Minecraft Account",
+      "clearData": "Clear Data",
+      "dataCleared": "Data cleared.",
+      "clearDataFailed": "Failed to clear data: {error}",
+      "logoutFailed": "Failed to logout properly. Please try again."
+    },
+    "client": {
+      "build": "Build"
+    },
+    "title": "Settings",
+    "tabs": {
+      "general": "General",
+      "minecraft": "Minecraft",
+      "client": "Client",
+      "premium": "Premium"
+    },
+    "minecraft": {
+      "description": "This will allow you to use worlds, resource packs, and shader packs from another installation of Minecraft.",
+      "directory": "Minecraft Directory",
+      "autoDetect": "Auto-detect",
+      "directoryWindowTitle": "Select Minecraft directory",
+      "linkWorlds": "Link worlds ({count, number})",
+      "linkResourcePacks": "Link resource packs ({count, number})",
+      "linkShaderPacks": "Link shader packs ({count, number})",
+      "notFound": "No Minecraft vanilla installation found."
+    },
+    "premium": {
+      "skipAds": "Skip Advertisements",
+      "accountInformation": "Account Information",
+      "noPremium": "There appears to be no premium associated with this account. Please link it on the account management page.",
+      "manageAccount": "Manage Account",
+      "logout": "Logout",
+      "description": "By going premium, you not only support the ongoing development of the client but also receive a cape and the ability to bypass ads on the launcher.",
+      "login": "Login with LiquidBounce Account",
+      "loginFailed": "Failed to authenticate client account: {error}",
+      "logoutFailed": "Failed to log out of client account: {error}"
+    },
+    "liquidBounceAccount": {
+      "username": "Username",
+      "donatorPerks": "Donator Perks",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "message": {
+      "clearSearch": "Clear search"
+    },
+    "itemRow": {
+      "removeNamed": "Remove {name}"
+    },
+    "directorySelector": {
+      "select": "Select directory",
+      "open": "Open directory"
+    },
+    "fileSelector": {
+      "select": "Select file"
+    }
+  },
+  "builds": {
+    "title": "Builds",
+    "showNightly": "Show nightly builds",
+    "latest": "Latest",
+    "latestRelease": "Latest release",
+    "latestNightly": "Latest nightly",
+    "builds": "{count, plural, one {# build} other {# builds}}",
+    "releases": "{count, plural, one {# release} other {# releases}}"
+  },
+  "marketplace": {
+    "title": "{type, select, Addon {Add-ons} Theme {Themes} Script {Scripts} other {Items}}",
+    "type": "{type, select, Addon {Add-on} Theme {Theme} Script {Script} other {Item}}",
+    "empty": "{type, select, Addon {No add-ons yet.} Theme {No themes yet.} Script {No scripts yet.} other {Nothing yet.}}",
+    "search": "{type, select, Addon {Search add-ons} Theme {Search themes} Script {Search scripts} other {Search}}",
+    "noMatch": "{type, select, Addon {No add-ons match “{query}”.} Theme {No themes match “{query}”.} Script {No scripts match “{query}”.} other {Nothing matches “{query}”.}}",
+    "nonePublished": "{type, select, Addon {No add-ons published yet.} Theme {No themes published yet.} Script {No scripts published yet.} other {Nothing published yet.}}",
+    "byAuthor": "{type} by {author}",
+    "downloads": "{count, plural, one {# download} other {# downloads}}",
+    "notFor": "Not for {version}",
+    "offline": "Unable to check the marketplace: {error}",
+    "restart": "Restart LiquidBounce to apply {count, plural, one {# change} other {# changes}}.",
+    "removeQuestion": "Remove {name}? {names} {count, plural, one {stops} other {stop}} working without it.",
+    "screenshots": "Screenshots",
+    "versions": "Versions",
+    "neededBy": "Needed by",
+    "viewFullSize": "View full size",
+    "previousScreenshot": "Previous screenshot",
+    "nextScreenshot": "Next screenshot"
+  },
+  "mods": {
+    "title": "Mods - {target}",
+    "addFile": "Add file",
+    "addFileWindowTitle": "Select a custom mod to install",
+    "browse": "Browse",
+    "recommended": "Recommended",
+    "unknownVersion": "Unknown version",
+    "updateAvailable": "{version} available",
+    "installFailed": "Failed to install mod: {error}",
+    "deleteFailed": "Failed to delete mod: {error}",
+    "remove": "Remove mod",
+    "searchPlaceholder": "Search Modrinth mods",
+    "hitLine": "by {author} · {downloads, plural, one {# download} other {# downloads}}",
+    "noMatch": "No mods match “{query}”."
+  },
+  "facts": {
+    "blatantOrCloset": {
+      "title": "Blatant or Closet Cheating - You Decide!",
+      "description": "LiquidBounce comes with many built-in blatant and closet cheats, making it the perfect all-in-one client."
+    },
+    "multiVersion": {
+      "title": "Multi-Version Support",
+      "description": "With the integrated version changer, you can easily switch between different Minecraft versions without restarting the game!"
+    },
+    "multiServer": {
+      "title": "Multi-Server Support",
+      "description": "LiquidBounce provides features and bypasses for many different servers."
+    },
+    "autoConfig": {
+      "title": "Auto Config System",
+      "description": "LiquidBounce's Auto Config System will automatically apply the best settings for you when joining a well-known server."
+    },
+    "customizable": {
+      "title": "Customizable",
+      "description": "LiquidBounce's UI is fully customizable. You can change out the entire UI to your liking."
+    },
+    "downloads": {
+      "title": "{count, number} Total Downloads",
+      "description": "LiquidBounce is one of the most popular hacked clients of all time."
+    },
+    "openSource": {
+      "title": "Free & Open Source",
+      "description": "LiquidBounce's source code is publicly available."
+    },
+    "scriptApi": {
+      "title": "ScriptAPI",
+      "description": "LiquidBounce's Script API allows users to write their own modules and commands."
+    }
+  },
+  "login": {
+    "title": "Log in",
+    "microsoft": "Microsoft login",
+    "microsoftDevice": "Microsoft device login",
+    "or": "or",
+    "username": "Username",
+    "offline": "Offline login",
+    "microsoftTitle": "Microsoft sign-in",
+    "finishInPopup": "Finish signing in in the popup window.",
+    "codeTitle": "Sign in with a code",
+    "copy": "COPY",
+    "copied": "COPIED",
+    "openBefore": "Open",
+    "openAfter": "on any device and enter the code above.",
+    "scanTitle": "Scan the code",
+    "scanDescription": "Opens the page with the code already filled in.",
+    "waiting": "Waiting for confirmation",
+    "requestingCode": "Requesting a sign-in code…",
+    "qrAlt": "QR code to sign in with Microsoft",
+    "usernameLength": "Username must be between 1 and 16 characters long.",
+    "usernameCharacters": "Username can only contain letters, numbers, and underscores.",
+    "microsoftFailed": "Microsoft authentication failed.\n\n{error}\n\nShould you be unable to resolve this issue, please use the offline login option and attempt to log in through the client's inbuilt account manager."
+  },
+  "account": {
+    "offline": "Offline"
+  },
+  "launch": {
+    "instance": "Instance",
+    "newInstance": "New instance",
+    "state": {
+      "starting": "Starting",
+      "started": "Launched"
+    },
+    "terminate": "Terminate",
+    "log": "Log",
+    "launch": "Launch LiquidBounce"
+  },
+  "errorScreen": {
+    "title": "Error Occurred",
+    "unknown": "Unknown error",
+    "details": "Technical Details:",
+    "quickHelp": "Quick Help",
+    "contactSupport": "Contact Support"
+  },
+  "firstRun": {
+    "title": "Welcome to LiquidBounce!",
+    "description": "During the first launch or when a new update of LiquidBounce is available, a download window will show up. This is our way of generating advertising revenue for the client. If you do not want to see advertisements, you can purchase LiquidBounce Premium. You might also want to check out the quick start guide for tips on how to use LiquidBounce.",
+    "quickStart": "Quick Start Guide"
+  },
+  "versionWarning": {
+    "title": "You are about to launch an unsupported version!",
+    "description": "The selected version of LiquidBounce is no longer officially supported. We recommend switching to the newest version, which works with all Minecraft versions from 1.7 onward.",
+    "switch": "Switch to the newest version",
+    "launchAnyway": "Launch anyway",
+    "launchAnywayIn": "Launch anyway ({seconds})"
+  },
+  "insecure": {
+    "title": "Security Warning",
+    "message": "LiquidLauncher is unable to connect to the secure (HTTPS) API endpoint, but was able to establish a connection to a non-secure (HTTP) endpoint.",
+    "risks": "Security Risks:",
+    "riskUnencrypted": "Your connection is not encrypted and may be visible to others on your network",
+    "riskIntercepted": "Data sent and received could be intercepted or modified by malicious actors",
+    "riskCredentials": "Your login credentials could be compromised if transmitted over this connection",
+    "recommendation": "Recommendation:",
+    "recommendationText": "This issue is often caused by network restrictions or SSL certificate problems. We recommend using a VPN such as Cloudflare WARP to establish a secure connection.",
+    "getWarp": "Get Cloudflare WARP",
+    "allow": "Allow Non-Secure Connection"
+  },
+  "log": {
+    "title": "Client log",
+    "upload": "Upload log",
+    "autoScroll": "Auto scroll",
+    "search": "Search",
+    "filters": {
+      "error": "Error",
+      "warn": "Warn",
+      "info": "Info",
+      "debug": "Debug"
+    },
+    "uploadConfirm": "The entire log of this session will be uploaded. It may contain sensitive information like private chat messages. Are you sure you want to proceed?",
+    "uploadFailed": "Failed to upload log: {error}",
+    "uploaded": "Your log is available at the following URL:"
+  },
+  "news": {
+    "readMore": "Read more"
+  }
+}

@@ -26,3 +26,4 @@ pub mod client_api_target;
 pub mod marketplace;
 pub mod modrinth;
 pub mod builds;
+pub mod translations;

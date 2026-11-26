@@ -2,6 +2,8 @@
     import { createEventDispatcher } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
     import { confirm } from "@tauri-apps/plugin-dialog";
+    import { _, locale } from "svelte-i18n";
+    import { shortDate } from "../../../../../i18n.js";
     import SettingWrapper from "../../../../settings/SettingWrapper.svelte";
     import IconButtonSetting from "../../../../settings/IconButtonSetting.svelte";
     import ButtonSetting from "../../../../settings/ButtonSetting.svelte";
@@ -49,7 +51,15 @@
     }
 
     async function remove() {
-        if (detail.removeQuestion && !await confirm(detail.removeQuestion)) {
+        const names = detail.neededBy.map(dependent => dependent.name);
+        const question = names.length && $_("marketplace.removeQuestion", {
+            values: {
+                name: detail.name,
+                count: names.length,
+                names: new Intl.ListFormat($locale, { type: "conjunction" }).format(names)
+            }
+        });
+        if (question && !await confirm(question)) {
             return;
         }
 
@@ -70,16 +80,19 @@
 
 <div class="stack">
     <div class="row-start">
-        <IconButtonSetting text="Back" icon="icon-prev" on:click={() => dispatch("back")} />
+        <IconButtonSetting text={$_("common.back")} icon="icon-prev" on:click={() => dispatch("back")} />
     </div>
     {#if detail}
         <div class="head">
             <div>
                 <div class="name">{detail.name}</div>
-                <div class="meta">{detail.meta}</div>
+                <div class="meta">
+                    {$_("marketplace.byAuthor", { values: { type: $_("marketplace.type", { values: { type: detail.type } }), author: detail.author } })}
+                    · {$_("marketplace.downloads", { values: { count: detail.downloads } })}
+                </div>
             </div>
             {#if detail.subscribed}
-                <IconButtonSetting text="Remove" icon="icon-button-close" on:click={() => !busy && remove()} />
+                <IconButtonSetting text={$_("common.remove")} icon="icon-button-close" on:click={() => !busy && remove()} />
             {/if}
         </div>
         {#if detail.summary}
@@ -91,41 +104,50 @@
 {#if detail}
     {#if !detail.subscribed}
         <ButtonSetting
-                text={busy ? "Installing" : "Install"}
+                text={busy ? $_("common.installing") : $_("common.install")}
                 disabled={busy || !detail.canInstall}
                 on:click={install}
         />
     {/if}
 
     {#if detail.screenshots.length > 0}
-        <SettingWrapper title="Screenshots" unbounded>
+        <SettingWrapper title={$_("marketplace.screenshots")} unbounded>
             <Screenshots screenshots={detail.screenshots} />
         </SettingWrapper>
     {/if}
 
     {#if detail.versions.length > 0}
-        <SettingWrapper title="Versions" unbounded>
+        <SettingWrapper title={$_("marketplace.versions")} unbounded>
             <div class="versions">
-                {#each detail.versions as { label, liquidbounce, date, tag }}
-                    <span class="version" class:dim={tag && !tag.installed}>{label}</span>
+                {#each detail.versions as { version, liquidbounce, date, tag }}
+                    <span class="version" class:dim={tag?.kind === "notFor"}>{version ?? $shortDate(date)}</span>
                     <span class="muted">{liquidbounce ?? ""}</span>
-                    <span class="muted">{date ?? ""}</span>
-                    <span class="tag" class:strong={tag?.installed}>{tag?.text ?? ""}</span>
+                    <span class="muted">{version && date ? $shortDate(date) : ""}</span>
+                    <span class="tag" class:strong={tag?.kind === "installed"}>
+                        {#if tag?.kind === "installed"}
+                            {$_("common.installed")}
+                        {:else if tag?.kind === "notFor"}
+                            {$_("marketplace.notFor", { values: { version: tag.version } })}
+                        {/if}
+                    </span>
                 {/each}
             </div>
         </SettingWrapper>
     {/if}
 
     {#if detail.neededBy.length > 0}
-        <SettingWrapper title="Needed by" unbounded>
+        <SettingWrapper title={$_("marketplace.neededBy")} unbounded>
             {#each detail.neededBy as dependent}
-                <ItemRow name={dependent.name} openable={false}>{dependent.line}</ItemRow>
+                {@const type = $_("marketplace.type", { values: { type: dependent.type } })}
+                <ItemRow name={dependent.name} openable={false}>
+                    {dependent.author ? $_("marketplace.byAuthor", { values: { type, author: dependent.author } }) : type}
+                </ItemRow>
             {/each}
         </SettingWrapper>
     {/if}
 {:else if error}
     <Message title={error}>
-        <ButtonSetting small text="Try again" on:click={load} />
+        <ButtonSetting small text={$_("common.tryAgain")} on:click={load} />
     </Message>
 {:else}
     <Message>

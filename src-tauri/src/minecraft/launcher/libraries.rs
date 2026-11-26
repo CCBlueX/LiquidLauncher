@@ -10,7 +10,7 @@ use backon::Retryable;
 use crate::{
     error::LauncherError,
     minecraft::{
-        progress::{ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
+        progress::{Label, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
         rule_interpreter,
         version::{LibraryDownloadInfo, VersionProfile},
     },
@@ -35,7 +35,7 @@ pub async fn setup_libraries<D: Send + Sync>(
         .collect::<Vec<_>>();
     let libraries_max = libraries_to_download.len() as u64;
 
-    launcher_data.progress_update(ProgressUpdate::set_label("Checking libraries..."));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::CheckingLibraries));
     launcher_data.progress_update(ProgressUpdate::set_for_step(
         ProgressUpdateSteps::DownloadLibraries,
         0,
@@ -80,9 +80,7 @@ pub async fn setup_libraries<D: Send + Sync>(
                                         )
                                     })?;
 
-                                launcher_data.progress_update(ProgressUpdate::set_label(
-                                    "Extracting natives...",
-                                ));
+                                launcher_data.progress_update(ProgressUpdate::SetLabel(Label::ExtractingNatives));
                                 let file = OpenOptions::new()
                                     .read(true)
                                     .open(path)

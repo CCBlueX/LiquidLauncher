@@ -6,6 +6,7 @@
     import ButtonClose from "../common/ButtonClose.svelte";
     import {openUrl} from "@tauri-apps/plugin-opener";
     import ButtonSetting from "../settings/ButtonSetting.svelte";
+    import {_} from "svelte-i18n";
 
     const dispatch = createEventDispatcher();
     
@@ -25,31 +26,25 @@
     </TitleBar>
 
     <div class="warning-container">
-        <h1>Security Warning</h1>
-        <p class="warning-message">
-            LiquidLauncher is unable to connect to the secure (HTTPS) API endpoint, 
-            but was able to establish a connection to a non-secure (HTTP) endpoint.
-        </p>
+        <h1>{$_("insecure.title")}</h1>
+        <p class="warning-message">{$_("insecure.message")}</p>
         
         <div class="warning-details">
-            <h3>Security Risks:</h3>
+            <h3>{$_("insecure.risks")}</h3>
             <ul>
-                <li>Your connection is not encrypted and may be visible to others on your network</li>
-                <li>Data sent and received could be intercepted or modified by malicious actors</li>
-                <li>Your login credentials could be compromised if transmitted over this connection</li>
+                <li>{$_("insecure.riskUnencrypted")}</li>
+                <li>{$_("insecure.riskIntercepted")}</li>
+                <li>{$_("insecure.riskCredentials")}</li>
             </ul>
             
-            <h3 class="recommendation">Recommendation:</h3>
-            <p>
-                This issue is often caused by network restrictions or SSL certificate problems. 
-                We recommend using a VPN such as Cloudflare WARP to establish a secure connection.
-            </p>
+            <h3 class="recommendation">{$_("insecure.recommendation")}</h3>
+            <p>{$_("insecure.recommendationText")}</p>
         </div>
 
         <div class="action-buttons">
-            <ButtonSetting text="Get Cloudflare WARP" color="#4677ff" on:click={() => openUrl('https://1.1.1.1/')}></ButtonSetting>
-            <ButtonSetting text="Allow Non-Secure Connection" color="#B83529" on:click={handleAllowConnection}></ButtonSetting>
-            <ButtonSetting text="Cancel" color="#707070" on:click={handleCancel}></ButtonSetting>
+            <ButtonSetting text={$_("insecure.getWarp")} color="#4677ff" on:click={() => openUrl('https://1.1.1.1/')}></ButtonSetting>
+            <ButtonSetting text={$_("insecure.allow")} color="#B83529" on:click={handleAllowConnection}></ButtonSetting>
+            <ButtonSetting text={$_("common.cancel")} color="#707070" on:click={handleCancel}></ButtonSetting>
         </div>
     </div>
 </VerticalFlexWrapper>

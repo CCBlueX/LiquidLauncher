@@ -1,5 +1,6 @@
 <script>
     import { createEventDispatcher } from "svelte";
+    import { _ } from "svelte-i18n";
 
     export let username;
     export let uuid;
@@ -14,10 +15,10 @@
     </object>
     <div class="details">
         <div class="username">{username}</div>
-        <div class="type">{accountType === "Microsoft" || accountType === "Premium" ? "Microsoft" : accountType}</div>
+        <div class="type">{accountType === "Offline" ? $_("account.offline") : accountType === "Premium" ? "Microsoft" : accountType}</div>
     </div>
     <button class="button-settings" type="button" on:click={() => dispatch("showSettings")} >
-        <img class="icon" src="img/icon/icon-cog.svg" alt="settings">
+        <img class="icon" src="img/icon/icon-cog.svg" alt={$_("common.settings")}>
     </button>
 </div>
 

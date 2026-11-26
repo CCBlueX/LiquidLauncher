@@ -19,7 +19,7 @@
 
 use crate::minecraft::{
     launcher::LauncherData,
-    progress::{ProgressReceiver, ProgressUpdate},
+    progress::{Label, ProgressReceiver, ProgressUpdate},
 };
 use anyhow::{anyhow, bail, Context, Result};
 use serde::Deserialize;
@@ -59,10 +59,10 @@ pub async fn open_download_page(
             Or try our advice at https://liquidbounce.net/docs/tutorials/fixing-liquidlauncher.", MAX_DOWNLOAD_ATTEMPTS);
         }
 
-        launcher_data.progress_update(ProgressUpdate::SetLabel(format!(
-            "Opening download page... (Attempt {}/{})",
-            count, MAX_DOWNLOAD_ATTEMPTS
-        )));
+        launcher_data.progress_update(ProgressUpdate::SetLabel(Label::OpeningDownloadPage {
+            attempt: count,
+            attempts: MAX_DOWNLOAD_ATTEMPTS,
+        }));
 
         match show_webview(download_page.clone(), &launcher_data.data.window).await {
             Ok(pid) => break pid,
@@ -144,7 +144,7 @@ async fn show_webview(url: Url, window: &Arc<Mutex<tauri::Window>>) -> Result<St
 
         download_view
             .is_visible()
-            .context("Download view was closed unexpected")?;
+            .context("Download view was closed unexpectedly")?;
     };
 
     let _ = download_view.destroy();

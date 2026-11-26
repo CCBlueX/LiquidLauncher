@@ -26,7 +26,7 @@ use std::{
 };
 
 use crate::minecraft::launcher::StartParameter;
-use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
+use crate::minecraft::progress::{Label, ProgressReceiver, ProgressUpdate};
 use crate::utils::{get_maven_artifact_path, sha1sum};
 use crate::{
     error::LauncherError,
@@ -490,10 +490,9 @@ impl AssetObject {
         let asset_path = asset_folder.join(&self.hash);
 
         if !asset_path.exists() {
-            progress.progress_update(ProgressUpdate::set_label(format!(
-                "Downloading asset object {}",
-                self.hash
-            )));
+            progress.progress_update(ProgressUpdate::SetLabel(Label::DownloadingAsset {
+                hash: self.hash.clone(),
+            }));
 
             info!("Downloading {}", self.hash);
             download_file_untracked(
@@ -733,10 +732,9 @@ impl LibraryDownloadInfo {
         }
 
         // Download library
-        progress.progress_update(ProgressUpdate::set_label(format!(
-            "Downloading library {}",
-            name
-        )));
+        progress.progress_update(ProgressUpdate::SetLabel(Label::DownloadingLibrary {
+            name: name.to_string(),
+        }));
         progress.log(&format!(
             "Downloading library {} (sha1: {:?}, size: {:?}) from {} to {:}",
             name,

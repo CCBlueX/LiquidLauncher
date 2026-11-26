@@ -1,7 +1,8 @@
 <script>
     import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+    import { _ } from "svelte-i18n";
 
-    export let text = "Copy to clipboard";
+    export let text = null;
     export let textToCopy;
     export let iconOnly = false;
 
@@ -18,12 +19,12 @@
     }
 </script>
 
-<button class="button {iconOnly ? 'icon-only' : ''}" on:click={handleCopy} title={iconOnly ? (copied ? 'Copied!' : text) : ''}>
+<button class="button {iconOnly ? 'icon-only' : ''}" on:click={handleCopy} title={iconOnly ? (copied ? $_("common.copied") : text ?? $_("common.copyToClipboard")) : ''}>
     <div class="icon">
-        <img src="img/icon/icon-copy-to-clipboard.svg" alt="Copy icon" class={iconOnly ? 'white-icon' : ''}>
+        <img src="img/icon/icon-copy-to-clipboard.svg" alt="" class={iconOnly ? 'white-icon' : ''}>
     </div>
     {#if !iconOnly}
-        <div class="text">{copied ? 'Copied!' : text}</div>
+        <div class="text">{copied ? $_("common.copied") : text ?? $_("common.copyToClipboard")}</div>
     {/if}
 </button>
 

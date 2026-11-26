@@ -1,42 +1,8 @@
 <script>
     import {fly} from "svelte/transition";
+    import {_} from "svelte-i18n";
 
-    const facts = [
-        {
-            title: "Blatant or Closet Cheating - You Decide!",
-            description: "LiquidBounce comes with many built-in blatant and closet cheats, making it the perfect all-in-one client.",
-        },
-        {
-            title: "Multi-Version Support",
-            description: "With the integrated version changer, you can easily switch between different Minecraft versions without restarting the game!",
-        },
-        {
-            title: "Multi-Server Support",
-            description: "LiquidBounce provides features and bypasses for many different servers."
-        },
-        {
-            title: "Auto Config System",
-            description: "LiquidBounce's Auto Config System will automatically apply the best settings for you when joining a well-known server.",
-        },
-        {
-            title: "Customizable",
-            description: "LiquidBounce's UI is fully customizable. You can change out the entire UI to your liking.",
-        },
-        {
-            title: "6.000.000 Total Downloads",
-            description:
-                "LiquidBounce is one of the most popular hacked clients of all time.",
-        },
-        {
-            title: "Free & Open Source",
-            description: "LiquidBounce's source code is publicly available.",
-        },
-        {
-            title: "ScriptAPI",
-            description:
-                "LiquidBounce's Script API allows users to write their own modules and commands.",
-        },
-    ];
+    const facts = ["blatantOrCloset", "multiVersion", "multiServer", "autoConfig", "customizable", "downloads", "openSource", "scriptApi"];
 
     let currentFact = 0;
 
@@ -64,22 +30,22 @@
 <div class="wrapper">
     {#key currentFact}
         <div class="fact" in:fly={{duration: 200, x: 50}} out:fly={{duration: 200, x: -50}}>
-            <div class="title">{facts[currentFact].title}</div>
-            <div class="description">{facts[currentFact].description}</div>
+            <div class="title">{$_(`facts.${facts[currentFact]}.title`, { values: { count: 6000000 } })}</div>
+            <div class="description">{$_(`facts.${facts[currentFact]}.description`)}</div>
             <div class="buttons-wrapper">
                 <button
                     type="button"
                     class="button-switch-fact"
                     on:click={handlePrevClick}
                 >
-                    <img src="img/icon/icon-prev.svg" alt="prev" />
+                    <img src="img/icon/icon-prev.svg" alt={$_("common.previous")} />
                 </button>
                 <button
                     type="button"
                     class="button-switch-fact"
                     on:click={handleNextClick}
                 >
-                    <img src="img/icon/icon-next.svg" alt="next" />
+                    <img src="img/icon/icon-next.svg" alt={$_("common.next")} />
                 </button>
             </div>
         </div>

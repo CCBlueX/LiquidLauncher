@@ -1,5 +1,6 @@
 <script>
     import { createEventDispatcher } from "svelte";
+    import { _ } from "svelte-i18n";
     import ToggleSetting from "./ToggleSetting.svelte";
 
     export let value;
@@ -19,7 +20,7 @@
     <div class="side">
         {#if removable}
             <button class="button-delete" on:click={() => dispatch("delete", { name: title })}>
-                <img src="img/icon/icon-button-close.svg" alt="delete" title="Remove mod">
+                <img src="img/icon/icon-button-close.svg" alt={$_("mods.remove")} title={$_("mods.remove")}>
             </button>
         {/if}
         <slot name="side" />

@@ -38,7 +38,7 @@ use crate::auth::ClientAccount;
 use crate::error::LauncherError;
 use crate::minecraft::game_dir::GameDir;
 use crate::minecraft::java::DistributionSelection;
-use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
+use crate::minecraft::progress::{Label, ProgressReceiver, ProgressUpdate};
 use crate::{join_and_mkdir, join_and_mkdir_vec};
 use crate::{
     utils::{downloaded_bytes, OS, OS_VERSION},
@@ -47,6 +47,7 @@ use crate::{
 use crate::app::options::MinecraftInstallationOptions;
 use self::assets::setup_assets;
 use self::client_jar::setup_client_jar;
+use self::options::setup_options;
 use self::jre::load_jre;
 use self::libraries::setup_libraries;
 
@@ -56,6 +57,7 @@ mod assets;
 mod client_jar;
 mod jre;
 mod libraries;
+mod options;
 
 pub struct LauncherData<D: Send + Sync> {
     pub(crate) on_stdout: fn(&D, &[u8]) -> Result<()>,
@@ -156,7 +158,7 @@ pub async fn launch<D: Send + Sync>(
     let features: HashSet<String> = HashSet::new();
     let mut class_path = String::new();
 
-    launcher_data.progress_update(ProgressUpdate::set_label("Setting up..."));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::SettingUp));
 
     launcher_data.log(&format!(
         "Determined OS to be {} {}",
@@ -190,7 +192,7 @@ pub async fn launch<D: Send + Sync>(
     }
 
     // Check if json has client download (or doesn't require one)
-    setup_client_jar(
+    let client_jar = setup_client_jar(
         &client_folder,
         &natives_folder,
         &version_profile,
@@ -199,6 +201,10 @@ pub async fn launch<D: Send + Sync>(
     )
     .await
     .context("Failed to setup client JAR")?;
+
+    if let Err(error) = setup_options(&game_dir, &client_jar, &launching_parameter.language).await {
+        warn!("Failed to set the game language: {error:#}");
+    }
 
     // Libraries
     setup_libraries(
@@ -290,7 +296,7 @@ pub async fn launch<D: Send + Sync>(
         })?);
     }
 
-    launcher_data.progress_update(ProgressUpdate::set_label("Launching..."));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::Launching));
     launcher_data.progress_update(ProgressUpdate::set_to_max());
 
     let mut running_task = java_runtime.execute(mapped, &game_dir).await?;
@@ -298,7 +304,7 @@ pub async fn launch<D: Send + Sync>(
         (launcher_data.on_start)(&launcher_data.data, pid);
     }
 
-    launcher_data.progress_update(ProgressUpdate::set_label("Running..."));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::Running));
 
     if !launching_parameter.keep_launcher_open {
         // Hide launcher window
@@ -346,6 +352,8 @@ pub struct StartParameter {
     pub client_account: Option<ClientAccount>,
     pub skip_advertisement: bool,
     pub vanilla_integration: MinecraftInstallationOptions,
+    /// Minecraft's code for the launcher language, `de_de`.
+    pub language: String,
 }
 
 fn process_templates<F: Fn(&mut String, &str) -> Result<()>>(

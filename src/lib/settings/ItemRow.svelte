@@ -1,5 +1,6 @@
 <script>
     import { createEventDispatcher } from "svelte";
+    import { _ } from "svelte-i18n";
 
     export let name;
     /** An image before the name, like the build's. */
@@ -27,7 +28,7 @@
     </button>
     <div class="side">
         {#if removable}
-            <button class="remove" type="button" title="Remove" aria-label="Remove {name}"
+            <button class="remove" type="button" title={$_("common.remove")} aria-label={$_("settings.itemRow.removeNamed", { values: { name } })}
                     on:click={() => dispatch("remove")}>
                 <img src="img/icon/icon-button-close.svg" alt="">
             </button>

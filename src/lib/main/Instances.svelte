@@ -1,6 +1,7 @@
 <script>
     import { createEventDispatcher } from "svelte";
     import { slide } from "svelte/transition";
+    import { _ } from "svelte-i18n";
 
     export let instances = [];
     export let instance = null;
@@ -9,10 +10,6 @@
 
     const dispatch = createEventDispatcher();
     const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 150;
-    const states = {
-        starting: "Starting",
-        started: "Launched"
-    };
 
     function reveal(card, isChosen) {
         const update = isChosen => {
@@ -26,7 +23,7 @@
 </script>
 
 <fieldset>
-    <legend>Instance</legend>
+    <legend>{$_("launch.instance")}</legend>
     {#each [null, ...instances] as choice (choice?.id ?? 0)}
         {@const isChosen = choice === instance}
         <div class="card" class:chosen={isChosen} use:reveal={isChosen}>
@@ -34,13 +31,13 @@
                 <input type="radio" name="instance" checked={isChosen} on:change={() => instance = choice}>
                 {#if choice}
                     <span class="title">Minecraft {choice.version}</span>
-                    <span class="state">{states[choice.state]}</span>
+                    <span class="state">{$_(`launch.state.${choice.state}`)}</span>
                     <span class="identity">{choice.username}</span>
                     {#if choice.pid}
                         <span class="pid">PID {choice.pid}</span>
                     {/if}
                 {:else}
-                    <span class="title">New instance</span>
+                    <span class="title">{$_("launch.newInstance")}</span>
                 {/if}
             </label>
             {#if isChosen && !choice}

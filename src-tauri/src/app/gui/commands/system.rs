@@ -18,6 +18,7 @@
  */
 use crate::app::client_api::Client;
 use crate::{utils, LAUNCHER_VERSION};
+use sys_locale::get_locale;
 use tracing::{debug, debug_span, info};
 
 #[tauri::command]
@@ -51,4 +52,10 @@ pub(crate) async fn check_system() -> Result<(), String> {
 #[tauri::command]
 pub(crate) fn sys_memory() -> u64 {
     utils::sys_memory() / (1024 * 1024)
+}
+
+/// The OS language as a BCP 47 tag; the webviews do not report it reliably.
+#[tauri::command]
+pub(crate) fn sys_locale() -> Option<String> {
+    get_locale()
 }

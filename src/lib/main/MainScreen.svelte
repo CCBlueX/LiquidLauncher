@@ -13,6 +13,8 @@
     import Settings from "./settings/Settings.svelte";
     import FirstRunWarning from "./FirstRunWarning.svelte";
     import {onMount} from "svelte";
+    import {_, date, locale} from "svelte-i18n";
+    import {english, languages} from "../../i18n.js";
 
     export let client;
     export let options;
@@ -42,7 +44,7 @@
     let progressState = {
         max: 0,
         value: 0,
-        text: "",
+        label: null,
         speed: 0
     };
 
@@ -82,7 +84,7 @@
         } catch (e) {
             console.error("Failed to request the build:", e);
             error = {
-                message: "Failed to establish connection with LiquidBounce API",
+                message: $_("errors.api"),
                 error: e
             };
             return;
@@ -104,7 +106,6 @@
 
         versionState.currentBuild = {
             ...build,
-            dateDay: new Date(build.date).toLocaleDateString(),
             changelog: changelog.changelog
         };
         await updateMods();
@@ -180,7 +181,7 @@
 
         try {
             launching = true;
-            progressState = { max: 0, value: 0, text: "Starting client...", speed: 0 };
+            progressState = { max: 0, value: 0, label: { key: "startingClient" }, speed: 0 };
 
             await authenticate();
             await checkMemory();
@@ -189,7 +190,7 @@
             instance = instances.find(listed => listed.id === id) ?? null;
         } catch (error) {
             console.error("Failed to start client:", error);
-            logs[0] = [{ kind: "launcher", level: "ERROR", text: `Failed to start client: ${error}` }];
+            logs[0] = [{ kind: "launcher", level: "ERROR", text: $_("main.startFailed", { values: { error: `${error}` } }) }];
             logShown = 0;
         } finally {
             launching = false;
@@ -210,7 +211,7 @@
     }
 
     async function authenticate() {
-        progressState.text = "Refreshing minecraft session...";
+        progressState.label = { key: "refreshingSession" };
         try {
             options.start.account = await invoke("refresh", {
                 client,
@@ -225,7 +226,7 @@
     async function checkMemory() {
         if (options.start.memory < WARNING_MEMORY) {
             const confirmed = await confirm(
-                `You are about to launch the client with less than ${WARNING_MEMORY} MB of memory. This may cause performance issues. Do you want to continue?`
+                $_("main.lowMemory", { values: { memory: WARNING_MEMORY } })
             );
 
             if (!confirmed) {
@@ -240,7 +241,8 @@
             client,
             buildId: versionState.currentBuild.buildId,
             options,
-            mods: [...versionState.recommendedMods, ...versionState.customMods]
+            mods: [...versionState.recommendedMods, ...versionState.customMods],
+            language: ($languages.find(language => language.code === $locale) ?? english).minecraft
         });
     }
 
@@ -271,7 +273,7 @@
         }
     }
     
-    async function switchToNextgen() {
+    async function switchToLatest() {
         launchVersionWarningShown = false;
         options.version.buildId = -1;
         await options.store();
@@ -294,7 +296,7 @@
                 progressState.value = value;
                 break;
             case "label":
-                progressState.text = value;
+                progressState.label = value;
                 break;
             case "speed":
                 progressState.speed = value;
@@ -332,7 +334,7 @@
 {#if launchVersionWarningShown}
     <VersionWarning
             {launchVersionWarningCountdown}
-            on:switchToNextgen={switchToNextgen}
+            on:switchToLatest={switchToLatest}
             on:runClientAnyway={async () => {
                 launchVersionWarningShown = false;
                 await runClient();
@@ -380,12 +382,14 @@
                     bannerUrl: "img/banner.png",
                     title: versionState.currentBuild ?
                         `LiquidBounce v${versionState.currentBuild.lbVersion}` :
-                        "Loading...",
-                    date: versionState.currentBuild?.dateDay || "Loading...",
-                    description: versionState.currentBuild?.changelog || "Loading..."
+                        $_("common.loading"),
+                    date: versionState.currentBuild ?
+                        $date(new Date(versionState.currentBuild.date), { year: "numeric", month: "numeric", day: "numeric" }) :
+                        $_("common.loading"),
+                    description: versionState.currentBuild?.changelog || $_("common.loading")
                 }}
-                mcVersion={versionState.currentBuild?.mcVersion || "Loading..."}
-                lbVersion={versionState.currentBuild?.lbVersion || "Loading..."}
+                mcVersion={versionState.currentBuild?.mcVersion || $_("common.loading")}
+                lbVersion={versionState.currentBuild?.lbVersion || $_("common.loading")}
                 canLaunch={!!versionState.currentBuild && !starting}
                 {instances}
                 bind:instance

@@ -1,0 +1,304 @@
+{
+  "common": {
+    "loading": "読み込み中...",
+    "tryAgain": "再試行",
+    "back": "戻る",
+    "browse": "参照",
+    "install": "インストール",
+    "installing": "インストール中",
+    "installed": "インストール済み",
+    "remove": "削除",
+    "undo": "元に戻す",
+    "selected": "選択中",
+    "showMore": "さらに表示",
+    "close": "閉じる",
+    "update": "アップデート",
+    "updating": "アップデート中",
+    "cancel": "キャンセル",
+    "continue": "続行",
+    "previous": "前へ",
+    "next": "次へ",
+    "settings": "設定",
+    "copied": "コピーしました！",
+    "copyToClipboard": "クリップボードにコピー"
+  },
+  "errors": {
+    "options": "ランチャーの設定を読み込めませんでした",
+    "api": "LiquidBounce API に接続できませんでした",
+    "system": "システムの構成に問題があるようです。\n\n{error}"
+  },
+  "update": {
+    "failedTitle": "ランチャーのアップデートに失敗しました",
+    "failed": "ランチャーを自動でアップデートできませんでした。次回の起動時に再試行します。\n\n{error}"
+  },
+  "main": {
+    "welcome": "おかえりなさい、{name} さん。",
+    "lowMemory": "{memory} MB 未満のメモリでクライアントを起動しようとしています。パフォーマンスに問題が出る可能性があります。続行しますか？",
+    "startFailed": "クライアントの起動に失敗しました: {error}"
+  },
+  "progress": {
+    "startingClient": "クライアントを起動中...",
+    "refreshingSession": "Minecraft のセッションを更新中...",
+    "updatingLauncher": "ランチャーを v{version} にアップデート中...",
+    "installingUpdate": "アップデートをインストール中...",
+    "loadingVersionManifest": "バージョンマニフェストを読み込み中...",
+    "loadingVersionProfile": "バージョンプロファイルを読み込み中...",
+    "installingAddon": "アドオン {name} をインストール中",
+    "copiedCustomMod": "カスタム Mod {name} をコピーしました",
+    "downloadingRecommendedMod": "おすすめ Mod {name} をダウンロード中",
+    "openingModDownloadPage": "Mod {name} のダウンロードページを開いています",
+    "openingDownloadPage": "ダウンロードページを開いています...（{attempt}/{attempts} 回目）",
+    "downloadingMod": "Mod {name} をダウンロード中",
+    "launchingBuild": "{commit} を起動中...",
+    "settingUp": "セットアップ中...",
+    "checkingJre": "JRE を確認中...",
+    "downloadingJre": "JRE をダウンロード中...",
+    "downloadingClient": "クライアントをダウンロード中...",
+    "checkingLibraries": "ライブラリを確認中...",
+    "downloadingLibrary": "ライブラリ {name} をダウンロード中",
+    "extractingNatives": "ネイティブを展開中...",
+    "checkingAssets": "アセットを確認中...",
+    "downloadingAsset": "アセット {hash} をダウンロード中",
+    "launching": "起動中...",
+    "running": "実行中..."
+  },
+  "settings": {
+    "general": {
+      "language": "言語",
+      "systemLanguage": "システムの既定",
+      "jvmDistribution": "JVM ディストリビューション",
+      "automatic": "自動",
+      "manual": "手動",
+      "custom": "カスタム",
+      "distribution": "ディストリビューション",
+      "customJvmPath": "カスタム JVM のパス",
+      "customJvmPlaceholder": "Java ラッパーの場所を選択",
+      "customJvmWindowTitle": "カスタム Java ラッパーを選択",
+      "dataLocation": "データの保存先",
+      "dataLocationWindowTitle": "カスタムデータディレクトリを選択",
+      "memory": "メモリ",
+      "concurrentDownloads": "同時ダウンロード数",
+      "connectionsSuffix": " 接続",
+      "keepLauncherOpen": "ランチャーを開いたままにする",
+      "signOut": "Minecraft アカウントからサインアウト",
+      "clearData": "データを消去",
+      "dataCleared": "データを消去しました。",
+      "clearDataFailed": "データの消去に失敗しました: {error}",
+      "logoutFailed": "正常にログアウトできませんでした。もう一度お試しください。"
+    },
+    "client": {
+      "build": "ビルド"
+    },
+    "title": "設定",
+    "tabs": {
+      "general": "一般",
+      "minecraft": "Minecraft",
+      "client": "クライアント",
+      "premium": "Premium"
+    },
+    "minecraft": {
+      "description": "別の Minecraft のインストールにあるワールド、リソースパック、シェーダーパックを使えるようにします。",
+      "directory": "Minecraft ディレクトリ",
+      "autoDetect": "自動検出",
+      "directoryWindowTitle": "Minecraft ディレクトリを選択",
+      "linkWorlds": "ワールドをリンク（{count, number}）",
+      "linkResourcePacks": "リソースパックをリンク（{count, number}）",
+      "linkShaderPacks": "シェーダーパックをリンク（{count, number}）",
+      "notFound": "バニラの Minecraft のインストールが見つかりません。"
+    },
+    "premium": {
+      "skipAds": "広告をスキップ",
+      "accountInformation": "アカウント情報",
+      "noPremium": "このアカウントには Premium が紐付けられていないようです。アカウント管理ページでリンクしてください。",
+      "manageAccount": "アカウント管理",
+      "logout": "ログアウト",
+      "description": "Premium に加入すると、クライアントの継続的な開発を支援できるだけでなく、マントが手に入り、ランチャーの広告をスキップできるようになります。",
+      "login": "LiquidBounce アカウントでログイン",
+      "loginFailed": "クライアントアカウントの認証に失敗しました: {error}",
+      "logoutFailed": "クライアントアカウントからのログアウトに失敗しました: {error}"
+    },
+    "liquidBounceAccount": {
+      "username": "ユーザー名",
+      "donatorPerks": "寄付者特典",
+      "active": "有効",
+      "inactive": "無効"
+    },
+    "message": {
+      "clearSearch": "検索をクリア"
+    },
+    "itemRow": {
+      "removeNamed": "{name} を削除"
+    },
+    "directorySelector": {
+      "select": "ディレクトリを選択",
+      "open": "ディレクトリを開く"
+    },
+    "fileSelector": {
+      "select": "ファイルを選択"
+    }
+  },
+  "builds": {
+    "title": "ビルド",
+    "showNightly": "ナイトリービルドを表示",
+    "latest": "最新",
+    "latestRelease": "最新リリース",
+    "latestNightly": "最新ナイトリー",
+    "builds": "{count, plural, other {# 件のビルド}}",
+    "releases": "{count, plural, other {# 件のリリース}}"
+  },
+  "marketplace": {
+    "title": "{type, select, Addon {アドオン} Theme {テーマ} Script {スクリプト} other {アイテム}}",
+    "type": "{type, select, Addon {アドオン} Theme {テーマ} Script {スクリプト} other {アイテム}}",
+    "empty": "{type, select, Addon {アドオンはまだありません。} Theme {テーマはまだありません。} Script {スクリプトはまだありません。} other {まだ何もありません。}}",
+    "search": "{type, select, Addon {アドオンを検索} Theme {テーマを検索} Script {スクリプトを検索} other {検索}}",
+    "noMatch": "{type, select, Addon {「{query}」に一致するアドオンはありません。} Theme {「{query}」に一致するテーマはありません。} Script {「{query}」に一致するスクリプトはありません。} other {「{query}」に一致するものはありません。}}",
+    "nonePublished": "{type, select, Addon {公開されているアドオンはまだありません。} Theme {公開されているテーマはまだありません。} Script {公開されているスクリプトはまだありません。} other {公開されているものはまだありません。}}",
+    "byAuthor": "{type}・作者: {author}",
+    "downloads": "{count, plural, other {# ダウンロード}}",
+    "notFor": "{version} には非対応",
+    "offline": "マーケットプレイスを確認できません: {error}",
+    "restart": "{count, plural, other {# 件の変更}}を適用するには LiquidBounce を再起動してください。",
+    "removeQuestion": "{name} を削除しますか？{names} はこれがないと動作しなくなります。",
+    "screenshots": "スクリーンショット",
+    "versions": "バージョン",
+    "neededBy": "必要としているもの",
+    "viewFullSize": "原寸で表示",
+    "previousScreenshot": "前のスクリーンショット",
+    "nextScreenshot": "次のスクリーンショット"
+  },
+  "mods": {
+    "title": "Mod - {target}",
+    "addFile": "ファイルを追加",
+    "addFileWindowTitle": "インストールするカスタム Mod を選択",
+    "browse": "参照",
+    "recommended": "おすすめ",
+    "unknownVersion": "不明なバージョン",
+    "updateAvailable": "{version} が利用可能",
+    "installFailed": "Mod のインストールに失敗しました: {error}",
+    "deleteFailed": "Mod の削除に失敗しました: {error}",
+    "remove": "Mod を削除",
+    "searchPlaceholder": "Modrinth の Mod を検索",
+    "hitLine": "作者: {author} · {downloads, plural, other {# ダウンロード}}",
+    "noMatch": "「{query}」に一致する Mod はありません。"
+  },
+  "facts": {
+    "blatantOrCloset": {
+      "title": "Blatant か Closet か、選ぶのはあなた！",
+      "description": "LiquidBounce には Blatant 向けと Closet 向けのチートが多数搭載されており、これ一つで何でもこなせるクライアントです。"
+    },
+    "multiVersion": {
+      "title": "マルチバージョン対応",
+      "description": "内蔵のバージョンチェンジャーで、ゲームを再起動せずに Minecraft のバージョンを簡単に切り替えられます！"
+    },
+    "multiServer": {
+      "title": "マルチサーバー対応",
+      "description": "LiquidBounce は多くのサーバー向けの機能とバイパスを備えています。"
+    },
+    "autoConfig": {
+      "title": "AutoConfig システム",
+      "description": "LiquidBounce の AutoConfig システムは、有名なサーバーに参加したときに最適な設定を自動的に適用します。"
+    },
+    "customizable": {
+      "title": "カスタマイズ可能",
+      "description": "LiquidBounce の UI は自由にカスタマイズできます。UI 全体を好みに合わせて変更できます。"
+    },
+    "downloads": {
+      "title": "累計 {count, number} ダウンロード",
+      "description": "LiquidBounce は史上最も人気のあるハッククライアントの一つです。"
+    },
+    "openSource": {
+      "title": "無料でオープンソース",
+      "description": "LiquidBounce のソースコードは公開されています。"
+    },
+    "scriptApi": {
+      "title": "ScriptAPI",
+      "description": "LiquidBounce の Script API を使えば、独自のモジュールやコマンドを作成できます。"
+    }
+  },
+  "login": {
+    "title": "ログイン",
+    "microsoft": "Microsoft でログイン",
+    "microsoftDevice": "Microsoft デバイスログイン",
+    "or": "または",
+    "username": "ユーザー名",
+    "offline": "オフラインでログイン",
+    "microsoftTitle": "Microsoft サインイン",
+    "finishInPopup": "ポップアップウィンドウでサインインを完了してください。",
+    "codeTitle": "コードでサインイン",
+    "copy": "コピー",
+    "copied": "コピー済み",
+    "openBefore": "任意のデバイスで",
+    "openAfter": "を開き、上のコードを入力してください。",
+    "scanTitle": "コードをスキャン",
+    "scanDescription": "コードが入力済みのページを開きます。",
+    "waiting": "確認を待っています",
+    "requestingCode": "サインインコードを取得中…",
+    "qrAlt": "Microsoft でサインインするための QR コード",
+    "usernameLength": "ユーザー名は 1～16 文字で入力してください。",
+    "usernameCharacters": "ユーザー名には英字、数字、アンダースコアのみ使用できます。",
+    "microsoftFailed": "Microsoft 認証に失敗しました。\n\n{error}\n\nこの問題を解決できない場合は、オフラインログインを使用し、クライアント内蔵のアカウントマネージャーからログインしてください。"
+  },
+  "account": {
+    "offline": "オフライン"
+  },
+  "launch": {
+    "instance": "インスタンス",
+    "newInstance": "新しいインスタンス",
+    "state": {
+      "starting": "起動中",
+      "started": "起動済み"
+    },
+    "terminate": "終了",
+    "log": "ログ",
+    "launch": "LiquidBounce を起動"
+  },
+  "errorScreen": {
+    "title": "エラーが発生しました",
+    "unknown": "不明なエラー",
+    "details": "技術的な詳細:",
+    "quickHelp": "クイックヘルプ",
+    "contactSupport": "サポートに問い合わせる"
+  },
+  "firstRun": {
+    "title": "LiquidBounce へようこそ！",
+    "description": "初回起動時や LiquidBounce の新しいアップデートがあるときは、ダウンロードウィンドウが表示されます。これはクライアントの広告収入を得るための仕組みです。広告を表示したくない場合は、LiquidBounce Premium を購入できます。LiquidBounce の使い方のヒントは、クイックスタートガイドもご覧ください。",
+    "quickStart": "クイックスタートガイド"
+  },
+  "versionWarning": {
+    "title": "サポート対象外のバージョンを起動しようとしています！",
+    "description": "選択した LiquidBounce のバージョンは公式サポートが終了しています。1.7 以降のすべての Minecraft バージョンで動作する最新バージョンへの切り替えをおすすめします。",
+    "switch": "最新バージョンに切り替える",
+    "launchAnyway": "このまま起動",
+    "launchAnywayIn": "このまま起動（{seconds}）"
+  },
+  "insecure": {
+    "title": "セキュリティ警告",
+    "message": "LiquidLauncher は安全な（HTTPS）API エンドポイントに接続できませんでしたが、安全でない（HTTP）エンドポイントには接続できました。",
+    "risks": "セキュリティ上のリスク:",
+    "riskUnencrypted": "通信が暗号化されておらず、同じネットワーク上の他者に見られる可能性があります",
+    "riskIntercepted": "送受信するデータが悪意のある第三者に傍受・改ざんされる可能性があります",
+    "riskCredentials": "この接続でログイン情報を送信すると、漏えいする可能性があります",
+    "recommendation": "推奨事項:",
+    "recommendationText": "この問題は、ネットワークの制限や SSL 証明書の問題が原因であることがよくあります。安全な接続を確立するために、Cloudflare WARP などの VPN の使用をおすすめします。",
+    "getWarp": "Cloudflare WARP を入手",
+    "allow": "安全でない接続を許可"
+  },
+  "log": {
+    "title": "クライアントログ",
+    "upload": "ログをアップロード",
+    "autoScroll": "自動スクロール",
+    "search": "検索",
+    "filters": {
+      "error": "エラー",
+      "warn": "警告",
+      "info": "情報",
+      "debug": "デバッグ"
+    },
+    "uploadConfirm": "このセッションのログ全体がアップロードされます。プライベートなチャットメッセージなどの機密情報が含まれている可能性があります。続行してもよろしいですか？",
+    "uploadFailed": "ログのアップロードに失敗しました: {error}",
+    "uploaded": "ログは次の URL で確認できます:"
+  },
+  "news": {
+    "readMore": "続きを読む"
+  }
+}

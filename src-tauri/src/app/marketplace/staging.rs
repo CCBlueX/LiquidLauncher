@@ -32,7 +32,7 @@ use super::install::{self, addon_jar, installed_revision, rename};
 use super::revisions::{display_version, pick, revisions, supports_addons};
 use super::{subscriptions, GameDir, ItemType, SubscribedItem};
 use crate::app::client_api::{Build, Client};
-use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
+use crate::minecraft::progress::{Label, ProgressReceiver, ProgressUpdate};
 
 /// Filename prefix for add-on jars staged into the mods directory.
 ///
@@ -214,10 +214,9 @@ async fn staged_jar(
         }
     }
 
-    progress.progress_update(ProgressUpdate::set_label(format!(
-        "Installing add-on {}",
-        item.name
-    )));
+    progress.progress_update(ProgressUpdate::SetLabel(Label::InstallingAddon {
+        name: item.name.clone(),
+    }));
     let url = api::download_url(client, item.id, target.revision);
     let chosen = match install::install(game, item.id, target.revision, &url).await {
         Ok(()) => Some(target),

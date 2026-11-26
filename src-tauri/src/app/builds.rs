@@ -22,12 +22,11 @@
 use std::sync::Mutex;
 
 use anyhow::{Context, Result};
-use chrono::Local;
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 
 use crate::app::client_api::{Build, Client};
 use crate::app::options::Options;
-use crate::utils::{count, short_date};
 
 const PAGE_SIZE: u32 = 20;
 
@@ -106,13 +105,23 @@ pub(crate) async fn selected(
     }
 }
 
-/// How the build that launches was chosen: `Latest release`, or when it was pinned
-/// `Sep 26 · adfddc0`.
-pub fn selection(build: &Build, latest: bool) -> String {
-    match (latest, build.release) {
-        (true, true) => "Latest release".to_owned(),
-        (true, false) => "Latest nightly".to_owned(),
-        (false, _) => line(build),
+/// How the build that launches was chosen. The frontend shows `Latest release`, or when it was
+/// pinned `Sep 26 · adfddc0`.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Selection {
+    latest: bool,
+    release: bool,
+    date: DateTime<Utc>,
+    commit: String,
+}
+
+pub fn selection(build: &Build, latest: bool) -> Selection {
+    Selection {
+        latest,
+        release: build.release,
+        date: build.date,
+        commit: commit(build),
     }
 }
 
@@ -124,8 +133,8 @@ pub struct BuildChoice {
     name: String,
     /// The first line of the commit message.
     description: String,
-    /// `Sep 26 · adfddc0`
-    line: String,
+    date: DateTime<Utc>,
+    commit: String,
     selected: bool,
 }
 
@@ -137,8 +146,9 @@ pub struct BuildPage {
     builds: Vec<BuildChoice>,
     page: u32,
     pages: u32,
-    /// Across all pages, `120 builds` or `40 releases`.
-    count: String,
+    /// Builds across all pages, releases unless `nightly`.
+    total: u32,
+    nightly: bool,
 }
 
 /// One page of the builds, newest first. `selected` is the chosen build id, `-1` for the latest.
@@ -151,7 +161,8 @@ pub async fn page(client: &Client, page: u32, nightly: bool, selected: i32) -> R
             build_id: build.build_id,
             name: format!("{} · Minecraft {}", build.lb_version, build.mc_version),
             description: build.message.lines().next().unwrap_or_default().to_owned(),
-            line: line(build),
+            date: build.date,
+            commit: commit(build),
             selected: i64::from(build.build_id) == i64::from(selected),
         })
         .collect();
@@ -161,19 +172,14 @@ pub async fn page(client: &Client, page: u32, nightly: bool, selected: i32) -> R
         builds,
         page,
         pages: response.total.div_ceil(PAGE_SIZE),
-        count: if nightly {
-            count(response.total.into(), "build", "builds")
-        } else {
-            count(response.total.into(), "release", "releases")
-        },
+        total: response.total,
+        nightly,
     })
 }
 
-/// When the build was made and its commit, `Sep 26 · adfddc0`.
-fn line(build: &Build) -> String {
-    let date = short_date(build.date.with_timezone(&Local).naive_local());
-    let commit: String = build.commit_id.chars().take(7).collect();
-    format!("{date} · {commit}")
+/// The commit a build was made from, `adfddc0`.
+fn commit(build: &Build) -> String {
+    build.commit_id.chars().take(7).collect()
 }
 
 #[cfg(test)]
@@ -202,9 +208,11 @@ mod tests {
         }))
         .unwrap();
 
-        assert!(line(&build).ends_with(" · adfddc0"));
-        assert_eq!(selection(&build, true), "Latest nightly");
-        assert_eq!(selection(&build, false), line(&build));
+        assert_eq!(commit(&build), "adfddc0");
+        let latest = selection(&build, true);
+        assert!(latest.latest && !latest.release);
+        assert_eq!(latest.commit, "adfddc0");
+        assert!(!selection(&build, false).latest);
 
         let latest = SelectedBuild {
             build_id: -1,

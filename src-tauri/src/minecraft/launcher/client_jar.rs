@@ -1,13 +1,13 @@
 use anyhow::{bail, Context, Result};
 use path_absolutize::Absolutize;
 use std::fmt::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tokio::fs;
 
 use crate::{
     error::LauncherError,
     minecraft::{
-        progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
+        progress::{get_max, get_progress, Label, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
         version::VersionProfile,
     },
     utils::{download_file, sha1sum, OS},
@@ -21,7 +21,7 @@ pub async fn setup_client_jar<D: Send + Sync>(
     version_profile: &VersionProfile,
     launcher_data: &LauncherData<D>,
     class_path: &mut String,
-) -> Result<()> {
+) -> Result<PathBuf> {
     if let Some(client_download) = version_profile
         .downloads
         .as_ref()
@@ -51,7 +51,7 @@ pub async fn setup_client_jar<D: Send + Sync>(
 
         if requires_download {
             launcher_data.log("Downloading client...");
-            launcher_data.progress_update(ProgressUpdate::set_label("Downloading client..."));
+            launcher_data.progress_update(ProgressUpdate::SetLabel(Label::DownloadingClient));
 
             let retrieved_bytes = download_file(&client_download.url, |a, b| {
                 launcher_data.progress_update(ProgressUpdate::set_for_step(
@@ -83,12 +83,12 @@ pub async fn setup_client_jar<D: Send + Sync>(
                 .await
                 .context("Failed to create natives folder")?;
         }
+
+        Ok(client_jar)
     } else {
-        return Err(LauncherError::InvalidVersionProfile(
+        Err(LauncherError::InvalidVersionProfile(
             "No client JAR downloads were specified.".to_string(),
         )
-        .into());
+        .into())
     }
-
-    Ok(())
 }

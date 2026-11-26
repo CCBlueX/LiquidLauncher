@@ -48,10 +48,7 @@ pub(crate) async fn get_marketplace_library(
     let (build, remote) = if check {
         match builds::selected(&client, &options, &app_state.build).await {
             Ok(build) => (Some(build), Remote::Check(&client)),
-            Err(error) => {
-                let error = format!("Unable to check the marketplace: {error:#}");
-                (None, Remote::Failed(error))
-            }
+            Err(error) => (None, Remote::Failed(format!("{error:#}"))),
         }
     } else {
         (builds::kept(&options, &app_state.build), Remote::Skip)

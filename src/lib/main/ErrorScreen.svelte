@@ -6,9 +6,10 @@
     import { openUrl } from "@tauri-apps/plugin-opener";
     import ButtonCopyClipboard from "../common/ButtonCopyClipboard.svelte";
     import ButtonSetting from "../settings/ButtonSetting.svelte";
+    import { _ } from "svelte-i18n";
     
     export let error = {
-        message: "Unknown error",
+        message: null,
         error: null
     };
 </script>
@@ -20,13 +21,13 @@
     </TitleBar>
 
     <div class="error-container">
-        <h1>Error Occurred</h1>
-        <p class="error-message">{error.message}</p>
+        <h1>{$_("errorScreen.title")}</h1>
+        <p class="error-message">{error.message ?? $_("errorScreen.unknown")}</p>
         
         {#if error.error}
             <div class="error-details">
                 <div class="error-header">
-                    <h3>Technical Details:</h3>
+                    <h3>{$_("errorScreen.details")}</h3>
                     <div class="copy-button">
                         <ButtonCopyClipboard textToCopy={JSON.stringify(error)} iconOnly={true} />
                     </div>
@@ -36,8 +37,8 @@
         {/if}
 
         <div class="help-buttons">
-            <ButtonSetting text="Quick Help" color="#4677ff" on:click={() => openUrl('https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher')}></ButtonSetting>
-            <ButtonSetting text="Contact Support" color="#45a049" on:click={() => openUrl('https://ccbluex.net/contact')}></ButtonSetting>
+            <ButtonSetting text={$_("errorScreen.quickHelp")} color="#4677ff" on:click={() => openUrl('https://liquidbounce.net/docs/Tutorials/Fixing%20LiquidLauncher')}></ButtonSetting>
+            <ButtonSetting text={$_("errorScreen.contactSupport")} color="#45a049" on:click={() => openUrl('https://ccbluex.net/contact')}></ButtonSetting>
         </div>
     </div>
 </VerticalFlexWrapper>

@@ -44,6 +44,7 @@ path-absolutize = "^4.0.1"
 # OS
 os_info = "3"
 sysinfo = "^0.39.6"
+sys-locale = "0.3"
 
 # Data
 regex = "1.7.0"
