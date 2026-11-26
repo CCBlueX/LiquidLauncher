@@ -474,9 +474,9 @@ pub async fn browse(
     query: Option<&str>,
 ) -> Result<Browse> {
     let type_name = match item_type {
-        ItemType::Addon => "Addon",
-        ItemType::Theme => "Theme",
-        ItemType::Script => "Script",
+        ItemType::Addon => "addon",
+        ItemType::Theme => "theme",
+        ItemType::Script => "script",
         other => bail!("{other:?} is not listed here"),
     };
     let plural = item_type.title().to_lowercase();
@@ -532,7 +532,7 @@ pub async fn browse(
                     .collect::<Vec<_>>()
                     .join(" · "),
                 Some(BrowseFit::NoVersion) => format!("Not for {liquidbounce} · {downloads}"),
-                _ => match item.updated_at.map(short_date) {
+                _ => match item.live_revision.and_then(|r| r.created_at).map(|d| short_date(d.naive_utc())) {
                     Some(date) => format!("{date} · {downloads}"),
                     None => downloads,
                 },
@@ -609,7 +609,7 @@ pub async fn detail(
     let versions = revisions
         .iter()
         .map(|revision| {
-            let date = revision.created_at.map(short_date);
+            let date = revision.created_at.map(|d| short_date(d.naive_utc()));
             VersionRow {
                 label: match (is_theme, &date) {
                     (true, Some(date)) => date.clone(),
@@ -628,7 +628,7 @@ pub async fn detail(
         meta: format!(
             "{} by {} · {}",
             item.item_type.name(),
-            item.author,
+            item.owner.nickname.unwrap_or(item.owner.uid),
             count(item.downloads.into(), "download", "downloads")
         ),
         summary: summary(&item.description),
@@ -665,7 +665,7 @@ async fn needed_by(
     join_all(
         dependents(&others, &needs, queued, item_id).map(|other| async move {
             let author = match api::item(client, other.id).await {
-                Ok(dependent) => dependent.author,
+                Ok(dependent) => dependent.owner.nickname.unwrap_or(dependent.owner.uid),
                 Err(error) => {
                     warn!("Failed to look up '{}': {:?}", other.name, error);
                     String::new()

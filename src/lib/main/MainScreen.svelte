@@ -12,25 +12,29 @@
     import ClientLog from "./log/ClientLog.svelte";
     import Settings from "./settings/Settings.svelte";
     import FirstRunWarning from "./FirstRunWarning.svelte";
-    import AccountManager from "./accounts/AccountManager.svelte";
-    import {accounts, loadAccounts} from "./accounts/accounts.js";
+    import AccountManager from "../accounts/AccountManager.svelte";
+    import {accounts, loadAccounts} from "../accounts/accounts.js";
     import {onMount} from "svelte";
 
     export let client;
     export let options;
     export let error;
 
-    let running = false;
     let clientAccount = null;
 
-    let logShown = false;
+    let instances = [];
+    let instance = null;
+    let launching = false;
+    $: starting = launching || instances.some(listed => listed.state === "starting");
+
+    let logs = {};
+    let logShown = null;
     let settingsShown = false;
     let accountManagerShown = false;
     let settingsTab = "General";
     let launchVersionWarningShown = false;
     let firstRunWarningShown = false;
     let launchVersionWarningCountdown = 0;
-    let log = [];
 
     let versionState = {
         currentBuild: null,
@@ -175,23 +179,29 @@
             return;
         }
 
-        if (running) return;
-
-        log = [];
+        if (starting) return;
 
         try {
-            running = true;
+            launching = true;
             progressState = { max: 0, value: 0, text: "Starting client...", speed: 0 };
 
             await authenticate();
             await checkMemory();
-            await launchClient();
+            const id = await launchClient();
+            await refreshInstances();
+            instance = instances.find(listed => listed.id === id) ?? null;
         } catch (error) {
             console.error("Failed to start client:", error);
-            log = [...log, `Failed to start client: ${error}`];
-            running = false;
-            logShown = true;
+            logs[0] = [`Failed to start client: ${error}`];
+            logShown = 0;
+        } finally {
+            launching = false;
         }
+    }
+
+    async function refreshInstances() {
+        instances = await invoke("list_instances");
+        instance = instances.find(listed => listed.id === instance?.id) ?? null;
     }
 
     async function updateClientAccount() {
@@ -222,7 +232,6 @@
             );
 
             if (!confirmed) {
-                running = false;
                 throw new Error("Memory warning declined");
             }
         }
@@ -230,7 +239,7 @@
 
     async function launchClient() {
         await options.store();
-        await invoke("run_client", {
+        return invoke("run_client", {
             client,
             buildId: versionState.currentBuild.buildId,
             options,
@@ -239,11 +248,15 @@
     }
 
     async function terminateClient() {
-        await invoke("terminate");
+        await invoke("terminate", { id: instance.id });
+    }
+
+    function hideLog() {
+        if (!instances.some(listed => listed.id === logShown)) delete logs[logShown];
+        logShown = null;
     }
 
     function showSettings(tab) {
-        accountManagerShown = false;
         settingsTab = tab;
         settingsShown = true;
     }
@@ -251,13 +264,9 @@
     async function hideSettings() {
         settingsShown = false;
         await options.store();
-        // The data location may have changed, which has its own custom mods
+        // The data location may have changed, which has its own custom mods and accounts
+        loadAccounts(options);
         await updateMods();
-    }
-
-    async function showAccountManager() {
-        if (settingsShown) await hideSettings();
-        accountManagerShown = true;
     }
 
     async function switchAccount(entry) {
@@ -267,6 +276,7 @@
         } catch (e) {
             alert("Failed to switch account.\n\n" + e);
         }
+        await loadAccounts(options);
     }
 
     async function continueAfterFirstRun() {
@@ -291,7 +301,8 @@
     }
 
     listen("process-output", (event) => {
-        log = [...log, event.payload];
+        const { id, line } = event.payload;
+        logs[id] = [...(logs[id] ?? []), line];
     });
 
     listen("progress-update", (event) => {
@@ -312,18 +323,25 @@
         }
     });
 
-    listen("client-exited", () => {
-        running = false;
+    listen("client-running", refreshInstances);
+
+    listen("client-exited", (event) => {
+        const { id } = event.payload;
+        if (logShown !== id) delete logs[id];
+        refreshInstances();
         updateClientAccount();
+        // The client writes the list when it exits.
+        loadAccounts(options);
     });
 
-    listen("client-error", () => {
-        logShown = true;
+    listen("client-error", (event) => {
+        logShown = event.payload.id;
     });
 
     onMount(async () => {
         loadAccounts(options);
         updateClientAccount();
+        refreshInstances();
         await updateData();
     });
 </script>
@@ -347,8 +365,8 @@
     />
 {/if}
 
-{#if logShown}
-    <ClientLog messages={log} on:hideClientLog={() => logShown = false} />
+{#if logShown !== null}
+    <ClientLog messages={logs[logShown] ?? []} on:hideClientLog={hideLog} />
 {/if}
 
 {#if settingsShown}
@@ -361,7 +379,6 @@
             on:updateData={updateData}
             on:updateModStates={updateModStates}
             on:updateMods={updateMods}
-            on:showAccounts={showAccountManager}
             on:hide={hideSettings}
     />
 {/if}
@@ -369,23 +386,23 @@
 {#if accountManagerShown}
     <AccountManager
             bind:options
+            locked={instances.length > 0}
             on:switchAccount={(e) => switchAccount(e.detail)}
             on:hide={() => accountManagerShown = false}
     />
 {/if}
 
 <VerticalFlexWrapper
-        blur={settingsShown || accountManagerShown || logShown || launchVersionWarningShown || firstRunWarningShown}
+        blur={settingsShown || accountManagerShown || logShown !== null || launchVersionWarningShown || firstRunWarningShown}
 >
     <MainHeader
             account={options.start.account}
-            accountList={$accounts}
-            {running}
+            accounts={$accounts}
+            running={starting}
             {progressState}
             on:showSettings={() => showSettings("General")}
-            on:manageAccounts={showAccountManager}
+            on:manageAccounts={() => accountManagerShown = true}
             on:switchAccount={(e) => switchAccount(e.detail)}
-            on:openSwitcher={() => loadAccounts(options)}
     />
 
     <ContentWrapper>
@@ -400,10 +417,11 @@
                 }}
                 mcVersion={versionState.currentBuild?.mcVersion || "Loading..."}
                 lbVersion={versionState.currentBuild?.lbVersion || "Loading..."}
-                canLaunch={!!versionState.currentBuild}
-                {running}
+                canLaunch={!!versionState.currentBuild && !starting}
+                {instances}
+                bind:instance
                 on:showVersionSelect={() => showSettings("Client")}
-                on:showClientLog={() => logShown = true}
+                on:showClientLog={() => logShown = instance.id}
                 on:launch={runClientWithWarning}
                 on:terminate={terminateClient}
         />

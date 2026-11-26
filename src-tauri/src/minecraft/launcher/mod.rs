@@ -27,16 +27,17 @@ use std::process::exit;
 use anyhow::{bail, Context, Result};
 
 use path_absolutize::Absolutize;
-use tokio::{io, spawn};
+use tokio::{fs::try_exists, io, spawn};
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::*;
 
 use crate::app::client_api::{Client, LaunchManifest};
-use crate::app::marketplace::{self, GameDir};
+use crate::app::marketplace;
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
-use crate::minecraft::java::{DistributionSelection, JavaRuntime};
+use crate::minecraft::game_dir::GameDir;
+use crate::minecraft::java::DistributionSelection;
 use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
 use crate::{join_and_mkdir, join_and_mkdir_vec};
 use crate::{
@@ -61,6 +62,7 @@ pub struct LauncherData<D: Send + Sync> {
     pub(crate) on_stderr: fn(&D, &[u8]) -> Result<()>,
     pub(crate) on_progress: fn(&D, ProgressUpdate) -> Result<()>,
     pub(crate) on_log: fn(&D, &str) -> Result<()>,
+    pub(crate) on_start: fn(&D, u32),
     pub(crate) hide_window: fn(&D),
     pub(crate) data: Box<D>,
     pub(crate) terminator: tokio::sync::oneshot::Receiver<()>,
@@ -167,22 +169,23 @@ pub async fn launch<D: Send + Sync>(
     let natives_folder = join_and_mkdir!(client_folder, "natives");
     let libraries_folder = join_and_mkdir!(data, "libraries");
     let assets_folder = join_and_mkdir!(data, "assets");
-    let game_dir = join_and_mkdir_vec!(data, vec!["gameDir", &*manifest.build.branch]);
+    let game_dir = GameDir::new(data).path();
+    crate::mkdir!(game_dir);
 
     // Setup vanilla integration symlinks
     setup_installation_link(&game_dir, &launching_parameter.vanilla_integration, &launcher_data)?;
 
-    let java_bin = load_jre(
+    let java_runtime = load_jre(
         &runtimes_folder,
         &manifest,
-        &launching_parameter,
+        &launching_parameter.java_distribution,
         &launcher_data,
     )
     .await
     .context("Failed to load JRE")?;
 
-    launcher_data.log(&format!("Java Path: {:?}", java_bin));
-    if !java_bin.exists() {
+    launcher_data.log(&format!("Java Path: {}", java_runtime.path().display()));
+    if !try_exists(java_runtime.path()).await? {
         bail!("Java binary not found");
     }
 
@@ -219,9 +222,6 @@ pub async fn launch<D: Send + Sync>(
     )
     .await
     .context("Failed to setup assets")?;
-
-    // Game
-    let java_runtime = JavaRuntime::new(java_bin);
 
     let mut command_arguments = Vec::new();
 
@@ -294,6 +294,9 @@ pub async fn launch<D: Send + Sync>(
     launcher_data.progress_update(ProgressUpdate::set_to_max());
 
     let mut running_task = java_runtime.execute(mapped, &game_dir).await?;
+    if let Some(pid) = running_task.id() {
+        (launcher_data.on_start)(&launcher_data.data, pid);
+    }
 
     launcher_data.progress_update(ProgressUpdate::set_label("Running..."));
 
@@ -318,7 +321,7 @@ pub async fn launch<D: Send + Sync>(
 
     if !launching_parameter.keep_launcher_open {
         // The launcher quits with the game, before run_client could apply these.
-        marketplace::game_exited(&GameDir::new(data_dir, &manifest.build.branch)).await;
+        marketplace::game_exited(&GameDir::new(data_dir)).await;
         // Hide launcher window
         exit(0);
     }

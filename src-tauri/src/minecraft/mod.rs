@@ -18,6 +18,8 @@
  */
 
 pub mod auth;
+pub mod game_dir;
+pub mod instance;
 pub mod java;
 pub mod launcher;
 pub mod prelauncher;

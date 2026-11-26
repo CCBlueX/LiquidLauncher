@@ -53,16 +53,20 @@ where
     F: Fn(u64, u64),
 {
     debug!("Downloading file {:?}", url);
+    download_request(|| Ok(HTTP_CLIENT.get(url.trim())), on_progress).await
+}
 
+pub async fn download_request(
+    request: impl Fn() -> Result<reqwest::RequestBuilder>, on_progress: impl Fn(u64, u64),
+) -> Result<Vec<u8>> {
     let mut response = (|| async {
-        HTTP_CLIENT
-            .get(url.trim())
+        Ok::<_, anyhow::Error>(request()?
             .send()
             .await?
-            .error_for_status()
+            .error_for_status()?)
     }).retry(ExponentialBuilder::default())
         .notify(|err, dur| {
-            warn!("Failed to download file {}. Retrying in {:?}. Error: {}", url, dur, err);
+            warn!("Download failed; retrying in {dur:?}: {err}");
         })
         .await
         .map_err(|e| map_into_connection_error(e.into()))?;

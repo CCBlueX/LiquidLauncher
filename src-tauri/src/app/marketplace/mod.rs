@@ -19,7 +19,7 @@
 
 //! Marketplace items shared with LiquidBounce.
 //!
-//! Both programs read and write `gameDir/<branch>/LiquidBounce/marketplace.json` and the items
+//! Both programs read and write `instances/<edition>/LiquidBounce/marketplace.json` and the items
 //! installed beside it. The client owns the format, so everything here matches what it produces.
 
 pub mod api;
@@ -30,7 +30,6 @@ mod subscriptions;
 pub mod view;
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex, MutexGuard};
 
 use anyhow::Result;
@@ -38,14 +37,19 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 
 use crate::app::client_api::Client;
+use crate::minecraft::game_dir::GameDir;
 pub use revisions::install_target;
 pub use staging::stage_addons;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ItemType {
+    #[serde(alias = "config")]
     Config,
+    #[serde(alias = "theme")]
     Theme,
+    #[serde(alias = "addon")]
     Addon,
+    #[serde(alias = "script")]
     Script,
     #[serde(other)]
     Other,
@@ -83,43 +87,6 @@ pub struct SubscribedItem {
     pub id: u32,
     #[serde(rename = "type")]
     pub item_type: ItemType,
-}
-
-/// The launcher's data directory and the branch whose game directory holds the items.
-pub struct GameDir {
-    data: PathBuf,
-    branch: String,
-}
-
-impl GameDir {
-    pub fn new(data: impl Into<PathBuf>, branch: impl Into<String>) -> Self {
-        Self {
-            data: data.into(),
-            branch: branch.into(),
-        }
-    }
-
-    fn mods(&self) -> PathBuf {
-        self.data.join("gameDir").join(&self.branch).join("mods")
-    }
-
-    fn client(&self) -> PathBuf {
-        self.data
-            .join("gameDir")
-            .join(&self.branch)
-            .join("LiquidBounce")
-    }
-
-    fn subscriptions(&self) -> PathBuf {
-        self.client().join("marketplace.json")
-    }
-
-    fn item(&self, item_id: u32) -> PathBuf {
-        self.client()
-            .join("marketplace")
-            .join("items")
-            .join(item_id.to_string())
-    }
 }
 
 /// An edit made while the game runs. LiquidBounce writes its subscriptions back when it exits, so
@@ -164,7 +131,7 @@ impl Queued {
 #[derive(Default)]
 struct Session {
     /// From the start of a launch until the game exits.
-    running: bool,
+    running: usize,
     queued: Queued,
 }
 
@@ -181,11 +148,11 @@ fn queued() -> Queued {
 }
 
 pub fn game_started() {
-    session().running = true;
+    session().running += 1;
 }
 
 pub fn game_running() -> bool {
-    session().running
+    session().running > 0
 }
 
 /// Applies what was edited while the game ran. Called once it exited or failed to start; calling
@@ -193,7 +160,10 @@ pub fn game_running() -> bool {
 pub async fn game_exited(game: &GameDir) {
     let queued = {
         let mut session = session();
-        session.running = false;
+        session.running = session.running.saturating_sub(1);
+        if session.running > 0 {
+            return;
+        }
         std::mem::take(&mut session.queued)
     };
 
@@ -211,10 +181,11 @@ pub async fn game_exited(game: &GameDir) {
 /// Queues `edit` while the game runs, and tells whether it did.
 fn queue_while_running(item_id: u32, edit: impl FnOnce() -> Edit) -> bool {
     let mut session = session();
-    if session.running {
+    let running = session.running > 0;
+    if running {
         session.queued.push(item_id, edit());
     }
-    session.running
+    running
 }
 
 /// Subscribes to `item` and installs `revision`, or, while the game runs, once it exited. Undoes a

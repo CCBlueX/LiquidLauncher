@@ -35,9 +35,25 @@ pub(crate) use minecraft_installation::*;
 pub(crate) use updater::*;
 pub(crate) use modrinth::*;
 
+use std::path::PathBuf;
+
+use crate::app::options::Options;
+use crate::minecraft::game_dir::GameDir;
+
 /// Turns an error into the message the frontend shows: `Unable to <action>: <error>`.
 fn failed(action: &str) -> impl FnOnce(anyhow::Error) -> String + '_ {
     move |error| format!("Unable to {action}: {error:#}")
+}
+
+/// The data directory of the options, once the `gameDir` an older launcher left in it is moved.
+/// For every command that uses a game directory: its options may name another data directory
+/// than the stored ones.
+async fn data_directory(options: &Options) -> Result<PathBuf, String> {
+    let data = options.start_options.data_directory();
+    GameDir::migrate(&data)
+        .await
+        .map_err(|error| format!("{error:#}"))?;
+    Ok(data)
 }
 
 /// A search query, or `None` when it is blank.

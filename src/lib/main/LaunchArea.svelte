@@ -1,12 +1,13 @@
 <script>
     import { createEventDispatcher } from "svelte";
     import ButtonLaunchArea from "./ButtonLaunchArea.svelte";
-    import ButtonVersion from "./ButtonVersion.svelte";
+    import Instances from "./Instances.svelte";
 
     export let versionInfo;
     export let mcVersion;
     export let lbVersion;
-    export let running;
+    export let instances = [];
+    export let instance = null;
     export let canLaunch = true;
 
     const dispatch = createEventDispatcher();
@@ -33,12 +34,11 @@
         {@html parseChangelog(versionInfo.description)}
     </pre>
 
-    <div class="version-selector">
-        <ButtonVersion icon="lb" title={lbVersion} subtitle="LiquidBounce" on:click={() => dispatch("showVersionSelect")} />
-        <ButtonVersion icon="mc" title="1.7 - {mcVersion}" subtitle="Minecraft" on:click={() => dispatch("showVersionSelect")} />
-    </div> 
+    <div class="instances">
+        <Instances {instances} {lbVersion} {mcVersion} bind:instance on:showVersionSelect />
+    </div>
 
-    {#if running}
+    {#if instance}
         <div class="running-button-wrapper">
             <ButtonLaunchArea text="Terminate" active={true} on:click={() => dispatch("terminate")} /> 
             <ButtonLaunchArea text="Log" active={false} on:click={() => dispatch("showClientLog")} />  
@@ -92,6 +92,7 @@
 
     .description {
         flex: 1;
+        min-height: 64px;
         font-size: 12px;
         color: rgba(255, 255, 255, .5);
         overflow: auto;
@@ -102,10 +103,11 @@
         overflow-x: hidden;
     }
 
-    .version-selector {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        column-gap: 10px;
+    .instances {
+        max-height: 45vh;
+        overflow-y: auto;
+        padding-inline-end: 8px;
+        scrollbar-gutter: stable;
     }
 
     .running-button-wrapper {

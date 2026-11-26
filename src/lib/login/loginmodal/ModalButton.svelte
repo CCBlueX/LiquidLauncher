@@ -12,7 +12,7 @@
 
 <style>
     .button {
-        background-color: rgba(0, 0, 0, .26);
+        background-color: rgba(255, 255, 255, .06);
         border: none;
         font-family: "Inter", sans-serif;
         padding: 20px;
@@ -22,7 +22,20 @@
         border-radius: 6px;
         cursor: pointer;
         margin: 0 20px;
-        transition: ease background-color .2s;
+        transition: ease background-color .2s, ease-out transform .16s;
+    }
+
+    .button:hover {
+        background-color: rgba(255, 255, 255, .1);
+    }
+
+    .button:active {
+        transform: scale(.98);
+    }
+
+    .button:focus-visible {
+        outline: solid 2px white;
+        outline-offset: 2px;
     }
 
     .button.primary {

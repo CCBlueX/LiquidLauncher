@@ -19,24 +19,25 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 use async_zip::base::read::mem::ZipFileReader;
 use tokio::fs;
 use tracing::*;
 
 use crate::app::client_api::{Client, LaunchManifest, LoaderMod, LoaderSubsystem, ModSource};
-use crate::app::gui::ShareableWindow;
+use crate::app::gui::Runner;
 use crate::app::marketplace;
 use crate::app::webview::open_download_page;
 use crate::auth::ClientAccount;
 use crate::error::LauncherError;
+use crate::minecraft::game_dir::GameDir;
 use crate::minecraft::launcher;
 use crate::minecraft::launcher::{LauncherData, StartParameter};
 use crate::minecraft::progress::{
     get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps,
 };
 use crate::minecraft::version::{VersionManifest, VersionProfile};
-use crate::utils::{download_file, get_maven_artifact_path};
+use crate::utils::{download_file, download_request, get_maven_artifact_path};
 use crate::LAUNCHER_DIRECTORY;
 
 use backon::{ExponentialBuilder, Retryable};
@@ -48,7 +49,7 @@ pub(crate) async fn launch(
     launch_manifest: LaunchManifest,
     launching_parameter: StartParameter,
     additional_mods: Vec<LoaderMod>,
-    launcher_data: LauncherData<ShareableWindow>,
+    launcher_data: LauncherData<Runner>,
 ) -> Result<()> {
     // Starts the speed meter, kills it when the launch is completed.
     let _speed_meter = launcher_data.start_speed_meter();
@@ -84,7 +85,7 @@ pub(crate) async fn launch(
     };
 
     // Copy retrieve and copy mods from manifest
-    clear_mods(&data_directory, &launch_manifest).await?;
+    clear_mods(&data_directory).await?;
     retrieve_and_copy_mods(
         &data_directory,
         &launch_manifest,
@@ -182,11 +183,8 @@ pub(crate) async fn launch(
     Ok(())
 }
 
-pub(crate) async fn clear_mods(data: &Path, manifest: &LaunchManifest) -> Result<()> {
-    let mods_path = data
-        .join("gameDir")
-        .join(&manifest.build.branch)
-        .join("mods");
+pub(crate) async fn clear_mods(data: &Path) -> Result<()> {
+    let mods_path = GameDir::new(data).mods();
 
     if !mods_path.exists() {
         return Ok(());
@@ -213,15 +211,12 @@ pub async fn retrieve_and_copy_mods(
     mods: &Vec<LoaderMod>,
     client: &Client,
     client_account: &Option<ClientAccount>,
-    launcher_data: &LauncherData<ShareableWindow>,
+    launcher_data: &LauncherData<Runner>,
 ) -> Result<()> {
     let mod_cache_path = data.join("mod_cache");
     let mod_custom_path =
         custom_mods_directory(data, &manifest.build.branch, &manifest.build.mc_version);
-    let mods_path = data
-        .join("gameDir")
-        .join(&manifest.build.branch)
-        .join("mods");
+    let mods_path = GameDir::new(data).mods();
 
     fs::create_dir_all(&mod_cache_path).await.with_context(|| {
         format!(
@@ -284,9 +279,9 @@ pub async fn retrieve_and_copy_mods(
 
             let contents = match &current_mod.source {
                 ModSource::SkipAd {
-                    artifact_name: _,
+                    skip_id,
                     url,
-                    extract,
+                    extract, ..
                 } => {
                     launcher_data.log(&format!(
                         "Opening download page for mod {} on {}",
@@ -297,35 +292,25 @@ pub async fn retrieve_and_copy_mods(
                         current_mod.name
                     )));
 
-                    let pid = match client_account {
-                        Some(account) => {
-                            // PID is taken from the URL which is the last part of the URL
-                            // https://dl.liquidbounce.net/skip/c7kMT2q00U -> c7kMT2q00U
-                            let pid = url.split('/').last().context("Failed to get PID")?;
-                            let skip_file_resolve =
-                                client.resolve_skip_file(account, pid).await?;
-                            
-                            // If the skip file resolve has a target PID, use it - 
-                            // if not, it means that the account is not allowed for direct downloads
-                            skip_file_resolve.target_pid.ok_or_else(|| {
-                                anyhow!("Failed to get direct URL for mod {}", current_mod.name)
-                            })?
+                    let (url, account) = match client_account {
+                        Some(account) => (format!("{}/files/skips/{skip_id}", client.url()), Some(account)),
+                        None => {
+                            let pid = open_download_page(url, launcher_data).await?;
+                            (format!("{}/files/{pid}", client.url()), None)
                         }
-                        None => open_download_page(url, launcher_data).await?,
                     };
-                    
-                    // Download the mod
-                    let url = client.get_direct_download_link(&pid);
-                    launcher_data.log(&format!(
-                        "Downloading mod {} from {}",
-                        current_mod.name, url
-                    ));
                     launcher_data.progress_update(ProgressUpdate::set_label(format!(
                         "Downloading mod {}",
                         current_mod.name
                     )));
                     
-                    let retrieved_bytes = download_file(&url, |a, b| {
+                    let retrieved_bytes = download_request(|| {
+                        let request = crate::HTTP_CLIENT.get(&url);
+                        match account {
+                            Some(account) => account.authenticate_request(request),
+                            None => Ok(request),
+                        }
+                    }, |a, b| {
                         launcher_data.progress_update(ProgressUpdate::set_for_step(
                             ProgressUpdateSteps::DownloadLiquidBounceMods,
                             get_progress(mod_idx, a, b),

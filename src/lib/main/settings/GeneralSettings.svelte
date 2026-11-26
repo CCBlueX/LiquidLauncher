@@ -6,16 +6,24 @@
     import ToggleSetting from "../../settings/ToggleSetting.svelte";
     import ButtonSetting from "../../settings/ButtonSetting.svelte";
     import LauncherVersion from "../../settings/LauncherVersion.svelte";
-    import {createEventDispatcher, onMount} from "svelte";
+    import {onMount} from "svelte";
     import {invoke} from "@tauri-apps/api/core";
 
+    export let client;
     export let options;
-
-    const dispatch = createEventDispatcher();
 
     let launcherVersion = "";
     let defaultDataFolder = "";
     let systemMemory = options.start.memory;
+    let vendors = [];
+
+    const isListed = id => vendors.some(v => v.vendor === id);
+
+    // A saved distribution stays selectable after the API stops listing it.
+    $: saved = options.start.javaDistribution;
+    $: distributions = saved.type === "manual" && !isListed(saved.value)
+        ? [...vendors, { vendor: saved.value, name: saved.value }]
+        : vendors;
 
     async function clearData() {
         try {
@@ -30,12 +38,16 @@
     function resetJavaDistribution() {
         if (options.start.javaDistribution.type === "custom") {
             options.start.javaDistribution.value = "";
-        } else if (options.start.javaDistribution.type === "manual") {
-            options.start.javaDistribution.value = "temurin";
+        } else if (options.start.javaDistribution.type === "manual" && !isListed(options.start.javaDistribution.value)) {
+            options.start.javaDistribution.value = vendors[0].vendor;
         }
     }
 
     onMount(async () => {
+        invoke("get_java_distributions", { client })
+            .then(listed => vendors = listed)
+            .catch(error => console.error("Failed to load Java distributions:", error));
+
         const [version, folder, memory] = await Promise.all([
             invoke("get_launcher_version"),
             invoke("default_data_folder_path"),
@@ -52,7 +64,7 @@
     title="JVM Distribution"
     items={[
         { value: "automatic", text: "Automatic" },
-        { value: "manual", text: "Manual" },
+        ...(distributions.length ? [{ value: "manual", text: "Manual" }] : []),
         { value: "custom", text: "Custom" },
     ]}
     on:change={resetJavaDistribution}
@@ -62,11 +74,7 @@
 {#if options.start.javaDistribution.type === "manual"}
     <SelectSetting
         title="Distribution"
-        items={[
-            { value: "temurin", text: "Eclipse Temurin" },
-            { value: "graalvm", text: "GraalVM" },
-            { value: "zulu", text: "Azul Zulu" },
-        ]}
+        items={distributions.map(v => ({ value: v.vendor, text: v.name }))}
         bind:value={options.start.javaDistribution.value}
     />
 {/if}
@@ -110,12 +118,6 @@
     title="Keep launcher running"
     disabled={false}
     bind:value={options.launcher.keepLauncherOpen}
-/>
-
-<ButtonSetting
-    text="Manage accounts"
-    on:click={() => dispatch("showAccounts")}
-    color="#4677FF"
 />
 
 <ButtonSetting text="Clear Data" on:click={clearData} color="#B83529" />

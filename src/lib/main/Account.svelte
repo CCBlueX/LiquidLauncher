@@ -2,80 +2,74 @@
     import {createEventDispatcher} from "svelte";
     import {fly} from "svelte/transition";
     import TextSetting from "../settings/TextSetting.svelte";
-    import Avatar from "./accounts/Avatar.svelte";
-    import {accountTypeName, isActiveAccount} from "./accounts/accounts.js";
+    import Avatar from "../accounts/Avatar.svelte";
+    import AccountRow from "../accounts/AccountRow.svelte";
 
     export let account;
-    export let accountList;
+    export let accounts;
 
     const dispatch = createEventDispatcher();
+    const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 150;
 
     let root;
     let open = false;
     let search = "";
 
-    $: shownAccounts = accountList.filter((entry) => entry.name.toLowerCase().includes(search.toLowerCase()));
+    $: query = search.trim().toLowerCase();
+    $: shown = accounts.filter(entry => entry.name.toLowerCase().includes(query));
 
-    function toggleSwitcher() {
+    function toggle() {
         open = !open;
         search = "";
-        if (open) dispatch("openSwitcher");
     }
 
-    function switchTo(entry) {
+    function choose(entry) {
         open = false;
-        if (!isActiveAccount(entry, account)) dispatch("switchAccount", entry);
+        if (!entry.active) dispatch("switchAccount", entry);
     }
 
-    function send(event) {
+    function manage() {
         open = false;
-        dispatch(event);
-    }
-
-    function closeOnOutsideClick(event) {
-        if (open && !root.contains(event.target)) open = false;
-    }
-
-    function closeOnEscape(event) {
-        if (event.key === "Escape") open = false;
+        dispatch("manageAccounts");
     }
 </script>
 
-<svelte:window on:click={closeOnOutsideClick} on:keydown={closeOnEscape} />
+<svelte:window
+        on:click={e => open &&= root.contains(e.target)}
+        on:keydown={e => open &&= e.key !== "Escape"}
+/>
 
 <div class="account" bind:this={root}>
     <div class="card" class:open>
-        <button class="switch" type="button" aria-expanded={open} aria-label="Switch account" on:click={toggleSwitcher}>
+        <button class="switch" type="button" title="Switch account" aria-expanded={open} on:click={toggle}>
             <Avatar uuid={account?.id} size={35} />
-            <div class="details">
-                <div class="username">{account?.name}</div>
-                <div class="type">{accountTypeName(account)}</div>
-            </div>
+            <span class="details">
+                <span class="username">{account?.name}</span>
+                <!-- options.json says "Premium" for a Microsoft account. -->
+                <span class="type">{account?.type === "Premium" ? "Microsoft" : account?.type}</span>
+            </span>
+            <img class="chevron" src="img/icon/icon-next.svg" alt="">
         </button>
-        <button class="icon-button" type="button" aria-label="Manage accounts" title="Manage accounts" on:click={() => send("manageAccounts")}>
-            <img src="img/icon/icon-pen.svg" alt="">
-        </button>
-        <button class="icon-button" type="button" aria-label="Settings" title="Settings" on:click={() => send("showSettings")}>
+        <button class="settings" type="button" title="Settings" aria-label="Settings" on:click={() => dispatch("showSettings")}>
             <img src="img/icon/icon-cog.svg" alt="">
         </button>
     </div>
 
     {#if open}
-        <div class="popover" role="menu" aria-label="Accounts" transition:fly={{y: -6, duration: 150}}>
-            <div class="search">
-                <TextSetting placeholder="Search..." bind:value={search} />
-            </div>
+        <div class="popover" transition:fly={{y: -6, duration}}>
+            <!-- Few enough to see at a glance otherwise. -->
+            {#if accounts.length > 5}
+                <TextSetting placeholder="Search accounts" bind:value={search} />
+            {/if}
             <div class="rows">
-                {#each shownAccounts as entry (entry.id)}
-                    <button class="row" class:active={isActiveAccount(entry, account)} type="button" role="menuitem" on:click={() => switchTo(entry)}>
-                        <Avatar uuid={entry.uuid} size={28} />
-                        <div class="row-details">
-                            <span class="name">{entry.name}</span>
-                            <span class="row-type">{entry.type}</span>
-                        </div>
-                    </button>
+                {#each shown as entry (entry.id)}
+                    <AccountRow {entry} on:click={() => choose(entry)} />
                 {/each}
             </div>
+            <button class="manage" type="button" on:click={manage}>
+                Manage accounts
+                <img src="img/icon/icon-next.svg" alt="">
+            </button>
         </div>
     {/if}
 </div>
@@ -88,16 +82,15 @@
     }
 
     .card {
-        display: grid;
-        grid-template-columns: auto max-content max-content;
+        display: flex;
         align-items: center;
-        gap: 8px;
-        min-width: 200px;
+        column-gap: 12px;
+        min-width: 220px;
         height: 50px;
         padding: 8px 12px;
         border-radius: 6px;
         background-color: rgba(0, 0, 0, .36);
-        transition: ease background-color .12s, ease border-radius .12s;
+        transition: ease background-color .2s;
     }
 
     .card.open {
@@ -106,22 +99,25 @@
     }
 
     .switch {
+        flex: 1;
         display: flex;
         align-items: center;
-        gap: 8px;
+        column-gap: 8px;
         min-width: 0;
         padding: 0;
         border: none;
-        background-color: transparent;
+        background: none;
         font-family: "Inter", sans-serif;
         text-align: left;
         cursor: pointer;
     }
 
     .details {
+        flex: 1;
+        display: grid;
+        min-width: 0;
         font-size: 11px;
         font-weight: 600;
-        min-width: 0;
     }
 
     .username {
@@ -132,20 +128,26 @@
     }
 
     .type {
-        color: #45a049;
+        color: rgba(255, 255, 255, .5);
     }
 
-    .icon-button {
+    .chevron {
+        height: 10px;
+        opacity: .5;
+        transform: rotate(90deg);
+        transition: ease transform .2s;
+    }
+
+    .open .chevron {
+        transform: rotate(-90deg);
+    }
+
+    .settings {
         display: flex;
-        align-items: center;
         padding: 0;
         border: none;
-        background-color: transparent;
+        background: none;
         cursor: pointer;
-    }
-
-    .icon-button img {
-        height: 20px;
     }
 
     .popover {
@@ -153,61 +155,50 @@
         top: 100%;
         left: 0;
         right: 0;
-        overflow: hidden;
+        display: grid;
+        row-gap: 6px;
+        padding: 6px;
         border-radius: 0 0 6px 6px;
         background-color: rgba(0, 0, 0, .58);
         backdrop-filter: blur(10px);
-        box-shadow: 0 0 10px rgba(0, 0, 0, .5);
-    }
-
-    .search {
-        padding: 8px 12px;
+        box-shadow: 0 10px 10px rgba(0, 0, 0, .5);
     }
 
     .rows {
+        display: grid;
+        row-gap: 2px;
         max-height: 300px;
         overflow-y: auto;
     }
 
-    .row {
+    .manage {
         display: flex;
         align-items: center;
-        gap: 8px;
-        width: 100%;
-        padding: 6px 12px;
+        justify-content: space-between;
+        padding: 8px 10px;
         border: none;
-        background-color: transparent;
+        border-radius: 6px;
+        background: none;
+        color: white;
         font-family: "Inter", sans-serif;
-        text-align: left;
+        font-size: 12px;
         cursor: pointer;
-        transition: ease background-color .12s;
+        transition: ease background-color .2s;
     }
 
-    .row:hover {
+    .manage:hover {
         background-color: rgba(255, 255, 255, .06);
     }
 
-    .row-details {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
+    .manage img {
+        height: 10px;
+        opacity: .5;
     }
 
-    .name {
-        color: white;
-        font-size: 12px;
-        font-weight: 600;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .row.active .name {
-        color: #4677FF;
-    }
-
-    .row-type {
-        color: rgba(255, 255, 255, .5);
-        font-size: 11px;
+    .switch:focus-visible,
+    .settings:focus-visible,
+    .manage:focus-visible {
+        outline: solid 2px white;
+        outline-offset: 2px;
     }
 </style>

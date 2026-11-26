@@ -20,12 +20,12 @@
 //! The marketplace endpoints of the LiquidBounce API.
 
 use anyhow::Result;
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use super::ItemType;
-use crate::app::client_api::{Build, Client, PaginatedResponse, API_V3};
-use crate::app::client_api_target::CLIENT_BRANCH;
+use crate::app::client_api::{Build, Client, PaginatedResponse};
+use crate::app::client_api_target::CLIENT_EDITION;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Item {
@@ -34,18 +34,25 @@ pub struct Item {
     #[serde(rename = "type")]
     pub item_type: ItemType,
     pub description: String,
-    #[serde(default)]
-    pub author: String,
+    pub owner: Owner,
     #[serde(default)]
     pub downloads: u32,
-    pub updated_at: Option<NaiveDateTime>,
+    #[serde(rename = "liveRevision")]
+    pub live_revision: Option<Revision>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Owner {
+    pub nickname: Option<String>,
+    pub uid: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Revision {
     pub id: u32,
     pub version: String,
-    pub created_at: Option<NaiveDateTime>,
+    #[serde(rename = "createdAt")]
+    pub created_at: Option<DateTime<Utc>>,
     /// The LiquidBounce versions of the builds it fits; `None` when none does.
     pub liquidbounce: Option<LiquidBounceRange>,
 }
@@ -57,12 +64,10 @@ pub struct LiquidBounceRange {
 }
 
 #[derive(Deserialize)]
-struct Linked {
-    item: Item,
+struct Dependencies {
+    requires: Vec<Item>,
 }
 
-/// Items of one type. The API leaves add-ons out of untyped listings, so LiquidBounce builds
-/// predating add-ons never receive a type they cannot deserialize.
 pub async fn items(
     client: &Client,
     item_type: &str,
@@ -72,75 +77,56 @@ pub async fn items(
     let limit = limit.to_string();
     let mut params = vec![
         ("limit", limit.as_str()),
-        ("branch", CLIENT_BRANCH),
+        ("edition", CLIENT_EDITION),
         ("type", item_type),
     ];
     params.extend(query.map(|query| ("q", query)));
 
-    let page: PaginatedResponse<Item> = client.request(API_V3, "marketplace", &params).await?;
+    let page: PaginatedResponse<Item> = client.request("marketplace/items", &params).await?;
     Ok(page.items)
 }
 
 pub async fn item(client: &Client, item_id: u32) -> Result<Item> {
     client
-        .request_from_endpoint(API_V3, &format!("marketplace/{item_id}"))
+        .request(&format!("marketplace/items/{item_id}"), &[])
         .await
 }
 
 /// The newest revisions of an item, whatever they fit.
 pub async fn revisions(client: &Client, item_id: u32, limit: u32) -> Result<Vec<Revision>> {
-    let path = format!("marketplace/{item_id}/revisions");
+    let path = format!("marketplace/items/{item_id}/revisions");
     let page: PaginatedResponse<Revision> = client
-        .request(API_V3, &path, &[("limit", &limit.to_string())])
+        .request(&path, &[("limit", &limit.to_string())])
         .await?;
     Ok(page.items)
 }
 
 pub async fn revision(client: &Client, item_id: u32, revision_id: u32) -> Result<Revision> {
     client
-        .request_from_endpoint(
-            API_V3,
-            &format!("marketplace/{item_id}/revisions/{revision_id}"),
+        .request(
+            &format!("marketplace/items/{item_id}/revisions/{revision_id}"),
+            &[],
         )
         .await
 }
 
 /// Every revision that fits the build, newest first.
 pub async fn revisions_for(client: &Client, item_id: u32, build: &Build) -> Result<Vec<Revision>> {
-    let path = format!("marketplace/{item_id}/revisions");
-    let mut revisions = vec![];
-    for page in 1.. {
-        let response: PaginatedResponse<Revision> = client
-            .request(
-                API_V3,
-                &path,
-                &[
-                    ("minecraft", &build.mc_version),
-                    ("liquidbounce", &build.lb_version),
-                    ("page", &page.to_string()),
-                    ("limit", "50"),
-                ],
-            )
-            .await?;
-        revisions.extend(response.items);
-        if page >= response.pagination.pages {
-            break;
-        }
-    }
-    Ok(revisions)
+    let path = format!("marketplace/items/{item_id}/revisions");
+    client.request_pages(&path, &[("minecraft", &build.mc_version), ("liquidbounce", &build.lb_version)]).await
 }
 
 /// The items an item needs installed beside it.
 pub async fn dependencies(client: &Client, item_id: u32) -> Result<Vec<Item>> {
-    let linked: Vec<Linked> = client
-        .request_from_endpoint(API_V3, &format!("marketplace/{item_id}/dependencies"))
+    let linked: Dependencies = client
+        .request(&format!("marketplace/items/{item_id}"), &[])
         .await?;
-    Ok(linked.into_iter().map(|linked| linked.item).collect())
+    Ok(linked.requires)
 }
 
 pub fn download_url(client: &Client, item_id: u32, revision_id: u32) -> String {
     format!(
-        "{}/{API_V3}/marketplace/{item_id}/revisions/{revision_id}/download",
+        "{}/marketplace/items/{item_id}/revisions/{revision_id}/file",
         client.url()
     )
 }
@@ -151,25 +137,15 @@ mod tests {
 
     #[test]
     fn reads_what_an_item_needs() {
-        // The shape of GET /api/v3/marketplace/{id}/dependencies.
-        let linked: Vec<Linked> = serde_json::from_value(serde_json::json!([{
-            "item": {
-                "id": 771,
-                "uid": "d560440229a5a1d5",
-                "type": "Addon",
-                "name": "ScriptAPI",
-                "branch": "nextgen",
-                "description": "The JavaScript Script API for LiquidBounce.",
-                "thumbnail_pid": null,
-                "featured": false,
-                "created_at": "2026-09-17T10:00:00",
-                "status": "Active"
-            },
-            "author": "1zun4",
-            "live_revision": { "id": 4323, "item_id": 771, "version": "v1.0.0" }
-        }]))
+        let linked: Dependencies = serde_json::from_value(serde_json::json!({
+            "dependencies": [{"id": 771}],
+            "requires": [{
+                "id": 771, "type": "addon", "name": "ScriptAPI", "description": "",
+                "owner": { "uid": "author" }
+            }]
+        }))
         .unwrap();
-        assert_eq!(linked[0].item.id, 771);
-        assert_eq!(linked[0].item.item_type, ItemType::Addon);
+        assert_eq!(linked.requires[0].id, 771);
+        assert_eq!(linked.requires[0].item_type, ItemType::Addon);
     }
 }

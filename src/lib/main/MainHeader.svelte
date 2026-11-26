@@ -8,7 +8,7 @@
     import ButtonClose from "../common/ButtonClose.svelte";
 
     export let account;
-    export let accountList;
+    export let accounts;
     export let running;
     export let progressState;
 </script>
@@ -26,11 +26,10 @@
     </StatusBar>
     <Account
             {account}
-            {accountList}
+            {accounts}
             on:showSettings
             on:manageAccounts
             on:switchAccount
-            on:openSwitcher
     />
     <ButtonClose />
 </TitleBar>

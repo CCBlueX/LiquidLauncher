@@ -27,7 +27,7 @@ use serde_json::{json, Map, Value};
 use tokio::fs;
 
 use super::ClientAccount;
-use crate::app::client_api_target::CLIENT_BRANCH;
+use crate::minecraft::game_dir::GameDir;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -95,12 +95,8 @@ pub async fn renew(data: &Path, account: ClientAccount) -> Result<ClientAccount>
     Ok(account)
 }
 
-pub(super) fn liquidbounce_dir(data: &Path) -> PathBuf {
-    data.join("gameDir").join(CLIENT_BRANCH).join("LiquidBounce")
-}
-
 fn path(data: &Path) -> PathBuf {
-    liquidbounce_dir(data).join("account.json")
+    GameDir::new(data).client().join("account.json")
 }
 
 /// Writes a temporary file first, so the client never reads half a file.

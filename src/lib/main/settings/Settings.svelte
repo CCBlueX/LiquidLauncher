@@ -29,8 +29,8 @@
 
     {#if activeTab === "General"}
         <GeneralSettings
+                {client}
                 bind:options
-                on:showAccounts
         />
     {:else if activeTab === "Minecraft"}
         <MinecraftSettings

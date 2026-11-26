@@ -51,18 +51,15 @@ static LAUNCHER_DIRECTORY: Lazy<ProjectDirs> =
 
 static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
-/// HTTP Client with launcher agent
 static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
-    let client = reqwest::ClientBuilder::new()
+    Client::builder()
         .user_agent(APP_USER_AGENT)
         .connect_timeout(Duration::from_secs(15))
         // Stall between reads, not a whole-request timeout: this client also
         // downloads large assets, which are slow but not stuck.
         .read_timeout(Duration::from_secs(60))
         .build()
-        .unwrap_or_else(|_| Client::new());
-
-    client
+        .unwrap_or_else(|_| Client::new())
 });
 
 pub fn main() -> Result<()> {

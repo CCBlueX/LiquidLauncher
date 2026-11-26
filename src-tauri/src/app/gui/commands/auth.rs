@@ -17,11 +17,15 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::env;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use tauri::{Emitter, Window};
+use serde_json::json;
+use tauri::{Emitter, State, Window};
 use tracing::{debug, error, info};
 
+use super::data_directory;
 use crate::app::client_api::{Client, UserInformation};
 use crate::app::gui::AppState;
 use crate::app::options::Options;
@@ -33,15 +37,16 @@ use crate::{
     minecraft::auth::MinecraftAccount,
 };
 
-/// Set to `1`, offline accounts no longer need a Microsoft account in the list.
+/// Set to `1`, offline and session accounts no longer need a Microsoft account in the list.
 const ALLOW_OFFLINE_ENV: &str = "LIQUIDLAUNCHER_ALLOW_OFFLINE";
 
-/// The frontend shows "Get Minecraft to play" for this error.
+/// The frontend offers to buy Minecraft for this error.
 const NO_MINECRAFT: &str = "no_minecraft";
 
 #[tauri::command]
 pub(crate) async fn list_accounts(options: Options) -> Result<Vec<AccountEntry>, String> {
-    accounts::list(&options.start_options.data_directory())
+    let data = data_directory(&options).await?;
+    accounts::list(&data, options.start_options.minecraft_account.as_ref())
         .await
         .map_err(error_text)
 }
@@ -51,7 +56,7 @@ pub(crate) async fn select_account(
     options: Options,
     id: String,
 ) -> Result<MinecraftAccount, String> {
-    accounts::select(&options.start_options.data_directory(), &id)
+    accounts::select(&data_directory(&options).await?, &id)
         .await
         .map_err(error_text)
 }
@@ -60,7 +65,7 @@ pub(crate) async fn select_account(
 pub(crate) async fn add_microsoft_webview(
     window: Window,
     options: Options,
-    app_state: tauri::State<'_, AppState>,
+    app_state: State<'_, AppState>,
 ) -> Result<MinecraftAccount, String> {
     ensure_client_stopped(&app_state)?;
 
@@ -74,7 +79,7 @@ pub(crate) async fn add_microsoft_webview(
 pub(crate) async fn add_microsoft_device_code(
     window: Window,
     options: Options,
-    app_state: tauri::State<'_, AppState>,
+    app_state: State<'_, AppState>,
 ) -> Result<MinecraftAccount, String> {
     ensure_client_stopped(&app_state)?;
 
@@ -85,7 +90,7 @@ pub(crate) async fn add_microsoft_device_code(
         );
         let _ = window.emit(
             "microsoft_device_code",
-            serde_json::json!({
+            json!({
                 "userCode": device_code.user_code,
                 "verificationUri": device_code.verification_uri,
                 "directVerificationUri": device_code.direct_verification_uri(),
@@ -101,13 +106,16 @@ pub(crate) async fn add_microsoft_device_code(
 pub(crate) async fn add_offline(
     options: Options,
     username: String,
-    app_state: tauri::State<'_, AppState>,
+    app_state: State<'_, AppState>,
 ) -> Result<MinecraftAccount, String> {
     let username = username.trim();
-    if username.is_empty() {
-        return Err("Enter a username.".to_string());
+    let is_name = username
+        .bytes()
+        .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_');
+    if !is_name || !(1..=16).contains(&username.len()) {
+        return Err("A username has 1 to 16 letters, digits and underscores.".to_string());
     }
-    require_microsoft(&options).await?;
+    require_offline_allowed(&data_directory(&options).await?).await?;
 
     let account = MinecraftAccount::auth_offline(username.to_string());
     save(&app_state, &options, account).await
@@ -117,7 +125,7 @@ pub(crate) async fn add_offline(
 pub(crate) async fn add_session(
     options: Options,
     token: String,
-    app_state: tauri::State<'_, AppState>,
+    app_state: State<'_, AppState>,
 ) -> Result<MinecraftAccount, String> {
     let token = token.trim();
     if token.is_empty() {
@@ -128,7 +136,7 @@ pub(crate) async fn add_session(
     let account = if token.starts_with("M.") {
         MinecraftAccount::auth_msa_refresh_token(token).await
     } else {
-        require_microsoft(&options).await?;
+        require_offline_allowed(&data_directory(&options).await?).await?;
         MinecraftAccount::auth_session(token.to_string()).await
     }
     .map_err(error_text)?;
@@ -139,11 +147,11 @@ pub(crate) async fn add_session(
 pub(crate) async fn remove_account(
     options: Options,
     id: String,
-    app_state: tauri::State<'_, AppState>,
+    app_state: State<'_, AppState>,
 ) -> Result<(), String> {
     ensure_client_stopped(&app_state)?;
 
-    accounts::remove(&options.start_options.data_directory(), &id)
+    accounts::remove(&data_directory(&options).await?, &id)
         .await
         .map_err(error_text)
 }
@@ -153,29 +161,33 @@ pub(crate) async fn set_favorite(
     options: Options,
     id: String,
     favorite: bool,
-    app_state: tauri::State<'_, AppState>,
+    app_state: State<'_, AppState>,
 ) -> Result<(), String> {
     ensure_client_stopped(&app_state)?;
 
-    accounts::set_favorite(&options.start_options.data_directory(), &id, favorite)
+    accounts::set_favorite(&data_directory(&options).await?, &id, favorite)
         .await
         .map_err(error_text)
 }
 
+/// Whether offline and session accounts can be added and played with.
 #[tauri::command]
-pub(crate) fn offline_login_available() -> bool {
-    std::env::var(ALLOW_OFFLINE_ENV).is_ok_and(|value| value == "1")
+pub(crate) async fn offline_allowed(options: Options) -> Result<bool, String> {
+    is_offline_allowed(&data_directory(&options).await?).await
 }
 
-async fn require_microsoft(options: &Options) -> Result<(), String> {
-    if offline_login_available() {
-        return Ok(());
+async fn is_offline_allowed(data: &Path) -> Result<bool, String> {
+    if env::var(ALLOW_OFFLINE_ENV).is_ok_and(|value| value == "1") {
+        return Ok(true);
     }
+    accounts::has_microsoft(data).await.map_err(error_text)
+}
 
-    match accounts::has_microsoft(&options.start_options.data_directory()).await {
-        Ok(true) => Ok(()),
-        Ok(false) => Err("Add a Microsoft account first.".to_string()),
-        Err(error) => Err(error_text(error)),
+async fn require_offline_allowed(data: &Path) -> Result<(), String> {
+    if is_offline_allowed(data).await? {
+        Ok(())
+    } else {
+        Err("Add a Microsoft account first.".to_string())
     }
 }
 
@@ -187,7 +199,7 @@ async fn save(
     // A sign-in takes a while, the client may have been started since.
     ensure_client_stopped(app_state)?;
 
-    accounts::add(&options.start_options.data_directory(), &account)
+    accounts::add(&data_directory(options).await?, &account)
         .await
         .map_err(error_text)?;
     Ok(account)
@@ -205,7 +217,7 @@ pub(crate) async fn client_account(
     client: Client,
     options: Options,
 ) -> Result<Option<UserInformation>, String> {
-    let data = options.start_options.data_directory();
+    let data = data_directory(&options).await?;
     let Some(mut account) = shared::read(&data)
         .await
         .map_err(|e| format!("unable to read client account: {:?}", e))?
@@ -245,7 +257,7 @@ pub(crate) async fn client_account_authenticate(
         .await
         .map_err(|e| format!("unable to fetch user information: {:?}", e))?;
 
-    shared::write(&options.start_options.data_directory(), Some(&account))
+    shared::write(&data_directory(&options).await?, Some(&account))
         .await
         .map_err(|e| format!("unable to store client account: {:?}", e))?;
     Ok(user)
@@ -258,17 +270,17 @@ pub(crate) async fn client_account_logout(
 ) -> Result<(), String> {
     ensure_client_stopped(&app_state)?;
 
-    shared::write(&options.start_options.data_directory(), None)
+    shared::write(&data_directory(&options).await?, None)
         .await
         .map_err(|e| format!("unable to store client account: {:?}", e))
 }
 
 fn ensure_client_stopped(app_state: &AppState) -> Result<(), String> {
-    let running = app_state
-        .runner_instance
+    let running = !app_state
+        .runner_instances
         .lock()
-        .map_err(|e| format!("unable to lock runner instance: {:?}", e))?
-        .is_some();
+        .map_err(|e| format!("unable to lock runner instances: {:?}", e))?
+        .is_empty();
 
     if running {
         return Err("close LiquidBounce first, it would overwrite the account when it exits".to_string());

@@ -20,22 +20,19 @@
             return;
         }
 
-        const response = await fetch("https://paste.ccbluex.net/api.php", {
-            body: `content=${log}`,
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
+        const response = await fetch("https://logs.liquidbounce.net/api/1/log", {
+            body: new URLSearchParams({ content: log }),
             method: "POST"
         });
 
-        const responseData = await response.text();
+        const responseData = await response.json().catch(() => ({ success: false, error: `HTTP ${response.status}` }));
 
-        if (response.status !== 200) {
-            alert(`Failed to upload log: ${responseData}`);
+        if (!response.ok || !responseData.success) {
+            alert(`Failed to upload log: ${responseData.error}`);
             return;
         }
 
-        prompt("Your log is available at the following URL: ", responseData);
+        prompt("Your log is available at the following URL: ", responseData.url);
     }
 </script>
 

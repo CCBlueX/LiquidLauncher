@@ -17,21 +17,68 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
+use anyhow::{anyhow, Result};
 use commands::*;
-use tauri::Window;
+#[cfg(windows)]
+use os_info::Version;
+use serde::Serialize;
+use serde_json::json;
+#[cfg(target_os = "macos")]
+use tauri::window::EffectState;
+#[cfg(any(windows, target_os = "macos"))]
+use tauri::window::{Effect, EffectsBuilder};
+use tauri::{Emitter, Manager, Window};
+#[cfg(target_os = "linux")]
+use tauri::{WebviewWindow, WindowEvent};
+use tokio::sync::oneshot;
+#[cfg(target_os = "linux")]
+use tracing::info;
+#[cfg(any(windows, target_os = "macos"))]
+use tracing::warn;
+#[cfg(target_os = "linux")]
+use window_vibrancy::{apply_wayland_blur, RoundedRect};
 
 use crate::app::builds::KeptBuild;
+use crate::minecraft::instance::Instance;
 
 pub type ShareableWindow = Arc<Mutex<Window>>;
 
 pub struct RunnerInstance {
-    pub terminator: tokio::sync::oneshot::Sender<()>,
+    pub terminator: Option<oneshot::Sender<()>>,
+    pub instance: Instance,
+}
+
+pub type RunnerInstances = Arc<Mutex<BTreeMap<u32, RunnerInstance>>>;
+
+#[derive(Clone)]
+pub struct Runner {
+    pub id: u32,
+    pub window: ShareableWindow,
+    pub instances: RunnerInstances,
+}
+
+impl Runner {
+    pub fn emit(&self, event: &str, payload: impl Serialize + Clone) -> Result<()> {
+        self.window
+            .lock()
+            .map_err(|_| anyhow!("Window lock is poisoned"))?
+            .emit(event, payload)?;
+        Ok(())
+    }
+
+    pub fn update(&self, change: impl FnOnce(&mut Instance)) {
+        if let Some(runner) = self.instances.lock().unwrap().get_mut(&self.id) {
+            change(&mut runner.instance);
+        }
+        let _ = self.emit("client-running", json!({ "id": self.id }));
+    }
 }
 
 pub struct AppState {
-    pub runner_instance: Arc<Mutex<Option<RunnerInstance>>>,
+    pub runner_instances: RunnerInstances,
     /// The build that launches, as fetched last.
     pub build: KeptBuild,
 }
@@ -39,7 +86,7 @@ pub struct AppState {
 impl AppState {
     pub fn new() -> Self {
         Self {
-            runner_instance: Arc::new(Mutex::new(None)),
+            runner_instances: RunnerInstances::default(),
             build: Mutex::new(None),
         }
     }
@@ -57,6 +104,73 @@ pub fn gui_main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(AppState::new())
+        .setup(|app| {
+            let Some(window) = app.get_webview_window("main") else {
+                return Ok(());
+            };
+
+            // Acrylic lags while the window is dragged before Windows 11 22H2.
+            #[cfg(windows)]
+            {
+                let acrylic = matches!(
+                    os_info::get().version(),
+                    Version::Semantic(_, _, build) if *build >= 22621
+                );
+                let effect = if acrylic {
+                    Effect::Acrylic
+                } else {
+                    Effect::Blur
+                };
+                if let Err(error) = window.set_effects(EffectsBuilder::new().effect(effect).build())
+                {
+                    warn!("Failed to blur the window: {error}");
+                }
+            }
+
+            // Same corners as `.window.rounded` in Window.svelte.
+            #[cfg(target_os = "macos")]
+            if let Err(error) = window.set_effects(
+                EffectsBuilder::new()
+                    .effect(Effect::HudWindow)
+                    .state(EffectState::Active)
+                    .radius(8.0)
+                    .build(),
+            ) {
+                warn!("Failed to blur the window: {error}");
+            }
+
+            // Inside the rounded corners of `.window.rounded` in Window.svelte, again on every resize.
+            #[cfg(target_os = "linux")]
+            {
+                let blur = |window: &WebviewWindow| -> Result<()> {
+                    let size = window
+                        .inner_size()?
+                        .to_logical::<u32>(window.scale_factor()?);
+                    let rect = RoundedRect {
+                        width: size.width,
+                        height: size.height,
+                        radius: 8,
+                    };
+                    apply_wayland_blur(window, Some(rect))?;
+                    Ok(())
+                };
+                match blur(&window) {
+                    Ok(()) => {
+                        let resized = window.clone();
+                        window.on_window_event(move |event| {
+                            if matches!(
+                                event,
+                                WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. }
+                            ) {
+                                let _ = blur(&resized);
+                            }
+                        });
+                    }
+                    Err(error) => info!("No window blur: {error:#}"),
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             setup_client,
             check_system,
@@ -65,8 +179,10 @@ pub fn gui_main() {
             store_options,
             request_build,
             request_build_page,
+            get_java_distributions,
             request_mods,
             run_client,
+            list_instances,
             list_accounts,
             select_account,
             add_microsoft_webview,
@@ -75,7 +191,7 @@ pub fn gui_main() {
             add_session,
             remove_account,
             set_favorite,
-            offline_login_available,
+            offline_allowed,
             client_account,
             client_account_authenticate,
             client_account_logout,
