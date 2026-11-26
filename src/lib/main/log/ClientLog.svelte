@@ -104,8 +104,8 @@
     </div>
 
     <div class="settings">
-        <ButtonSetting text="Upload log" color="#4677FF" on:click={handleUploadSetting}></ButtonSetting>
         <ToggleSetting title="Auto scroll" disabled={false} bind:value={autoScroll} />
+        <ButtonSetting text="Upload log" color="#4677FF" small on:click={handleUploadSetting}></ButtonSetting>
     </div>
 </div>
 
@@ -131,6 +131,7 @@
         display: flex;
         gap: 20px;
         align-items: center;
+        justify-content: flex-end;
     }
 
     .output {
