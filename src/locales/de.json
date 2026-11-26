@@ -80,7 +80,7 @@
       "concurrentDownloads": "Gleichzeitige Downloads",
       "connectionsSuffix": " Verbindungen",
       "keepLauncherOpen": "Launcher geöffnet lassen",
-      "signOut": "Vom Minecraft-Konto abmelden",
+      "signOut": "Vom Minecraft-Account abmelden",
       "clearData": "Daten löschen",
       "dataCleared": "Daten gelöscht.",
       "clearDataFailed": "Die Daten konnten nicht gelöscht werden: {error}",
@@ -97,29 +97,29 @@
       "premium": "Premium"
     },
     "minecraft": {
-      "description": "Damit kannst du Welten, Ressourcenpakete und Shaderpakete aus einer anderen Minecraft-Installation verwenden.",
-      "directory": "Minecraft-Verzeichnis",
+      "description": "Damit kannst du Welten, Resource Packs und Shader Packs aus einer anderen Minecraft-Installation verwenden.",
+      "directory": "Minecraft-Ordner",
       "autoDetect": "Automatisch erkennen",
-      "directoryWindowTitle": "Minecraft-Verzeichnis auswählen",
+      "directoryWindowTitle": "Minecraft-Ordner auswählen",
       "linkWorlds": "Welten verknüpfen ({count, number})",
-      "linkResourcePacks": "Ressourcenpakete verknüpfen ({count, number})",
-      "linkShaderPacks": "Shaderpakete verknüpfen ({count, number})",
+      "linkResourcePacks": "Resource Packs verknüpfen ({count, number})",
+      "linkShaderPacks": "Shader Packs verknüpfen ({count, number})",
       "notFound": "Keine Vanilla-Installation von Minecraft gefunden."
     },
     "premium": {
       "skipAds": "Werbung überspringen",
-      "accountInformation": "Kontoinformationen",
-      "noPremium": "Mit diesem Konto scheint kein Premium verknüpft zu sein. Bitte verknüpfe es auf der Seite zur Kontoverwaltung.",
-      "manageAccount": "Konto verwalten",
+      "accountInformation": "Account-Informationen",
+      "noPremium": "Mit diesem Account scheint kein Premium verknüpft zu sein. Bitte verknüpfe es auf deiner Account-Seite.",
+      "manageAccount": "Account verwalten",
       "logout": "Abmelden",
-      "description": "Mit Premium unterstützt du nicht nur die Weiterentwicklung des Clients, sondern bekommst auch einen Umhang und kannst die Werbung im Launcher überspringen.",
-      "login": "Mit LiquidBounce-Konto anmelden",
-      "loginFailed": "Anmeldung mit dem Client-Konto fehlgeschlagen: {error}",
-      "logoutFailed": "Abmeldung vom Client-Konto fehlgeschlagen: {error}"
+      "description": "Mit Premium unterstützt du nicht nur die Weiterentwicklung des Clients, sondern bekommst auch ein Cape und kannst die Werbung im Launcher überspringen.",
+      "login": "Mit LiquidBounce-Account anmelden",
+      "loginFailed": "Anmeldung mit dem Client-Account fehlgeschlagen: {error}",
+      "logoutFailed": "Abmeldung vom Client-Account fehlgeschlagen: {error}"
     },
     "liquidBounceAccount": {
       "username": "Benutzername",
-      "donatorPerks": "Spendervorteile",
+      "donatorPerks": "Donator-Perks",
       "active": "Aktiv",
       "inactive": "Inaktiv"
     },
@@ -130,8 +130,8 @@
       "removeNamed": "{name} entfernen"
     },
     "directorySelector": {
-      "select": "Verzeichnis auswählen",
-      "open": "Verzeichnis öffnen"
+      "select": "Ordner auswählen",
+      "open": "Ordner öffnen"
     },
     "fileSelector": {
       "select": "Datei auswählen"
@@ -147,16 +147,16 @@
     "releases": "{count, plural, one {# Release} other {# Releases}}"
   },
   "marketplace": {
-    "title": "{type, select, Addon {Add-ons} Theme {Themes} Script {Skripte} other {Elemente}}",
-    "type": "{type, select, Addon {Add-on} Theme {Theme} Script {Skript} other {Element}}",
-    "empty": "{type, select, Addon {Noch keine Add-ons.} Theme {Noch keine Themes.} Script {Noch keine Skripte.} other {Noch nichts.}}",
-    "search": "{type, select, Addon {Add-ons durchsuchen} Theme {Themes durchsuchen} Script {Skripte durchsuchen} other {Durchsuchen}}",
-    "noMatch": "{type, select, Addon {Keine Add-ons passen zu „{query}“.} Theme {Keine Themes passen zu „{query}“.} Script {Keine Skripte passen zu „{query}“.} other {Nichts passt zu „{query}“.}}",
-    "nonePublished": "{type, select, Addon {Noch keine Add-ons veröffentlicht.} Theme {Noch keine Themes veröffentlicht.} Script {Noch keine Skripte veröffentlicht.} other {Noch nichts veröffentlicht.}}",
+    "title": "{type, select, Addon {Add-ons} Theme {Themes} Script {Scripts} other {Elemente}}",
+    "type": "{type, select, Addon {Add-on} Theme {Theme} Script {Script} other {Element}}",
+    "empty": "{type, select, Addon {Noch keine Add-ons.} Theme {Noch keine Themes.} Script {Noch keine Scripts.} other {Noch nichts.}}",
+    "search": "{type, select, Addon {Add-ons durchsuchen} Theme {Themes durchsuchen} Script {Scripts durchsuchen} other {Durchsuchen}}",
+    "noMatch": "{type, select, Addon {Keine Add-ons passen zu „{query}“.} Theme {Keine Themes passen zu „{query}“.} Script {Keine Scripts passen zu „{query}“.} other {Nichts passt zu „{query}“.}}",
+    "nonePublished": "{type, select, Addon {Noch keine Add-ons veröffentlicht.} Theme {Noch keine Themes veröffentlicht.} Script {Noch keine Scripts veröffentlicht.} other {Noch nichts veröffentlicht.}}",
     "byAuthor": "{type} von {author}",
     "downloads": "{count, plural, one {# Download} other {# Downloads}}",
     "notFor": "Nicht für {version}",
-    "offline": "Der Marktplatz konnte nicht geprüft werden: {error}",
+    "offline": "Der Marketplace konnte nicht geprüft werden: {error}",
     "restart": "Starte LiquidBounce neu, um {count, plural, one {# Änderung} other {# Änderungen}} zu übernehmen.",
     "removeQuestion": "{name} entfernen? Ohne {name} {count, plural, one {funktioniert} other {funktionieren}} {names} nicht mehr.",
     "screenshots": "Screenshots",
@@ -236,7 +236,7 @@
     "qrAlt": "QR-Code zur Anmeldung mit Microsoft",
     "usernameLength": "Der Benutzername muss zwischen 1 und 16 Zeichen lang sein.",
     "usernameCharacters": "Der Benutzername darf nur Buchstaben, Zahlen und Unterstriche enthalten.",
-    "microsoftFailed": "Die Microsoft-Anmeldung ist fehlgeschlagen.\n\n{error}\n\nFalls du das Problem nicht lösen kannst, melde dich offline an und versuche es über die Kontoverwaltung im Client."
+    "microsoftFailed": "Die Microsoft-Anmeldung ist fehlgeschlagen.\n\n{error}\n\nFalls du das Problem nicht lösen kannst, melde dich offline an und versuche es über den Account-Manager im Client."
   },
   "account": {
     "offline": "Offline"
