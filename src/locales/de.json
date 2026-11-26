@@ -183,15 +183,15 @@
   },
   "facts": {
     "blatantOrCloset": {
-      "title": "Offensichtlich oder unauffällig cheaten – du entscheidest!",
-      "description": "LiquidBounce bringt viele offensichtliche und unauffällige Cheats mit und ist damit der perfekte All-in-one-Client."
+      "title": "Blatant oder Closet Cheating – du entscheidest!",
+      "description": "LiquidBounce bringt viele Blatant- und Closet-Cheats mit und ist damit der perfekte All-in-one-Client."
     },
     "multiVersion": {
-      "title": "Unterstützung mehrerer Versionen",
+      "title": "Multi-Version-Support",
       "description": "Mit dem integrierten Versionswechsler wechselst du ganz einfach zwischen Minecraft-Versionen, ohne das Spiel neu zu starten!"
     },
     "multiServer": {
-      "title": "Unterstützung vieler Server",
+      "title": "Multi-Server-Support",
       "description": "LiquidBounce bietet Funktionen und Bypasses für viele verschiedene Server."
     },
     "autoConfig": {
