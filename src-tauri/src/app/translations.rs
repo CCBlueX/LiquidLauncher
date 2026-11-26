@@ -17,8 +17,9 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-//! English ships with the launcher. Other languages come from CCBlueX/Translations, published
-//! per launcher version so a release never shows wording written for a later one.
+//! English and Simplified Chinese ship with the launcher. The other languages come from
+//! CCBlueX/Translations, published per launcher version so a release never shows wording written
+//! for a later one.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;

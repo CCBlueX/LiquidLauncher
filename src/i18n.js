@@ -2,14 +2,18 @@ import { addMessages, date, dictionary, init, locale } from "svelte-i18n";
 import { derived, get, writable } from "svelte/store";
 import { invoke } from "@tauri-apps/api/core";
 import en from "./locales/en.json";
+import zhCN from "./locales/zh-CN.json";
 
-/** Ships with the launcher; every other language is downloaded for this version. */
 export const english = { code: "en", name: "English", minecraft: "en_us" };
 
+/** Ship with the launcher; every other language is downloaded for this version. */
+export const bundled = [english, { code: "zh-CN", name: "简体中文", minecraft: "zh_cn" }];
+
 /** The languages to offer, each named in itself, with Minecraft's code for it. */
-export const languages = writable([english]);
+export const languages = writable(bundled);
 
 addMessages("en", en);
+addMessages("zh-CN", zhCN);
 init({ fallbackLocale: "en", initialLocale: "en" });
 
 // Picks the CJK glyph variants the language expects.
@@ -20,7 +24,7 @@ export function matchLanguage(tag, codes) {
     const subtags = tag?.split(/[-_]/).map(subtag => subtag.toLowerCase()) ?? [];
     if (subtags[0] === "zh") {
         const traditional = subtags.some(subtag => ["hant", "tw", "hk", "mo"].includes(subtag));
-        return codes.find(code => code === (traditional ? "zh-TW" : "zh-CN")) ?? "en";
+        return traditional && codes.includes("zh-TW") ? "zh-TW" : "zh-CN";
     }
     return codes.find(code => code.toLowerCase() === subtags.join("-"))
         ?? codes.find(code => code.split("-")[0] === subtags[0])

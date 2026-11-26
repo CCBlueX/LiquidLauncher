@@ -5,7 +5,7 @@
     import {exit} from "@tauri-apps/plugin-process";
     import {onMount} from "svelte";
     import {_} from "svelte-i18n";
-    import {english, languages, useLanguage} from "../i18n.js";
+    import {bundled, languages, useLanguage} from "../i18n.js";
     import MainScreen from "./main/MainScreen.svelte";
     import LoginScreen from "./login/LoginScreen.svelte";
     import LoadingScreen from "./main/LoadingScreen.svelte";
@@ -114,7 +114,8 @@
     }
 
     async function setupLanguages() {
-        languages.set([english, ...await invoke("get_languages")]);
+        const downloaded = await invoke("get_languages");
+        languages.set([...bundled, ...downloaded.filter(language => !bundled.some(({code}) => code === language.code))]);
         await useLanguage(options.launcher.language ?? systemLocale);
     }
 
