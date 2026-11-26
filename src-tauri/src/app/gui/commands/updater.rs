@@ -16,58 +16,32 @@
  * You should have received a copy of the GNU General Public License
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
-use crate::{minecraft::progress::ProgressUpdate, LAUNCHER_VERSION};
+use crate::{
+    minecraft::progress::{Label, ProgressUpdate},
+    LAUNCHER_VERSION,
+};
 use anyhow::Result;
 use std::{
     env,
     time::{Duration, Instant},
 };
-use tauri::{AppHandle, Emitter, Manager};
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri::{AppHandle, Emitter};
 use tauri_plugin_updater::UpdaterExt;
-use tokio::sync::oneshot::channel;
 use tracing::{debug, debug_span, error, info, Instrument};
 
 const SKIP_UPDATE_ENV: &str = "LIQUIDLAUNCHER_SKIP_UPDATE";
 const REPORT_INTERVAL: Duration = Duration::from_millis(250);
 
-/// Checks for a launcher update and installs it, then restarts.
+/// Checks for a launcher update and installs it, then restarts. The frontend tells the user when
+/// it fails.
 #[tauri::command]
 pub(crate) async fn check_for_updates(app: AppHandle) -> Result<(), String> {
     let span = debug_span!("update_check");
 
-    match update(app.clone()).instrument(span.clone()).await {
-        Ok(()) => Ok(()),
-        Err(e) => {
-            error!(parent: &span, "Update failed: {:?}", e);
-            notify_failure(&app, &e).await;
-            Err(format!("{}", e))
-        }
-    }
-}
-
-async fn notify_failure(app: &AppHandle, error: &anyhow::Error) {
-    let (tx, rx) = channel();
-
-    let mut dialog = app
-        .dialog()
-        .message(format!(
-            "The launcher could not update itself and will try again on the next start.\n\n{}",
-            error
-        ))
-        .title("Launcher update failed")
-        .kind(MessageDialogKind::Error)
-        .buttons(MessageDialogButtons::Ok);
-
-    if let Some(window) = app.get_webview_window("main") {
-        dialog = dialog.parent(&window);
-    }
-
-    dialog.show(move |_| {
-        let _ = tx.send(());
-    });
-
-    let _ = rx.await;
+    update(app).instrument(span.clone()).await.map_err(|e| {
+        error!(parent: &span, "Update failed: {:?}", e);
+        format!("{}", e)
+    })
 }
 
 async fn update(app: AppHandle) -> Result<()> {
@@ -109,7 +83,9 @@ async fn update(app: AppHandle) -> Result<()> {
     );
     report(
         &app,
-        ProgressUpdate::set_label(format!("Updating launcher to v{}...", update.version)),
+        ProgressUpdate::SetLabel(Label::UpdatingLauncher {
+            version: update.version.clone(),
+        }),
     );
 
     let mut downloaded = 0u64;
@@ -152,7 +128,7 @@ async fn update(app: AppHandle) -> Result<()> {
             },
             || {
                 info!("Download finished, installing update...");
-                report(&app, ProgressUpdate::set_label("Installing update..."));
+                report(&app, ProgressUpdate::SetLabel(Label::InstallingUpdate));
                 report(&app, ProgressUpdate::SetDownloadSpeed(0));
             },
         )

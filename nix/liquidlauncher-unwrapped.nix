@@ -67,7 +67,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
       runHook postInstall
     '';
 
-    outputHash = "sha256-jjB2Sc5i6JLO2rtyoefrz3rd/zukO+2xlCi3p6cDFVc=";
+    outputHash = "sha256-QYOcci8oBlzOEYocMz0314GcKy6cujxXAWZ5NPw8sCU=";
     outputHashAlgo = "sha256";
     outputHashMode = "recursive";
   };

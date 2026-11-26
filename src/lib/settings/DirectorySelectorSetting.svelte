@@ -1,6 +1,7 @@
 <script>
     import {open as dialogOpen} from "@tauri-apps/plugin-dialog";
     import {revealItemInDir} from "@tauri-apps/plugin-opener";
+    import {_} from "svelte-i18n";
 
     export let title;
     export let windowTitle;
@@ -29,10 +30,10 @@
     <div class="title">{title}</div>
     <div class="wrapper">
         <input class="input" type="text" {placeholder} bind:value={value} />
-        <button type="button" class="button-directory" title="Select directory" on:click={handleDirectorySelect}>
+        <button type="button" class="button-directory" title={$_("settings.directorySelector.select")} on:click={handleDirectorySelect}>
             <img src="img/icon/icon-directory-choose.svg" alt="choose">
         </button>
-        <button type="button" class="button-directory" title="Open directory" on:click={handleDirectoryOpen}>
+        <button type="button" class="button-directory" title={$_("settings.directorySelector.open")} on:click={handleDirectoryOpen}>
             <img src="img/icon/icon-directory-open.svg" alt="open">
         </button>
     </div>

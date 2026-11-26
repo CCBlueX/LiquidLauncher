@@ -38,7 +38,7 @@ use crate::auth::ClientAccount;
 use crate::error::LauncherError;
 use crate::minecraft::game_dir::GameDir;
 use crate::minecraft::java::DistributionSelection;
-use crate::minecraft::progress::{ProgressReceiver, ProgressUpdate};
+use crate::minecraft::progress::{Label, ProgressReceiver, ProgressUpdate};
 use crate::{join_and_mkdir, join_and_mkdir_vec};
 use crate::{
     utils::{downloaded_bytes, OS, OS_VERSION},
@@ -156,7 +156,7 @@ pub async fn launch<D: Send + Sync>(
     let features: HashSet<String> = HashSet::new();
     let mut class_path = String::new();
 
-    launcher_data.progress_update(ProgressUpdate::set_label("Setting up..."));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::SettingUp));
 
     launcher_data.log(&format!(
         "Determined OS to be {} {}",
@@ -290,7 +290,7 @@ pub async fn launch<D: Send + Sync>(
         })?);
     }
 
-    launcher_data.progress_update(ProgressUpdate::set_label("Launching..."));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::Launching));
     launcher_data.progress_update(ProgressUpdate::set_to_max());
 
     let mut running_task = java_runtime.execute(mapped, &game_dir).await?;
@@ -298,7 +298,7 @@ pub async fn launch<D: Send + Sync>(
         (launcher_data.on_start)(&launcher_data.data, pid);
     }
 
-    launcher_data.progress_update(ProgressUpdate::set_label("Running..."));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::Running));
 
     if !launching_parameter.keep_launcher_open {
         // Hide launcher window

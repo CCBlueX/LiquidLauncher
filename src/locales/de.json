@@ -1,0 +1,304 @@
+{
+  "common": {
+    "loading": "Wird geladen...",
+    "tryAgain": "Erneut versuchen",
+    "back": "Zurück",
+    "browse": "Durchsuchen",
+    "install": "Installieren",
+    "installing": "Wird installiert",
+    "installed": "Installiert",
+    "remove": "Entfernen",
+    "undo": "Rückgängig",
+    "selected": "Ausgewählt",
+    "showMore": "Mehr anzeigen",
+    "close": "Schließen",
+    "update": "Aktualisieren",
+    "updating": "Wird aktualisiert",
+    "cancel": "Abbrechen",
+    "continue": "Weiter",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "settings": "Einstellungen",
+    "copied": "Kopiert!",
+    "copyToClipboard": "In die Zwischenablage kopieren"
+  },
+  "errors": {
+    "options": "Die Launcher-Einstellungen konnten nicht geladen werden",
+    "api": "Keine Verbindung zur LiquidBounce-API",
+    "system": "Mit der Konfiguration deines Systems scheint etwas nicht zu stimmen.\n\n{error}"
+  },
+  "update": {
+    "failedTitle": "Launcher-Update fehlgeschlagen",
+    "failed": "Der Launcher konnte sich nicht aktualisieren und versucht es beim nächsten Start erneut.\n\n{error}"
+  },
+  "main": {
+    "welcome": "Willkommen zurück, {name}.",
+    "lowMemory": "Du startest den Client mit weniger als {memory} MB Arbeitsspeicher. Das kann zu Leistungsproblemen führen. Trotzdem fortfahren?",
+    "startFailed": "Der Client konnte nicht gestartet werden: {error}"
+  },
+  "progress": {
+    "startingClient": "Client wird gestartet...",
+    "refreshingSession": "Minecraft-Sitzung wird erneuert...",
+    "updatingLauncher": "Launcher wird auf v{version} aktualisiert...",
+    "installingUpdate": "Update wird installiert...",
+    "loadingVersionManifest": "Versionsmanifest wird geladen...",
+    "loadingVersionProfile": "Versionsprofil wird geladen...",
+    "installingAddon": "Add-on {name} wird installiert",
+    "copiedCustomMod": "Eigene Mod {name} kopiert",
+    "downloadingRecommendedMod": "Empfohlene Mod {name} wird heruntergeladen",
+    "openingModDownloadPage": "Downloadseite für Mod {name} wird geöffnet",
+    "openingDownloadPage": "Downloadseite wird geöffnet... (Versuch {attempt}/{attempts})",
+    "downloadingMod": "Mod {name} wird heruntergeladen",
+    "launchingBuild": "{commit} wird gestartet...",
+    "settingUp": "Wird vorbereitet...",
+    "checkingJre": "JRE wird gesucht...",
+    "downloadingJre": "JRE wird heruntergeladen...",
+    "downloadingClient": "Client wird heruntergeladen...",
+    "checkingLibraries": "Bibliotheken werden geprüft...",
+    "downloadingLibrary": "Bibliothek {name} wird heruntergeladen",
+    "extractingNatives": "Native Bibliotheken werden entpackt...",
+    "checkingAssets": "Assets werden geprüft...",
+    "downloadingAsset": "Asset {hash} wird heruntergeladen",
+    "launching": "Wird gestartet...",
+    "running": "Läuft..."
+  },
+  "settings": {
+    "general": {
+      "language": "Sprache",
+      "systemLanguage": "Systemsprache",
+      "jvmDistribution": "JVM-Distribution",
+      "automatic": "Automatisch",
+      "manual": "Manuell",
+      "custom": "Eigene",
+      "distribution": "Distribution",
+      "customJvmPath": "Eigener JVM-Pfad",
+      "customJvmPlaceholder": "Speicherort des Java-Wrappers wählen",
+      "customJvmWindowTitle": "Eigenen Java-Wrapper wählen",
+      "dataLocation": "Datenspeicherort",
+      "dataLocationWindowTitle": "Eigenen Datenordner wählen",
+      "memory": "Arbeitsspeicher",
+      "concurrentDownloads": "Gleichzeitige Downloads",
+      "connectionsSuffix": " Verbindungen",
+      "keepLauncherOpen": "Launcher geöffnet lassen",
+      "signOut": "Vom Minecraft-Konto abmelden",
+      "clearData": "Daten löschen",
+      "dataCleared": "Daten gelöscht.",
+      "clearDataFailed": "Die Daten konnten nicht gelöscht werden: {error}",
+      "logoutFailed": "Die Abmeldung ist fehlgeschlagen. Bitte versuche es erneut."
+    },
+    "client": {
+      "build": "Build"
+    },
+    "title": "Einstellungen",
+    "tabs": {
+      "general": "Allgemein",
+      "minecraft": "Minecraft",
+      "client": "Client",
+      "premium": "Premium"
+    },
+    "minecraft": {
+      "description": "Damit kannst du Welten, Ressourcenpakete und Shaderpakete aus einer anderen Minecraft-Installation verwenden.",
+      "directory": "Minecraft-Verzeichnis",
+      "autoDetect": "Automatisch erkennen",
+      "directoryWindowTitle": "Minecraft-Verzeichnis auswählen",
+      "linkWorlds": "Welten verknüpfen ({count, number})",
+      "linkResourcePacks": "Ressourcenpakete verknüpfen ({count, number})",
+      "linkShaderPacks": "Shaderpakete verknüpfen ({count, number})",
+      "notFound": "Keine Vanilla-Installation von Minecraft gefunden."
+    },
+    "premium": {
+      "skipAds": "Werbung überspringen",
+      "accountInformation": "Kontoinformationen",
+      "noPremium": "Mit diesem Konto scheint kein Premium verknüpft zu sein. Bitte verknüpfe es auf der Seite zur Kontoverwaltung.",
+      "manageAccount": "Konto verwalten",
+      "logout": "Abmelden",
+      "description": "Mit Premium unterstützt du nicht nur die Weiterentwicklung des Clients, sondern bekommst auch einen Umhang und kannst die Werbung im Launcher überspringen.",
+      "login": "Mit LiquidBounce-Konto anmelden",
+      "loginFailed": "Anmeldung mit dem Client-Konto fehlgeschlagen: {error}",
+      "logoutFailed": "Abmeldung vom Client-Konto fehlgeschlagen: {error}"
+    },
+    "liquidBounceAccount": {
+      "username": "Benutzername",
+      "donatorPerks": "Spendervorteile",
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "message": {
+      "clearSearch": "Suche leeren"
+    },
+    "itemRow": {
+      "removeNamed": "{name} entfernen"
+    },
+    "directorySelector": {
+      "select": "Verzeichnis auswählen",
+      "open": "Verzeichnis öffnen"
+    },
+    "fileSelector": {
+      "select": "Datei auswählen"
+    }
+  },
+  "builds": {
+    "title": "Builds",
+    "showNightly": "Nightly-Builds anzeigen",
+    "latest": "Neueste",
+    "latestRelease": "Neuestes Release",
+    "latestNightly": "Neuester Nightly-Build",
+    "builds": "{count, plural, one {# Build} other {# Builds}}",
+    "releases": "{count, plural, one {# Release} other {# Releases}}"
+  },
+  "marketplace": {
+    "title": "{type, select, Addon {Add-ons} Theme {Themes} Script {Skripte} other {Elemente}}",
+    "type": "{type, select, Addon {Add-on} Theme {Theme} Script {Skript} other {Element}}",
+    "empty": "{type, select, Addon {Noch keine Add-ons.} Theme {Noch keine Themes.} Script {Noch keine Skripte.} other {Noch nichts.}}",
+    "search": "{type, select, Addon {Add-ons durchsuchen} Theme {Themes durchsuchen} Script {Skripte durchsuchen} other {Durchsuchen}}",
+    "noMatch": "{type, select, Addon {Keine Add-ons passen zu „{query}“.} Theme {Keine Themes passen zu „{query}“.} Script {Keine Skripte passen zu „{query}“.} other {Nichts passt zu „{query}“.}}",
+    "nonePublished": "{type, select, Addon {Noch keine Add-ons veröffentlicht.} Theme {Noch keine Themes veröffentlicht.} Script {Noch keine Skripte veröffentlicht.} other {Noch nichts veröffentlicht.}}",
+    "byAuthor": "{type} von {author}",
+    "downloads": "{count, plural, one {# Download} other {# Downloads}}",
+    "notFor": "Nicht für {version}",
+    "offline": "Der Marktplatz konnte nicht geprüft werden: {error}",
+    "restart": "Starte LiquidBounce neu, um {count, plural, one {# Änderung} other {# Änderungen}} zu übernehmen.",
+    "removeQuestion": "{name} entfernen? Ohne {name} {count, plural, one {funktioniert} other {funktionieren}} {names} nicht mehr.",
+    "screenshots": "Screenshots",
+    "versions": "Versionen",
+    "neededBy": "Benötigt von",
+    "viewFullSize": "In voller Größe anzeigen",
+    "previousScreenshot": "Vorheriger Screenshot",
+    "nextScreenshot": "Nächster Screenshot"
+  },
+  "mods": {
+    "title": "Mods - {target}",
+    "addFile": "Datei hinzufügen",
+    "addFileWindowTitle": "Wähle eine eigene Mod zum Installieren",
+    "browse": "Durchsuchen",
+    "recommended": "Empfohlen",
+    "unknownVersion": "Unbekannte Version",
+    "updateAvailable": "{version} verfügbar",
+    "installFailed": "Mod konnte nicht installiert werden: {error}",
+    "deleteFailed": "Mod konnte nicht gelöscht werden: {error}",
+    "remove": "Mod entfernen",
+    "searchPlaceholder": "Modrinth-Mods durchsuchen",
+    "hitLine": "von {author} · {downloads, plural, one {# Download} other {# Downloads}}",
+    "noMatch": "Keine Mods passen zu „{query}“."
+  },
+  "facts": {
+    "blatantOrCloset": {
+      "title": "Offensichtlich oder unauffällig cheaten – du entscheidest!",
+      "description": "LiquidBounce bringt viele offensichtliche und unauffällige Cheats mit und ist damit der perfekte All-in-one-Client."
+    },
+    "multiVersion": {
+      "title": "Unterstützung mehrerer Versionen",
+      "description": "Mit dem integrierten Versionswechsler wechselst du ganz einfach zwischen Minecraft-Versionen, ohne das Spiel neu zu starten!"
+    },
+    "multiServer": {
+      "title": "Unterstützung vieler Server",
+      "description": "LiquidBounce bietet Funktionen und Bypasses für viele verschiedene Server."
+    },
+    "autoConfig": {
+      "title": "Auto-Config-System",
+      "description": "Das Auto-Config-System von LiquidBounce wendet automatisch die besten Einstellungen an, wenn du einem bekannten Server beitrittst."
+    },
+    "customizable": {
+      "title": "Anpassbar",
+      "description": "Die Oberfläche von LiquidBounce ist komplett anpassbar. Du kannst die gesamte Oberfläche nach deinem Geschmack austauschen."
+    },
+    "downloads": {
+      "title": "{count, number} Downloads insgesamt",
+      "description": "LiquidBounce ist einer der beliebtesten Hacked Clients aller Zeiten."
+    },
+    "openSource": {
+      "title": "Kostenlos & Open Source",
+      "description": "Der Quellcode von LiquidBounce ist öffentlich verfügbar."
+    },
+    "scriptApi": {
+      "title": "Script-API",
+      "description": "Mit der Script-API von LiquidBounce kannst du eigene Module und Befehle schreiben."
+    }
+  },
+  "login": {
+    "title": "Anmelden",
+    "microsoft": "Mit Microsoft anmelden",
+    "microsoftDevice": "Mit Microsoft-Gerätecode anmelden",
+    "or": "oder",
+    "username": "Benutzername",
+    "offline": "Offline anmelden",
+    "microsoftTitle": "Microsoft-Anmeldung",
+    "finishInPopup": "Schließe die Anmeldung im Popup-Fenster ab.",
+    "codeTitle": "Mit einem Code anmelden",
+    "copy": "KOPIEREN",
+    "copied": "KOPIERT",
+    "openBefore": "Öffne",
+    "openAfter": "auf einem beliebigen Gerät und gib den Code oben ein.",
+    "scanTitle": "Code scannen",
+    "scanDescription": "Öffnet die Seite mit bereits eingetragenem Code.",
+    "waiting": "Warte auf Bestätigung",
+    "requestingCode": "Anmeldecode wird angefordert…",
+    "qrAlt": "QR-Code zur Anmeldung mit Microsoft",
+    "usernameLength": "Der Benutzername muss zwischen 1 und 16 Zeichen lang sein.",
+    "usernameCharacters": "Der Benutzername darf nur Buchstaben, Zahlen und Unterstriche enthalten.",
+    "microsoftFailed": "Die Microsoft-Anmeldung ist fehlgeschlagen.\n\n{error}\n\nFalls du das Problem nicht lösen kannst, melde dich offline an und versuche es über den Account-Manager im Client."
+  },
+  "account": {
+    "offline": "Offline"
+  },
+  "launch": {
+    "instance": "Instanz",
+    "newInstance": "Neue Instanz",
+    "state": {
+      "starting": "Startet",
+      "started": "Gestartet"
+    },
+    "terminate": "Beenden",
+    "log": "Log",
+    "launch": "LiquidBounce starten"
+  },
+  "errorScreen": {
+    "title": "Ein Fehler ist aufgetreten",
+    "unknown": "Unbekannter Fehler",
+    "details": "Technische Details:",
+    "quickHelp": "Schnelle Hilfe",
+    "contactSupport": "Support kontaktieren"
+  },
+  "firstRun": {
+    "title": "Willkommen bei LiquidBounce!",
+    "description": "Beim ersten Start oder wenn ein neues Update von LiquidBounce verfügbar ist, erscheint ein Download-Fenster. So erzielen wir Werbeeinnahmen für den Client. Wenn du keine Werbung sehen möchtest, kannst du LiquidBounce Premium kaufen. Schau dir auch die Schnellstartanleitung an, um Tipps zur Nutzung von LiquidBounce zu bekommen.",
+    "quickStart": "Schnellstartanleitung"
+  },
+  "versionWarning": {
+    "title": "Du startest gleich eine nicht unterstützte Version!",
+    "description": "Die gewählte Version von LiquidBounce wird nicht mehr offiziell unterstützt. Wir empfehlen ein Upgrade auf die neueste Version von LiquidBounce Nextgen, die mit allen Minecraft-Versionen ab 1.7 funktioniert.",
+    "switch": "Jetzt zu Nextgen wechseln",
+    "launchAnyway": "Trotzdem starten",
+    "launchAnywayIn": "Trotzdem starten ({seconds})"
+  },
+  "insecure": {
+    "title": "Sicherheitswarnung",
+    "message": "LiquidLauncher kann sich nicht mit dem sicheren (HTTPS) API-Endpunkt verbinden, wohl aber mit einem unsicheren (HTTP) Endpunkt.",
+    "risks": "Sicherheitsrisiken:",
+    "riskUnencrypted": "Deine Verbindung ist nicht verschlüsselt und kann für andere in deinem Netzwerk sichtbar sein",
+    "riskIntercepted": "Gesendete und empfangene Daten können von Angreifern abgefangen oder verändert werden",
+    "riskCredentials": "Deine Anmeldedaten könnten kompromittiert werden, wenn sie über diese Verbindung gesendet werden",
+    "recommendation": "Empfehlung:",
+    "recommendationText": "Dieses Problem entsteht oft durch Netzwerkbeschränkungen oder SSL-Zertifikatsprobleme. Wir empfehlen ein VPN wie Cloudflare WARP, um eine sichere Verbindung herzustellen.",
+    "getWarp": "Cloudflare WARP holen",
+    "allow": "Unsichere Verbindung erlauben"
+  },
+  "log": {
+    "title": "Client-Log",
+    "upload": "Log hochladen",
+    "autoScroll": "Automatisch scrollen",
+    "search": "Suchen",
+    "filters": {
+      "error": "Fehler",
+      "warn": "Warnung",
+      "info": "Info",
+      "debug": "Debug"
+    },
+    "uploadConfirm": "Das gesamte Log dieser Sitzung wird hochgeladen. Es kann sensible Informationen wie private Chatnachrichten enthalten. Möchtest du wirklich fortfahren?",
+    "uploadFailed": "Log konnte nicht hochgeladen werden: {error}",
+    "uploaded": "Dein Log ist unter folgender URL verfügbar:"
+  },
+  "news": {
+    "readMore": "Weiterlesen"
+  }
+}

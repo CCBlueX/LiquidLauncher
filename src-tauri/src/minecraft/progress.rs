@@ -17,6 +17,8 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::fmt;
+
 use serde::Serialize;
 
 #[derive(Debug)]
@@ -60,9 +62,68 @@ pub enum ProgressUpdate {
     #[serde(rename = "progress")]
     SetProgress(u64),
     #[serde(rename = "label")]
-    SetLabel(String),
+    SetLabel(Label),
     #[serde(rename = "speed")]
     SetDownloadSpeed(u64),
+}
+
+/// The frontend translates `progress.<key>` with `values`; `Display` is the English text for logs.
+#[derive(Debug, Serialize, Clone)]
+#[serde(tag = "key", content = "values", rename_all = "camelCase")]
+pub enum Label {
+    UpdatingLauncher { version: String },
+    InstallingUpdate,
+    LoadingVersionManifest,
+    LoadingVersionProfile,
+    InstallingAddon { name: String },
+    CopiedCustomMod { name: String },
+    DownloadingRecommendedMod { name: String },
+    OpeningModDownloadPage { name: String },
+    OpeningDownloadPage { attempt: u8, attempts: u8 },
+    DownloadingMod { name: String },
+    LaunchingBuild { commit: String },
+    SettingUp,
+    CheckingJre,
+    DownloadingJre,
+    DownloadingClient,
+    CheckingLibraries,
+    DownloadingLibrary { name: String },
+    ExtractingNatives,
+    CheckingAssets,
+    DownloadingAsset { hash: String },
+    Launching,
+    Running,
+}
+
+impl fmt::Display for Label {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UpdatingLauncher { version } => write!(f, "Updating launcher to v{version}..."),
+            Self::InstallingUpdate => write!(f, "Installing update..."),
+            Self::LoadingVersionManifest => write!(f, "Loading version manifest..."),
+            Self::LoadingVersionProfile => write!(f, "Loading version profile..."),
+            Self::InstallingAddon { name } => write!(f, "Installing add-on {name}"),
+            Self::CopiedCustomMod { name } => write!(f, "Copied custom mod {name}"),
+            Self::DownloadingRecommendedMod { name } => write!(f, "Downloading recommended mod {name}"),
+            Self::OpeningModDownloadPage { name } => write!(f, "Opening download page for mod {name}"),
+            Self::OpeningDownloadPage { attempt, attempts } => {
+                write!(f, "Opening download page... (Attempt {attempt}/{attempts})")
+            }
+            Self::DownloadingMod { name } => write!(f, "Downloading mod {name}"),
+            Self::LaunchingBuild { commit } => write!(f, "Launching {commit}..."),
+            Self::SettingUp => write!(f, "Setting up..."),
+            Self::CheckingJre => write!(f, "Checking for JRE..."),
+            Self::DownloadingJre => write!(f, "Downloading JRE..."),
+            Self::DownloadingClient => write!(f, "Downloading client..."),
+            Self::CheckingLibraries => write!(f, "Checking libraries..."),
+            Self::DownloadingLibrary { name } => write!(f, "Downloading library {name}"),
+            Self::ExtractingNatives => write!(f, "Extracting natives..."),
+            Self::CheckingAssets => write!(f, "Checking assets..."),
+            Self::DownloadingAsset { hash } => write!(f, "Downloading asset object {hash}"),
+            Self::Launching => write!(f, "Launching..."),
+            Self::Running => write!(f, "Running..."),
+        }
+    }
 }
 
 const PER_STEP: u64 = 1024;
@@ -78,9 +139,6 @@ impl ProgressUpdate {
         let max = ProgressUpdateSteps::len() as u64;
 
         Self::SetMax(max * PER_STEP)
-    }
-    pub fn set_label<S: AsRef<str>>(str: S) -> Self {
-        Self::SetLabel(str.as_ref().to_owned())
     }
 }
 

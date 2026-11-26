@@ -21,6 +21,7 @@
 <script>
     import { createEventDispatcher } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
+    import { _ } from "svelte-i18n";
     import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
     import SettingWrapper from "../../../../settings/SettingWrapper.svelte";
     import ModSetting from "../../../../settings/ModSetting.svelte";
@@ -43,7 +44,7 @@
                 directory: false,
                 multiple: true,
                 filters: [{ name: "", extensions: ["jar"] }],
-                title: "Select a custom mod to install"
+                title: $_("mods.addFileWindowTitle")
             });
 
             if (selected) {
@@ -60,7 +61,7 @@
             }
         } catch (e) {
             console.error("Failed to install mod:", e);
-            alert(`Failed to install mod: ${e}`);
+            alert($_("mods.installFailed", { values: { error: `${e}` } }));
         }
     }
 
@@ -87,7 +88,7 @@
             }
         } catch (e) {
             console.error("Failed to delete mod:", e);
-            alert(`Failed to delete mod: ${e}`);
+            alert($_("mods.deleteFailed", { values: { error: `${e}` } }));
         }
         dispatch("updateMods");
     }
@@ -112,9 +113,7 @@
     }
 
     // Recommended mods load from a Maven repository, as `group:name:version`.
-    function recommendedLine(mod) {
-        return [mod.source.artifact?.split(":")[2], "Recommended"].filter(Boolean).join(" · ");
-    }
+    $: recommendedLine = mod => [mod.source.artifact?.split(":")[2], $_("mods.recommended")].filter(Boolean).join(" · ");
 
     function modKey(mod) {
         return `${mod.source.type}:${mod.name}`;
@@ -122,10 +121,10 @@
 </script>
 
 {#if build}
-    <SettingWrapper title="Mods - {build.subsystem.charAt(0).toUpperCase()}{build.subsystem.slice(1)} {build.mcVersion}" unbounded>
+    <SettingWrapper title={$_("mods.title", { values: { target: `${build.subsystem.charAt(0).toUpperCase()}${build.subsystem.slice(1)} ${build.mcVersion}` } })} unbounded>
         <div slot="title-element" class="actions">
-            <IconButtonSetting text="Add file" icon="icon-plus" on:click={addFile} />
-            <IconButtonSetting text="Browse" icon="icon-plus" on:click={() => dispatch("browse")} />
+            <IconButtonSetting text={$_("mods.addFile")} icon="icon-plus" on:click={addFile} />
+            <IconButtonSetting text={$_("mods.browse")} icon="icon-plus" on:click={() => dispatch("browse")} />
         </div>
         {#each versionState.recommendedMods as mod}
             <ModSetting
@@ -146,13 +145,13 @@
                     on:delete={() => remove(mod)}
             >
                 <svelte:fragment slot="line">
-                    {mod.version ?? "Unknown version"}{#if mod.modrinth?.update}{" · "}<span class="strong">{mod.modrinth.update} available</span>{/if}
+                    {mod.version ?? $_("mods.unknownVersion")}{#if mod.modrinth?.update}{" · "}<span class="strong">{$_("mods.updateAvailable", { values: { version: mod.modrinth.update } })}</span>{/if}
                 </svelte:fragment>
                 <svelte:fragment slot="side">
                     {#if mod.modrinth?.update}
                         <ButtonSetting
                                 small
-                                text={updating.has(modKey(mod)) ? "Updating" : "Update"}
+                                text={updating.has(modKey(mod)) ? $_("common.updating") : $_("common.update")}
                                 disabled={updating.has(modKey(mod))}
                                 on:click={() => update(mod)}
                         />

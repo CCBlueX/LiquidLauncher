@@ -10,7 +10,7 @@ use crate::minecraft::java::{
     JavaDistribution, JavaPackage, JavaRuntime,
 };
 use crate::minecraft::progress::{
-    get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps,
+    get_max, get_progress, Label, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps,
 };
 use crate::utils::{ARCHITECTURE, OS};
 
@@ -67,7 +67,7 @@ async fn managed_jre(
             .collect(),
     };
 
-    launcher_data.progress_update(ProgressUpdate::set_label("Checking for JRE..."));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::CheckingJre));
 
     for vendor in &vendors {
         if let Some(runtime) = find_java(runtimes_folder, vendor, major).await {
@@ -97,7 +97,7 @@ async fn managed_jre(
         })?;
 
     launcher_data.log("Downloading JRE...");
-    launcher_data.progress_update(ProgressUpdate::set_label("Download JRE..."));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::DownloadingJre));
 
     install_java(runtimes_folder, package, |downloaded, total| {
         launcher_data.progress_update(ProgressUpdate::set_for_step(

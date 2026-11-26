@@ -1,8 +1,11 @@
 <script>
     import {invoke} from "@tauri-apps/api/core";
     import {listen} from "@tauri-apps/api/event";
+    import {message} from "@tauri-apps/plugin-dialog";
     import {exit} from "@tauri-apps/plugin-process";
     import {onMount} from "svelte";
+    import {_, locale} from "svelte-i18n";
+    import {matchLanguage} from "../i18n.js";
     import MainScreen from "./main/MainScreen.svelte";
     import LoginScreen from "./login/LoginScreen.svelte";
     import LoadingScreen from "./main/LoadingScreen.svelte";
@@ -13,6 +16,9 @@
     let error = null;
     let options = null;
     let client = null;
+    let systemLocale = null;
+
+    $: if (options) locale.set(matchLanguage(options.launcher.language ?? systemLocale));
 
     // Asks if the user allows non-secure connections
     let allowNonSecure = false;
@@ -23,7 +29,7 @@
     async function handleUpdate() {
         const unlisten = await listen("progress-update", (event) => {
             const { type, value } = event.payload;
-            updateProgress ??= { value: 0, max: 0, text: "", speed: 0 };
+            updateProgress ??= { value: 0, max: 0, label: null, speed: 0 };
 
             switch (type) {
                 case "max":
@@ -33,7 +39,7 @@
                     updateProgress.value = value;
                     break;
                 case "label":
-                    updateProgress.text = value;
+                    updateProgress.label = value;
                     break;
                 case "speed":
                     updateProgress.speed = value;
@@ -45,6 +51,10 @@
             await invoke("check_for_updates");
         } catch (e) {
             console.error("Update process failed:", e);
+            await message($_("update.failed", { values: { error: `${e}` } }), {
+                title: $_("update.failedTitle"),
+                kind: "error"
+            });
         } finally {
             unlisten();
             updateProgress = null;
@@ -53,6 +63,8 @@
 
     async function setupOptions() {
         try {
+            const [loaded, system] = await Promise.all([invoke("get_options"), invoke("sys_locale")]);
+            systemLocale = system;
             options = {
                 store: async function () {
                     console.debug("Storing options...", options);
@@ -63,14 +75,14 @@
                         throw error;
                     }
                 },
-                ...await invoke("get_options")
+                ...loaded
             };
             console.debug("Options loaded:", options);
         } catch (e) {
             console.error("Failed to load options:", e);
 
             error = {
-                message: "Failed to load launcher options",
+                message: $_("errors.options"),
                 error: e
             };
         }
@@ -85,7 +97,7 @@
         } catch (e) {
             console.error("Failed to set up API client:", e);
             error = {
-                message: "Failed to establish connection with LiquidBounce API",
+                message: $_("errors.api"),
                 error: e
             };
         }
@@ -97,7 +109,7 @@
         } catch (e) {
             // We want to continue allowing the user to use the launcher even 
             // if the system check fails
-            alert("Looks like there is a configuration issue with your system.\n\n" + e);
+            alert($_("errors.system", { values: { error: `${e}` } }));
         }
     }
 

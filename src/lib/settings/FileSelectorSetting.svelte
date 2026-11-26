@@ -1,5 +1,6 @@
 <script>
     import {open as dialogOpen} from "@tauri-apps/plugin-dialog";
+    import {_} from "svelte-i18n";
 
     export let title;
     export let placeholder;
@@ -26,7 +27,7 @@
     <div class="title">{title}</div>
     <div class="wrapper">
         <input class="input" type="text" {placeholder} bind:value={value} />
-        <button type="button" class="button-file" title="Select file" on:click={handleFileSelect}>
+        <button type="button" class="button-file" title={$_("settings.fileSelector.select")} on:click={handleFileSelect}>
             <img src="img/icon/icon-file-choose.svg" alt="choose">
         </button>
     </div>

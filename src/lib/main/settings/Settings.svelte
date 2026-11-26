@@ -6,6 +6,7 @@
     import Tabs from "../../settings/tab/Tabs.svelte";
     import MinecraftSettings from "./MinecraftSettings.svelte";
     import ClientSettings from "./ClientSettings.svelte";
+    import {_} from "svelte-i18n";
 
     export let client;
     export let options;
@@ -17,12 +18,13 @@
 </script>
 
 <SettingsContainer
-        title="Settings"
+        title={$_("settings.title")}
         fill={activeTab === "Client"}
         on:hideSettings={() => dispatch('hide')}
 >
     <Tabs
             tabs={["General", "Minecraft", "Client", "Premium"]}
+            label={tab => $_(`settings.tabs.${tab.toLowerCase()}`)}
             bind:activeTab
             slot="tabs"
     />

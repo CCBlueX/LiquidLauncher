@@ -1,6 +1,7 @@
 <script>
     import qrcode from "qrcode-generator";
     import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+    import { _ } from "svelte-i18n";
 
     import ModalButton from "./ModalButton.svelte";
     import ModalInput from "./ModalInput.svelte";
@@ -31,18 +32,18 @@
         const qr = qrcode(0, "M");
         qr.addData(text);
         qr.make();
-        return qr.createSvgTag({cellSize: 4, margin: 0, alt: "QR code to sign in with Microsoft"});
+        return qr.createSvgTag({cellSize: 4, margin: 0, alt: $_("login.qrAlt")});
     }
 
     async function handleOfflineLoginClick() {
         if (offlineUsername.length > 16 || offlineUsername.length < 1) {
-            alert("Username must be between 1 and 16 characters long.");
+            alert($_("login.usernameLength"));
             return;
         }
 
         const usernameRegex = /^[a-zA-Z0-9_]+$/;
         if (!usernameRegex.test(offlineUsername)) {
-            alert("Username can only contain letters, numbers, and underscores.");
+            alert($_("login.usernameCharacters"));
             return;
         }
 
@@ -107,12 +108,7 @@
     }
 
     function reportMicrosoftError(err) {
-        alert(
-            "Microsoft authentication failed.\n\n" +
-             err + "\n\n" +
-            "Should you be unable to resolve this issue, please use the 'Play offline' login option " +
-            "and attempt to log in through the client's inbuilt account manager."
-        );
+        alert($_("login.microsoftFailed", { values: { error: `${err}` } }));
     }
 
     listen("microsoft_device_code", (e) => {
@@ -122,56 +118,56 @@
 
 <div class="modal">
     {#if view === "webview"}
-        <div class="title">Microsoft sign-in</div>
+        <div class="title">{$_("login.microsoftTitle")}</div>
 
         <RippleLoader></RippleLoader>
-        <div class="hint">Finish signing in in the popup window.</div>
+        <div class="hint">{$_("login.finishInPopup")}</div>
 
-        <ModalButton text="Cancel" primary={false} on:click={cancelWebviewLogin} />
+        <ModalButton text={$_("common.cancel")} primary={false} on:click={cancelWebviewLogin} />
     {:else if view === "code"}
-        <div class="title">Sign in with a code</div>
+        <div class="title">{$_("login.codeTitle")}</div>
 
         {#if deviceCode}
             <div class="code-box">
                 <span class="code-text">{deviceCode.userCode}</span>
-                <button class="copy-button" type="button" on:click={copyDeviceCode}>{codeCopied ? "COPIED" : "COPY"}</button>
+                <button class="copy-button" type="button" on:click={copyDeviceCode}>{codeCopied ? $_("login.copied") : $_("login.copy")}</button>
             </div>
 
             <div class="hint">
-                Open
+                {$_("login.openBefore")}
                 <button class="inline-link" type="button" on:click={() => openUrl(deviceCode.verificationUri)}>{deviceCode.verificationUri.replace('https://', '')}</button>
-                on any device and enter the code above.
+                {$_("login.openAfter")}
             </div>
 
-            <div class="divider">or</div>
+            <div class="divider">{$_("login.or")}</div>
 
             <div class="qr-row">
                 <div class="qr-code">{@html deviceCodeQr}</div>
                 <div class="qr-copy">
-                    <span class="qr-copy-title">Scan the code</span>
-                    <span class="qr-copy-desc">Opens the page with the code already filled in.</span>
+                    <span class="qr-copy-title">{$_("login.scanTitle")}</span>
+                    <span class="qr-copy-desc">{$_("login.scanDescription")}</span>
                 </div>
             </div>
 
             <div class="waiting">
                 <div class="waiting-dot"></div>
-                <span>Waiting for confirmation</span>
+                <span>{$_("login.waiting")}</span>
             </div>
         {:else}
-            <div class="hint">Requesting a sign-in code&hellip;</div>
+            <div class="hint">{$_("login.requestingCode")}</div>
         {/if}
 
-        <ModalButton text="Cancel" primary={false} on:click={cancelDeviceCode} />
+        <ModalButton text={$_("common.cancel")} primary={false} on:click={cancelDeviceCode} />
     {:else}
-        <div class="title">Log in</div>
+        <div class="title">{$_("login.title")}</div>
 
-        <ModalButton text="Microsoft login" primary={true} on:click={handleMicrosoftWebviewLoginClick} />
-        <ModalButton text="Microsoft device login" primary={false} on:click={startDeviceCodeLogin} />
+        <ModalButton text={$_("login.microsoft")} primary={true} on:click={handleMicrosoftWebviewLoginClick} />
+        <ModalButton text={$_("login.microsoftDevice")} primary={false} on:click={startDeviceCodeLogin} />
 
-        <div class="divider">or</div>
+        <div class="divider">{$_("login.or")}</div>
 
-        <ModalInput placeholder="Username" icon="person" characterLimit={16} bind:value={offlineUsername} />
-        <ModalButton text="Offline login" primary={false} on:click={handleOfflineLoginClick} />
+        <ModalInput placeholder={$_("login.username")} icon="person" characterLimit={16} bind:value={offlineUsername} />
+        <ModalButton text={$_("login.offline")} primary={false} on:click={handleOfflineLoginClick} />
     {/if}
 </div>
 

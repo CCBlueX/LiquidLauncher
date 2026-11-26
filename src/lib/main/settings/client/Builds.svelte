@@ -1,6 +1,8 @@
 <script>
     import { createEventDispatcher } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
+    import { _ } from "svelte-i18n";
+    import { shortDate } from "../../../../i18n.js";
     import ButtonSetting from "../../../settings/ButtonSetting.svelte";
     import ToggleSetting from "../../../settings/ToggleSetting.svelte";
     import ItemRow from "../../../settings/ItemRow.svelte";
@@ -40,33 +42,33 @@
 <ListView
         bind:this={view}
         bind:result
-        title="Builds"
+        title={$_("builds.title")}
         {request}
         on:back
 >
     <ToggleSetting
             slot="controls"
-            title="Show nightly builds"
+            title={$_("builds.showNightly")}
             bind:value={options.launcher.showNightlyBuilds}
             disabled={false}
             on:change={toggleNightly}
     />
-    <svelte:fragment slot="aside">{result?.count ?? ""}</svelte:fragment>
+    <svelte:fragment slot="aside">{result ? $_(result.nightly ? "builds.builds" : "builds.releases", { values: { count: result.total } }) : ""}</svelte:fragment>
 
-    <ItemRow name="Latest" status={result.latest ? "Selected" : null} on:open={() => dispatch("select", -1)} />
+    <ItemRow name={$_("builds.latest")} status={result.latest ? $_("common.selected") : null} on:open={() => dispatch("select", -1)} />
     {#each result.builds as build (build.buildId)}
         <ItemRow
                 name={build.name}
                 description={build.description}
-                status={build.selected ? "Selected" : null}
+                status={build.selected ? $_("common.selected") : null}
                 on:open={() => dispatch("select", build.buildId)}
         >
-            {build.line}
+            {$shortDate(build.date)} · {build.commit}
         </ItemRow>
     {/each}
     {#if result.page < result.pages}
         <div class="more">
-            <ButtonSetting small text={loadingMore ? "Loading" : "Show more"} disabled={loadingMore} on:click={more} />
+            <ButtonSetting small text={loadingMore ? $_("common.loading") : $_("common.showMore")} disabled={loadingMore} on:click={more} />
         </div>
     {/if}
 </ListView>

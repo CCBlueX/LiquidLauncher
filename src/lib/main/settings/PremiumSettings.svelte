@@ -6,6 +6,7 @@
     import ButtonSetting from "../../settings/ButtonSetting.svelte";
     import {invoke} from "@tauri-apps/api/core";
     import {openUrl} from "@tauri-apps/plugin-opener";
+    import {_} from "svelte-i18n";
 
     export let client;
     export let options;
@@ -19,7 +20,7 @@
             });
         } catch (error) {
             console.error("Failed to authenticate client account:", error);
-            alert(`Failed to authenticate client account: ${error}`);
+            alert($_("settings.premium.loginFailed", { values: { error: `${error}` } }));
         }
     }
 
@@ -29,45 +30,45 @@
             clientAccount = null;
         } catch (error) {
             console.error("Failed to log out of client account:", error);
-            alert(`Failed to log out of client account: ${error}`);
+            alert($_("settings.premium.logoutFailed", { values: { error: `${error}` } }));
         }
     }
 </script>
 
 <ToggleSetting
-        title="Skip Advertisements"
+        title={$_("settings.premium.skipAds")}
         disabled={!clientAccount || !clientAccount.premium}
         bind:value={options.premium.skipAdvertisement}
 />
 
 {#if clientAccount}
-    <SettingWrapper title="Account Information">
+    <SettingWrapper title={$_("settings.premium.accountInformation")}>
         <LiquidBounceAccount account={clientAccount} />
     </SettingWrapper>
 
     {#if !clientAccount.premium}
         <Description
-                description="There appears to be no premium associated with this account. Please link it on the account management page."
+                description={$_("settings.premium.noPremium")}
         />
     {/if}
 
     <ButtonSetting
-            text="Manage Account"
+            text={$_("settings.premium.manageAccount")}
             on:click={() => openUrl("https://user.liquidbounce.net")}
             color="#4677FF"
     />
     <ButtonSetting
-            text="Logout"
+            text={$_("settings.premium.logout")}
             on:click={logout}
             color="#B83529"
     />
 {:else}
     <Description
-            description="By going premium, you not only support the ongoing development of the client but also receive a cape and the ability to bypass ads on the launcher."
+            description={$_("settings.premium.description")}
     />
 
     <ButtonSetting
-            text="Login with LiquidBounce Account"
+            text={$_("settings.premium.login")}
             on:click={login}
             color="#4677FF"
     />

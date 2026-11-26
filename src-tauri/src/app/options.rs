@@ -92,6 +92,9 @@ pub(crate) struct LauncherOptions {
     pub keep_launcher_open: bool,
     #[serde(rename = "sessionToken", default = "random_token")]
     pub session_token: String,
+    /// `None` follows the OS.
+    #[serde(rename = "language", default)]
+    pub language: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -170,7 +173,8 @@ impl Default for LauncherOptions {
             show_nightly_builds: false,
             keep_launcher_open: false,
             concurrent_downloads: 10,
-            session_token: random_token()
+            session_token: random_token(),
+            language: None,
         }
     }
 }

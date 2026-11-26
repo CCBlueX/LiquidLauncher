@@ -175,6 +175,7 @@ pub fn gui_main() {
             setup_client,
             check_system,
             sys_memory,
+            sys_locale,
             get_options,
             store_options,
             request_build,

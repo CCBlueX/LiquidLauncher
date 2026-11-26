@@ -1,7 +1,9 @@
 <script>
+    import {_, number} from "svelte-i18n";
+
     export let value;
     export let max;
-    export let text;
+    export let label = null;
     export let speed = 0;
 
     const UNITS = ["B/s", "KB/s", "MB/s", "GB/s"];
@@ -15,13 +17,14 @@
             unit++;
         }
 
-        return `${size.toFixed(unit > 0 && size < 100 ? 1 : 0)} ${UNITS[unit]}`;
+        const digits = unit > 0 && size < 100 ? 1 : 0;
+        return `${$number(size, { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${UNITS[unit]}`;
     }
 </script>
 
 <div class="wrapper">
     <div class="labels">
-        <div class="text">{text}</div>
+        <div class="text">{label ? $_(`progress.${label.key}`, { values: label.values }) : ""}</div>
         {#if speed > 0}
             <div class="speed">{formatSpeed(speed)}</div>
         {/if}

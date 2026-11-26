@@ -6,6 +6,7 @@
     import ButtonSetting from "./ButtonSetting.svelte";
     import RippleLoader from "../common/RippleLoader.svelte";
     import Message from "./Message.svelte";
+    import {_} from "svelte-i18n";
 
     export let title;
     /** Requests the list, for `query` with a search. Typing requests it again after a pause. */
@@ -54,7 +55,7 @@
 
 <div class="stack">
     <div class="back">
-        <IconButtonSetting text="Back" icon="icon-prev" on:click={() => dispatch("back")} />
+        <IconButtonSetting text={$_("common.back")} icon="icon-prev" on:click={() => dispatch("back")} />
     </div>
     {#if placeholder}
         <TextSetting {placeholder} bind:value={query} on:keydown={e => e.key === "Escape" && (query = "")} />
@@ -66,7 +67,7 @@
     <span slot="title-element" class="aside"><slot name="aside" {result} /></span>
     {#if error}
         <Message title={error}>
-            <ButtonSetting small text="Try again" on:click={() => load()} />
+            <ButtonSetting small text={$_("common.tryAgain")} on:click={() => load()} />
         </Message>
     {:else if !result}
         <Message>

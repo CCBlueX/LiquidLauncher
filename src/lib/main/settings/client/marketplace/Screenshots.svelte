@@ -1,5 +1,6 @@
 <script>
     import { fade } from "svelte/transition";
+    import { _ } from "svelte-i18n";
 
     /** The images of an item's description, `{ url, caption }`. */
     export let screenshots;
@@ -34,14 +35,14 @@
 
 {#if current}
     <div class="gallery">
-        <button class="screenshot" type="button" title="View full size" on:click={() => viewing = true}>
+        <button class="screenshot" type="button" title={$_("marketplace.viewFullSize")} on:click={() => viewing = true}>
             <img src={current.url} alt={current.caption} on:error={() => failed = new Set(failed).add(current.url)}>
         </button>
         {#if shown.length > 1}
-            <button class="step previous" type="button" aria-label="Previous screenshot" on:click={() => step(-1)}>
+            <button class="step previous" type="button" aria-label={$_("marketplace.previousScreenshot")} on:click={() => step(-1)}>
                 <img src="img/icon/icon-prev.svg" alt="">
             </button>
-            <button class="step next" type="button" aria-label="Next screenshot" on:click={() => step(1)}>
+            <button class="step next" type="button" aria-label={$_("marketplace.nextScreenshot")} on:click={() => step(1)}>
                 <img src="img/icon/icon-next.svg" alt="">
             </button>
         {/if}
@@ -54,7 +55,7 @@
     </div>
 
     {#if viewing}
-        <button class="viewer" type="button" aria-label="Close" use:toBody transition:fade={{ duration: 150 }}
+        <button class="viewer" type="button" aria-label={$_("common.close")} use:toBody transition:fade={{ duration: 150 }}
                 on:click={() => viewing = false}>
             <img src={current.url} alt={current.caption}>
             {#if current.caption}

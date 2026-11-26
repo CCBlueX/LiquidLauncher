@@ -1,11 +1,12 @@
 <script>
     export let tabs;
     export let activeTab;
+    export let label = tab => tab;
 </script>
 
 <div class="tabs">
     {#each tabs as t}
-        <button class="tab" class:active={t === activeTab} on:click={() => activeTab = t}>{t}</button>
+        <button class="tab" class:active={t === activeTab} on:click={() => activeTab = t}>{label(t)}</button>
     {/each}
 </div>
 

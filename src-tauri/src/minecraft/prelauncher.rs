@@ -34,7 +34,7 @@ use crate::minecraft::game_dir::GameDir;
 use crate::minecraft::launcher;
 use crate::minecraft::launcher::{LauncherData, StartParameter};
 use crate::minecraft::progress::{
-    get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps,
+    get_max, get_progress, Label, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps,
 };
 use crate::minecraft::version::{VersionManifest, VersionProfile};
 use crate::utils::{download_file, download_request, get_maven_artifact_path};
@@ -56,7 +56,7 @@ pub(crate) async fn launch(
 
     launcher_data.progress_update(ProgressUpdate::set_max());
     launcher_data.progress_update(ProgressUpdate::SetProgress(0));
-    launcher_data.progress_update(ProgressUpdate::set_label("Loading version manifest..."));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::LoadingVersionManifest));
 
     let mc_version_manifest = VersionManifest::fetch
         .retry(ExponentialBuilder::default())
@@ -113,7 +113,7 @@ pub(crate) async fn launch(
         warn!("Failed to stage marketplace add-ons: {:?}", error);
     }
 
-    launcher_data.progress_update(ProgressUpdate::set_label("Loading version profile..."));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::LoadingVersionProfile));
     let manifest_url = match subsystem {
         LoaderSubsystem::Fabric { manifest, .. } => manifest
             .replace("{MINECRAFT_VERSION}", &build.mc_version)
@@ -168,10 +168,9 @@ pub(crate) async fn launch(
     }
     version.apply_library_patches(&launch_manifest.library_patches);
 
-    launcher_data.progress_update(ProgressUpdate::set_label(format!(
-        "Launching {}...",
-        launch_manifest.build.commit_id
-    )));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::LaunchingBuild {
+        commit: launch_manifest.build.commit_id.clone(),
+    }));
     launcher::launch(
         &data_directory,
         launch_manifest,
@@ -258,17 +257,15 @@ pub async fn retrieve_and_copy_mods(
             fs::copy(path, mods_path.join(file_name))
                 .await
                 .with_context(|| format!("Failed to copy custom mod {}", current_mod.name))?;
-            launcher_data.progress_update(ProgressUpdate::set_label(format!(
-                "Copied custom mod {}",
-                current_mod.name
-            )));
+            launcher_data.progress_update(ProgressUpdate::SetLabel(Label::CopiedCustomMod {
+                name: current_mod.name.clone(),
+            }));
             continue;
         }
 
-        launcher_data.progress_update(ProgressUpdate::set_label(format!(
-            "Downloading recommended mod {}",
-            current_mod.name
-        )));
+        launcher_data.progress_update(ProgressUpdate::SetLabel(Label::DownloadingRecommendedMod {
+            name: current_mod.name.clone(),
+        }));
 
         let current_mod_path = mod_cache_path.join(current_mod.source.get_path()?);
 
@@ -287,10 +284,9 @@ pub async fn retrieve_and_copy_mods(
                         "Opening download page for mod {} on {}",
                         current_mod.name, url
                     ));
-                    launcher_data.progress_update(ProgressUpdate::set_label(format!(
-                        "Opening download page for mod {}",
-                        current_mod.name
-                    )));
+                    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::OpeningModDownloadPage {
+                        name: current_mod.name.clone(),
+                    }));
 
                     let (url, account) = match client_account {
                         Some(account) => (format!("{}/files/skips/{skip_id}", client.url()), Some(account)),
@@ -299,10 +295,9 @@ pub async fn retrieve_and_copy_mods(
                             (format!("{}/files/{pid}", client.url()), None)
                         }
                     };
-                    launcher_data.progress_update(ProgressUpdate::set_label(format!(
-                        "Downloading mod {}",
-                        current_mod.name
-                    )));
+                    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::DownloadingMod {
+                        name: current_mod.name.clone(),
+                    }));
                     
                     let retrieved_bytes = download_request(|| {
                         let request = crate::HTTP_CLIENT.get(&url);

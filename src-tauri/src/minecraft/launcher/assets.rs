@@ -15,7 +15,7 @@ use crate::{
     error::LauncherError,
     join_and_mkdir,
     minecraft::{
-        progress::{ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
+        progress::{Label, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
         version::{AssetIndexLocation, VersionProfile},
     },
 };
@@ -48,7 +48,7 @@ pub async fn setup_assets<'a, D: Send + Sync>(
     let assets_downloaded = Arc::new(AtomicU64::new(0));
     let asset_max = asset_objects_to_download.len() as u64;
 
-    launcher_data.progress_update(ProgressUpdate::set_label("Checking assets..."));
+    launcher_data.progress_update(ProgressUpdate::SetLabel(Label::CheckingAssets));
     launcher_data.progress_update(ProgressUpdate::set_for_step(
         ProgressUpdateSteps::DownloadAssets,
         0,

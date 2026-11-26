@@ -1,6 +1,8 @@
 <script>
     import { createEventDispatcher } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
+    import { _ } from "svelte-i18n";
+    import { shortDate } from "../../../../../i18n.js";
     import ButtonSetting from "../../../../settings/ButtonSetting.svelte";
     import ItemRow from "../../../../settings/ItemRow.svelte";
     import Message from "../../../../settings/Message.svelte";
@@ -35,7 +37,7 @@
 <ListView
         bind:this={view}
         bind:query
-        placeholder="Search {title.toLowerCase()}"
+        placeholder={$_("marketplace.search", { values: { type } })}
         {title}
         {request}
         on:back
@@ -47,16 +49,22 @@
         <ItemRow
                 name={item.name}
                 description={item.summary}
-                dim={item.unfit}
-                status={item.subscribed ? "Installed" : null}
+                dim={!!item.notFor}
+                status={item.subscribed ? $_("common.installed") : null}
                 on:open={() => dispatch("open", item.id)}
         >
-            {item.line}
+            {[
+                item.version,
+                item.liquidbounce,
+                item.notFor && $_("marketplace.notFor", { values: { version: item.notFor } }),
+                item.updated && $shortDate(item.updated),
+                $_("marketplace.downloads", { values: { count: item.downloads } })
+            ].filter(Boolean).join(" · ")}
             <svelte:fragment slot="side">
                 {#if !item.subscribed}
                     <ButtonSetting
                             small
-                            text={busy === item.id ? "Installing" : "Install"}
+                            text={busy === item.id ? $_("common.installing") : $_("common.install")}
                             disabled={busy !== null || !item.installable}
                             on:click={() => install(item)}
                     />
@@ -64,6 +72,12 @@
             </svelte:fragment>
         </ItemRow>
     {:else}
-        <Message title={result.empty} clearable={!!query} on:clear={() => query = ""} />
+        <Message
+                title={result.query
+                    ? $_("marketplace.noMatch", { values: { type, query: result.query } })
+                    : $_("marketplace.nonePublished", { values: { type } })}
+                clearable={!!query}
+                on:clear={() => query = ""}
+        />
     {/each}
 </ListView>

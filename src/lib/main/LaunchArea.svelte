@@ -2,6 +2,7 @@
     import { createEventDispatcher } from "svelte";
     import ButtonLaunchArea from "./ButtonLaunchArea.svelte";
     import Instances from "./Instances.svelte";
+    import { _ } from "svelte-i18n";
 
     export let versionInfo;
     export let mcVersion;
@@ -40,12 +41,12 @@
 
     {#if instance}
         <div class="running-button-wrapper">
-            <ButtonLaunchArea text="Terminate" active={true} on:click={() => dispatch("terminate")} /> 
-            <ButtonLaunchArea text="Log" active={false} on:click={() => dispatch("showClientLog")} />  
+            <ButtonLaunchArea text={$_("launch.terminate")} active={true} on:click={() => dispatch("terminate")} /> 
+            <ButtonLaunchArea text={$_("launch.log")} active={false} on:click={() => dispatch("showClientLog")} />  
         </div>
     {:else}
         <ButtonLaunchArea
-                text="Launch LiquidBounce"
+                text={$_("launch.launch")}
                 active={false}
                 disabled={!canLaunch}
                 on:click={() => dispatch("launch")}

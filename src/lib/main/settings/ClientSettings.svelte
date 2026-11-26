@@ -3,6 +3,8 @@
     import { invoke } from "@tauri-apps/api/core";
     import { listen } from "@tauri-apps/api/event";
     import { confirm } from "@tauri-apps/plugin-dialog";
+    import { _, locale } from "svelte-i18n";
+    import { shortDate } from "../../../i18n.js";
     import SettingWrapper from "../../settings/SettingWrapper.svelte";
     import IconButtonSetting from "../../settings/IconButtonSetting.svelte";
     import ButtonSetting from "../../settings/ButtonSetting.svelte";
@@ -93,7 +95,14 @@
     }
 
     async function remove(row) {
-        if (row.removeQuestion && !await confirm(row.removeQuestion)) {
+        const question = row.neededBy.length && $_("marketplace.removeQuestion", {
+            values: {
+                name: row.name,
+                count: row.neededBy.length,
+                names: new Intl.ListFormat($locale, { type: "conjunction" }).format(row.neededBy)
+            }
+        });
+        if (question && !await confirm(question)) {
             return;
         }
         await act(row, "remove_marketplace_item", {});
@@ -110,30 +119,33 @@
 
 {#if view.name === "list"}
     {#if library}
-        {@const { notice } = library}
-        <SettingWrapper title="Build">
+        {@const { notice, selection } = library}
+        {@const offline = notice.kind === "offline" ? $_("marketplace.offline", { values: { error: notice.error } }) : null}
+        <SettingWrapper title={$_("settings.client.build")}>
             <ItemRow
                     icon="img/icon/icon-version-lb.png"
-                    name={library.liquidbounce ? `LiquidBounce ${library.liquidbounce} · Minecraft ${library.minecraft}` : notice.error}
-                    description={library.selection}
+                    name={library.liquidbounce ? `LiquidBounce ${library.liquidbounce} · Minecraft ${library.minecraft}` : offline}
+                    description={!selection ? null : selection.latest
+                        ? $_(selection.release ? "builds.latestRelease" : "builds.latestNightly")
+                        : `${$shortDate(selection.date)} · ${selection.commit}`}
                     on:open={() => show({ name: "builds" })}
             >
                 {#if library.liquidbounce}
-                    <span class="strong">{notice.error ?? notice.text ?? ""}</span>
+                    <span class="strong">{offline ?? (notice.kind === "restart" ? $_("marketplace.restart", { values: { count: notice.changes } }) : "")}</span>
                 {/if}
                 <svelte:fragment slot="side">
                     {#if notice.kind === "checking"}
                         <RippleLoader size={30} />
                     {:else if notice.kind === "offline"}
-                        <ButtonSetting small text="Try again" on:click={load} />
+                        <ButtonSetting small text={$_("common.tryAgain")} on:click={load} />
                     {/if}
                 </svelte:fragment>
             </ItemRow>
         </SettingWrapper>
     {:else if error}
-        <SettingWrapper title="Build">
+        <SettingWrapper title={$_("settings.client.build")}>
             <Message title={error}>
-                <ButtonSetting small text="Try again" on:click={load} />
+                <ButtonSetting small text={$_("common.tryAgain")} on:click={load} />
             </Message>
         </SettingWrapper>
     {/if}
@@ -142,24 +154,24 @@
 
     {#if library}
         {#each library.sections as section (section.type)}
-            <SettingWrapper title={section.title} unbounded>
+            <SettingWrapper title={$_("marketplace.title", { values: { type: section.type } })} unbounded>
                 <div slot="title-element">
-                    <IconButtonSetting text="Browse" icon="icon-plus" on:click={() => show({ name: "browse", section })} />
+                    <IconButtonSetting text={$_("common.browse")} icon="icon-plus" on:click={() => show({ name: "browse", section })} />
                 </div>
                 {#each section.items as row (row.id)}
                     <ItemRow
                             name={row.name}
                             removable={!row.removed && busy !== row.id}
-                            dim={row.removed || row.unfit}
+                            dim={row.removed || !!row.notFor}
                             on:open={() => show({ name: "detail", id: row.id, from: view })}
                             on:remove={() => remove(row)}
                     >
-                        {row.line}
+                        {[row.version, row.notFor && $_("marketplace.notFor", { values: { version: row.notFor } })].filter(Boolean).join(" · ")}
                         <svelte:fragment slot="side">
                             {#if row.removed}
                                 <ButtonSetting
                                         small
-                                        text="Undo"
+                                        text={$_("common.undo")}
                                         disabled={busy === row.id}
                                         on:click={() => act(row, "install_marketplace_item", { name: row.name, itemType: section.type })}
                                 />
@@ -167,7 +179,7 @@
                         </svelte:fragment>
                     </ItemRow>
                 {:else}
-                    <div class="empty">{section.empty}</div>
+                    <div class="empty">{$_("marketplace.empty", { values: { type: section.type } })}</div>
                 {/each}
             </SettingWrapper>
         {/each}
@@ -181,7 +193,7 @@
             {client}
             {options}
             type={view.section.type}
-            title={view.section.title}
+            title={$_("marketplace.title", { values: { type: view.section.type } })}
             bind:query
             on:back={() => show({ name: "list" })}
             on:open={e => show({ name: "detail", id: e.detail, from: view })}

@@ -1,6 +1,7 @@
 <script>
     import { createEventDispatcher } from "svelte";
     import IconButtonSetting from "./IconButtonSetting.svelte";
+    import {_} from "svelte-i18n";
 
     export let title = null;
     export let note = null;
@@ -19,7 +20,7 @@
     <slot />
     {#if clearable}
         <div class="clear">
-            <IconButtonSetting text="Clear search" icon="icon-button-close" on:click={() => dispatch("clear")} />
+            <IconButtonSetting text={$_("settings.message.clearSearch")} icon="icon-button-close" on:click={() => dispatch("clear")} />
         </div>
     {/if}
 </div>

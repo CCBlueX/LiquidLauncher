@@ -6,6 +6,7 @@
     import ProgressStatus from "./statusbar/ProgressStatus.svelte";
     import Account from "./Account.svelte";
     import ButtonClose from "../common/ButtonClose.svelte";
+    import {_} from "svelte-i18n";
 
     export let account;
     export let running;
@@ -17,7 +18,7 @@
     <StatusBar>
         {#if !running}
             <TextStatus
-                    text="Welcome back, {account?.name}."
+                    text={$_("main.welcome", { values: { name: account?.name } })}
             />
         {:else}
             <ProgressStatus {...progressState} />

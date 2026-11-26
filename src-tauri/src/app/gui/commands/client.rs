@@ -255,9 +255,8 @@ fn handle_stderr(runner: &Runner, data: &[u8]) -> anyhow::Result<()> {
 fn handle_progress(runner: &Runner, progress_update: ProgressUpdate) -> anyhow::Result<()> {
     runner.emit("progress-update", &progress_update)?;
 
-    // Check if progress update is label update
     if let ProgressUpdate::SetLabel(label) = progress_update {
-        handle_log(runner, &label)?;
+        handle_log(runner, &label.to_string())?;
     }
     Ok(())
 }

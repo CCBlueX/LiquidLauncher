@@ -7,7 +7,7 @@ use tokio::fs;
 use crate::{
     error::LauncherError,
     minecraft::{
-        progress::{get_max, get_progress, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
+        progress::{get_max, get_progress, Label, ProgressReceiver, ProgressUpdate, ProgressUpdateSteps},
         version::VersionProfile,
     },
     utils::{download_file, sha1sum, OS},
@@ -51,7 +51,7 @@ pub async fn setup_client_jar<D: Send + Sync>(
 
         if requires_download {
             launcher_data.log("Downloading client...");
-            launcher_data.progress_update(ProgressUpdate::set_label("Downloading client..."));
+            launcher_data.progress_update(ProgressUpdate::SetLabel(Label::DownloadingClient));
 
             let retrieved_bytes = download_file(&client_download.url, |a, b| {
                 launcher_data.progress_update(ProgressUpdate::set_for_step(

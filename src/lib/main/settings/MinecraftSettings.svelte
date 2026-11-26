@@ -4,6 +4,7 @@
     import {onMount} from "svelte";
     import {invoke} from "@tauri-apps/api/core";
     import Description from "../../settings/Description.svelte";
+    import {_} from "svelte-i18n";
 
     export let options;
 
@@ -25,33 +26,33 @@
     }
 </script>
 
-<Description description="This will allow you to use worlds, resource packs, and shader packs from another installation of Minecraft." />
+<Description description={$_("settings.minecraft.description")} />
 
 <DirectorySelectorSetting
-        title="Minecraft Directory"
-        placeholder={installation?.path || "Auto-detect"}
+        title={$_("settings.minecraft.directory")}
+        placeholder={installation?.path || $_("settings.minecraft.autoDetect")}
         bind:value={options.start.installation.customPath}
-        windowTitle="Select Minecraft directory"
+        windowTitle={$_("settings.minecraft.directoryWindowTitle")}
 />
 
 {#if installation}
     <ToggleSetting
-        title="Link worlds ({installation.saves_count})"
+        title={$_("settings.minecraft.linkWorlds", { values: { count: installation.saves_count } })}
         disabled={false}
         bind:value={options.start.installation.useVanillaSaves}
     />
 
     <ToggleSetting
-        title="Link resource packs ({installation.resource_packs_count})"
+        title={$_("settings.minecraft.linkResourcePacks", { values: { count: installation.resource_packs_count } })}
         disabled={false}
         bind:value={options.start.installation.useVanillaResourcePacks}
     />
 
     <ToggleSetting
-        title="Link shader packs ({installation.shader_packs_count})"
+        title={$_("settings.minecraft.linkShaderPacks", { values: { count: installation.shader_packs_count } })}
         disabled={false}
         bind:value={options.start.installation.useVanillaShaderPacks}
     />
 {:else}
-    <Description description="No Minecraft vanilla installation found."/>
+    <Description description={$_("settings.minecraft.notFound")}/>
 {/if}

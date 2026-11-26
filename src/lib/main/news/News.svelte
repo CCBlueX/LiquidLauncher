@@ -1,5 +1,6 @@
 <script>
     import {openUrl} from "@tauri-apps/plugin-opener";
+    import {_, date as formatDate} from "svelte-i18n";
 
     export let postUid;
     export let title;
@@ -21,10 +22,10 @@
     <div class="content">
         <div class="title-date">
             <div class="title">{title}</div>
-            <div class="date">{new Date(date).toLocaleDateString()}</div>
+            <div class="date">{$formatDate(new Date(date), { year: "numeric", month: "numeric", day: "numeric" })}</div>
         </div>
         <div class="description">{description}</div>
-        <button class="button-show-news" type="button" on:click={handleShowNews}>Read more</button>
+        <button class="button-show-news" type="button" on:click={handleShowNews}>{$_("news.readMore")}</button>
     </div>
 </div>
 

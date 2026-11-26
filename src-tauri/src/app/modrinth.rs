@@ -34,7 +34,7 @@ use tokio::{fs, task::spawn_blocking};
 use tracing::warn;
 
 use crate::app::client_api::{LoaderMod, ModSource};
-use crate::utils::{count, sha1sum};
+use crate::utils::sha1sum;
 use crate::HTTP_CLIENT;
 
 const API: &str = "https://api.modrinth.com/v2";
@@ -203,8 +203,8 @@ pub struct SearchHit {
     project_id: String,
     title: String,
     description: String,
-    /// `by CCBlueX · 1,234 downloads`
-    line: String,
+    author: String,
+    downloads: u64,
     installed: bool,
 }
 
@@ -213,8 +213,8 @@ pub struct SearchHit {
 pub struct Search {
     /// The game searched for, `Fabric 26.3`.
     target: String,
-    /// Shown when nothing matches the query.
-    empty: Option<String>,
+    /// The query searched for, to say when nothing matches it.
+    query: Option<String>,
     hits: Vec<SearchHit>,
 }
 
@@ -222,7 +222,7 @@ impl Search {
     pub fn new(hits: Vec<SearchHit>, query: Option<&str>, minecraft: &str, loader: &str) -> Self {
         Self {
             target: format!("{} {minecraft}", loader_name(loader)),
-            empty: query.map(|query| format!("No mods match “{query}”.")),
+            query: query.map(str::to_owned),
             hits,
         }
     }
@@ -235,11 +235,8 @@ pub fn tell(hits: Vec<Hit>, held: &Held) -> Vec<SearchHit> {
         .filter(|hit| !comes_with_game(hit, held))
         .map(|hit| SearchHit {
             installed: held.installed.contains(&hit.project_id),
-            line: format!(
-                "by {} · {}",
-                hit.author,
-                count(hit.downloads, "download", "downloads")
-            ),
+            author: hit.author,
+            downloads: hit.downloads,
             project_id: hit.project_id,
             title: hit.title,
             description: hit.description,
