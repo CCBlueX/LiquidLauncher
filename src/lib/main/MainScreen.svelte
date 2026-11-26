@@ -271,7 +271,7 @@
         }
     }
     
-    async function switchToNextgen() {
+    async function switchToLatest() {
         launchVersionWarningShown = false;
         options.version.buildId = -1;
         await options.store();
@@ -332,7 +332,7 @@
 {#if launchVersionWarningShown}
     <VersionWarning
             {launchVersionWarningCountdown}
-            on:switchToNextgen={switchToNextgen}
+            on:switchToLatest={switchToLatest}
             on:runClientAnyway={async () => {
                 launchVersionWarningShown = false;
                 await runClient();

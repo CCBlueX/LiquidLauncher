@@ -266,8 +266,8 @@
   },
   "versionWarning": {
     "title": "You are about to launch an unsupported version!",
-    "description": "The selected version of LiquidBounce is no longer officially supported. We recommend upgrading to the latest version of LiquidBounce Nextgen, which works with all Minecraft versions from 1.7 onward.",
-    "switch": "Switch to Nextgen now",
+    "description": "The selected version of LiquidBounce is no longer officially supported. We recommend switching to the newest version, which works with all Minecraft versions from 1.7 onward.",
+    "switch": "Switch to the newest version",
     "launchAnyway": "Launch anyway",
     "launchAnywayIn": "Launch anyway ({seconds})"
   },

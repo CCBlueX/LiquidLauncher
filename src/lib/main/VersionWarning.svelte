@@ -19,7 +19,7 @@
     />
     <ButtonSetting
             text={$_("versionWarning.switch")}
-            on:click={() => dispatch('switchToNextgen')}
+            on:click={() => dispatch('switchToLatest')}
             color="#4677FF"
     />
     <ButtonSetting

@@ -266,8 +266,8 @@
   },
   "versionWarning": {
     "title": "你即将启动一个不受支持的版本！",
-    "description": "所选的 LiquidBounce 版本已不再获得官方支持。我们建议升级到最新版本的 LiquidBounce Nextgen，它支持 1.7 及以上的所有 Minecraft 版本。",
-    "switch": "立即切换到 Nextgen",
+    "description": "所选的 LiquidBounce 版本已不再获得官方支持。我们建议切换到最新版本，它支持 1.7 及以上的所有 Minecraft 版本。",
+    "switch": "切换到最新版本",
     "launchAnyway": "仍然启动",
     "launchAnywayIn": "仍然启动（{seconds}）"
   },
