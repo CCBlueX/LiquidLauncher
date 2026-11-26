@@ -77,7 +77,7 @@
     title={$_("settings.general.language")}
     items={[
         { value: null, text: $_("settings.general.systemLanguage") },
-        ...Object.entries(languages).map(([value, { name }]) => ({ value, text: name })),
+        ...$languages.map(({ code, name }) => ({ value: code, text: name })),
     ]}
     bind:value={options.launcher.language}
 />

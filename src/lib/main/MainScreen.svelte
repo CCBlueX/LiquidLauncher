@@ -14,7 +14,7 @@
     import FirstRunWarning from "./FirstRunWarning.svelte";
     import {onMount} from "svelte";
     import {_, date, locale} from "svelte-i18n";
-    import {languages} from "../../i18n.js";
+    import {english, languages} from "../../i18n.js";
 
     export let client;
     export let options;
@@ -242,7 +242,7 @@
             buildId: versionState.currentBuild.buildId,
             options,
             mods: [...versionState.recommendedMods, ...versionState.customMods],
-            language: languages[$locale].minecraft
+            language: ($languages.find(language => language.code === $locale) ?? english).minecraft
         });
     }
 

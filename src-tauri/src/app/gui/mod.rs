@@ -176,6 +176,8 @@ pub fn gui_main() {
             check_system,
             sys_memory,
             sys_locale,
+            get_languages,
+            get_translation,
             get_options,
             store_options,
             request_build,

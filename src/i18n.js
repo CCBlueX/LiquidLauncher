@@ -1,45 +1,48 @@
-import { addMessages, date, init, locale } from "svelte-i18n";
-import { derived } from "svelte/store";
+import { addMessages, date, dictionary, init, locale } from "svelte-i18n";
+import { derived, get, writable } from "svelte/store";
+import { invoke } from "@tauri-apps/api/core";
+import en from "./locales/en.json";
 
-/** Each language named in itself, as the language setting lists them, with Minecraft's code for it. */
-export const languages = {
-    en: { name: "English", minecraft: "en_us" },
-    "en-x-pirate": { name: "Pirate Speak", minecraft: "en_pt" },
-    de: { name: "Deutsch", minecraft: "de_de" },
-    ja: { name: "日本語", minecraft: "ja_jp" },
-    "zh-CN": { name: "简体中文", minecraft: "zh_cn" },
-    "zh-TW": { name: "繁體中文", minecraft: "zh_tw" },
-    ru: { name: "Русский", minecraft: "ru_ru" },
-    uk: { name: "Українська", minecraft: "uk_ua" },
-    "pt-BR": { name: "Português (Brasil)", minecraft: "pt_br" },
-    tr: { name: "Türkçe", minecraft: "tr_tr" },
-    nl: { name: "Nederlands", minecraft: "nl_nl" },
-    // Without a catalog of its own, nl-BE reads nl.json.
-    "nl-BE": { name: "Nederlands (België)", minecraft: "nl_be" },
-};
+/** Ships with the launcher; every other language is downloaded for this version. */
+export const english = { code: "en", name: "English", minecraft: "en_us" };
 
-const catalogs = import.meta.glob("./locales/*.json", { eager: true, import: "default" });
-for (const [path, messages] of Object.entries(catalogs)) {
-    addMessages(path.slice("./locales/".length, -".json".length), messages);
-}
+/** The languages to offer, each named in itself, with Minecraft's code for it. */
+export const languages = writable([english]);
 
-/** The shipped language for a BCP 47 tag such as `de-AT`, `nl-BE` or `zh-Hant-TW`, English for any other. */
-export function matchLanguage(tag) {
+addMessages("en", en);
+init({ fallbackLocale: "en", initialLocale: "en" });
+
+// Picks the CJK glyph variants the language expects.
+locale.subscribe(code => document.documentElement.lang = code);
+
+/** The offered language for a BCP 47 tag such as `de-AT`, `nl-BE` or `zh-Hant-TW`, English for any other. */
+export function matchLanguage(tag, codes) {
     const subtags = tag?.split(/[-_]/).map(subtag => subtag.toLowerCase()) ?? [];
     if (subtags[0] === "zh") {
-        return subtags.some(subtag => ["hant", "tw", "hk", "mo"].includes(subtag)) ? "zh-TW" : "zh-CN";
+        const traditional = subtags.some(subtag => ["hant", "tw", "hk", "mo"].includes(subtag));
+        return codes.find(code => code === (traditional ? "zh-TW" : "zh-CN")) ?? "en";
     }
-    const codes = Object.keys(languages);
     return codes.find(code => code.toLowerCase() === subtags.join("-"))
         ?? codes.find(code => code.split("-")[0] === subtags[0])
         ?? "en";
 }
 
-// The window's language, until the options name one or the OS is asked.
-init({ fallbackLocale: "en", initialLocale: matchLanguage(navigator.language) });
+let request = 0;
 
-// Picks the CJK glyph variants the language expects.
-locale.subscribe(code => document.documentElement.lang = code);
+/** Switches to the language closest to `tag`, downloading it first. English stays when that fails. */
+export async function useLanguage(tag) {
+    const current = ++request;
+    const code = matchLanguage(tag, get(languages).map(language => language.code));
+    if (!get(dictionary)[code]) {
+        try {
+            addMessages(code, await invoke("get_translation", { code }));
+        } catch (error) {
+            console.error(`Failed to load the ${code} translation:`, error);
+            return;
+        }
+    }
+    if (current === request) locale.set(code);
+}
 
 /** `Sep 26`, with the year when it is not this one. */
 export const shortDate = derived(date, format => value => {

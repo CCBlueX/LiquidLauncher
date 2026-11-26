@@ -4,8 +4,8 @@
     import {message} from "@tauri-apps/plugin-dialog";
     import {exit} from "@tauri-apps/plugin-process";
     import {onMount} from "svelte";
-    import {_, locale} from "svelte-i18n";
-    import {matchLanguage} from "../i18n.js";
+    import {_} from "svelte-i18n";
+    import {english, languages, useLanguage} from "../i18n.js";
     import MainScreen from "./main/MainScreen.svelte";
     import LoginScreen from "./login/LoginScreen.svelte";
     import LoadingScreen from "./main/LoadingScreen.svelte";
@@ -18,7 +18,7 @@
     let client = null;
     let systemLocale = null;
 
-    $: if (options) locale.set(matchLanguage(options.launcher.language ?? systemLocale));
+    $: if (options) useLanguage(options.launcher.language ?? systemLocale);
 
     // Asks if the user allows non-secure connections
     let allowNonSecure = false;
@@ -113,9 +113,14 @@
         }
     }
 
+    async function setupLanguages() {
+        languages.set([english, ...await invoke("get_languages")]);
+        await useLanguage(options.launcher.language ?? systemLocale);
+    }
+
     onMount(async () => {
         await setupOptions();
-        await Promise.all([handleUpdate(), setupClient(), checkSystem()]);
+        await Promise.all([handleUpdate(), setupClient(), checkSystem(), setupLanguages()]);
         loading = false;
     });
 </script>
