@@ -22,10 +22,24 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::{anyhow, Result};
 use commands::*;
+#[cfg(windows)]
+use os_info::Version;
 use serde::Serialize;
 use serde_json::json;
-use tauri::{Emitter, Window};
+#[cfg(target_os = "macos")]
+use tauri::window::EffectState;
+#[cfg(any(windows, target_os = "macos"))]
+use tauri::window::{Effect, EffectsBuilder};
+use tauri::{Emitter, Manager, Window};
+#[cfg(target_os = "linux")]
+use tauri::{WebviewWindow, WindowEvent};
 use tokio::sync::oneshot;
+#[cfg(target_os = "linux")]
+use tracing::info;
+#[cfg(any(windows, target_os = "macos"))]
+use tracing::warn;
+#[cfg(target_os = "linux")]
+use window_vibrancy::{apply_wayland_blur, RoundedRect};
 
 use crate::app::builds::KeptBuild;
 use crate::minecraft::instance::Instance;
@@ -90,6 +104,73 @@ pub fn gui_main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(AppState::new())
+        .setup(|app| {
+            let Some(window) = app.get_webview_window("main") else {
+                return Ok(());
+            };
+
+            // Acrylic lags while the window is dragged before Windows 11 22H2.
+            #[cfg(windows)]
+            {
+                let acrylic = matches!(
+                    os_info::get().version(),
+                    Version::Semantic(_, _, build) if *build >= 22621
+                );
+                let effect = if acrylic {
+                    Effect::Acrylic
+                } else {
+                    Effect::Blur
+                };
+                if let Err(error) = window.set_effects(EffectsBuilder::new().effect(effect).build())
+                {
+                    warn!("Failed to blur the window: {error}");
+                }
+            }
+
+            // Same corners as `.window.rounded` in Window.svelte.
+            #[cfg(target_os = "macos")]
+            if let Err(error) = window.set_effects(
+                EffectsBuilder::new()
+                    .effect(Effect::HudWindow)
+                    .state(EffectState::Active)
+                    .radius(8.0)
+                    .build(),
+            ) {
+                warn!("Failed to blur the window: {error}");
+            }
+
+            // Inside the rounded corners of `.window.rounded` in Window.svelte, again on every resize.
+            #[cfg(target_os = "linux")]
+            {
+                let blur = |window: &WebviewWindow| -> Result<()> {
+                    let size = window
+                        .inner_size()?
+                        .to_logical::<u32>(window.scale_factor()?);
+                    let rect = RoundedRect {
+                        width: size.width,
+                        height: size.height,
+                        radius: 8,
+                    };
+                    apply_wayland_blur(window, Some(rect))?;
+                    Ok(())
+                };
+                match blur(&window) {
+                    Ok(()) => {
+                        let resized = window.clone();
+                        window.on_window_event(move |event| {
+                            if matches!(
+                                event,
+                                WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. }
+                            ) {
+                                let _ = blur(&resized);
+                            }
+                        });
+                    }
+                    Err(error) => info!("No window blur: {error:#}"),
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             setup_client,
             check_system,
