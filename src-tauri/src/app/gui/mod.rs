@@ -24,14 +24,16 @@ use anyhow::Result;
 use commands::*;
 #[cfg(windows)]
 use os_info::Version;
-#[cfg(windows)]
+#[cfg(target_os = "macos")]
+use tauri::window::EffectState;
+#[cfg(any(windows, target_os = "macos"))]
 use tauri::window::{Effect, EffectsBuilder};
 use tauri::{Manager, Window};
 #[cfg(target_os = "linux")]
 use tauri::{WebviewWindow, WindowEvent};
 #[cfg(target_os = "linux")]
 use tracing::info;
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "macos"))]
 use tracing::warn;
 #[cfg(target_os = "linux")]
 use window_vibrancy::{apply_wayland_blur, RoundedRect};
@@ -92,6 +94,18 @@ pub fn gui_main() {
                 {
                     warn!("Failed to blur the window: {error}");
                 }
+            }
+
+            // Same corners as `.window.rounded` in Window.svelte.
+            #[cfg(target_os = "macos")]
+            if let Err(error) = window.set_effects(
+                EffectsBuilder::new()
+                    .effect(Effect::HudWindow)
+                    .state(EffectState::Active)
+                    .radius(8.0)
+                    .build(),
+            ) {
+                warn!("Failed to blur the window: {error}");
             }
 
             // Inside the rounded corners of `.window.rounded` in Window.svelte, again on every resize.

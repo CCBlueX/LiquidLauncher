@@ -57,7 +57,7 @@ base16ct = { version = "^1.0.0", features = ["alloc"] }
 
 # Tauri Plugins
 # which must match package.json dependencies
-tauri = { version = "^2.11", features = [] }
+tauri = { version = "^2.11", features = ["macos-private-api"] }
 tauri-plugin-process = "^2.3.1"
 tauri-plugin-dialog = "^2.7.2"
 tauri-plugin-opener = "^2.5.4"

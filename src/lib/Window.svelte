@@ -109,7 +109,7 @@
 </script>
 
 <!-- Windows 11 rounds the window itself -->
-<div class="window" class:rounded={navigator.platform.startsWith("Linux")}>
+<div class="window" class:rounded={!navigator.platform.startsWith("Win")}>
     <div class="drag-area" data-tauri-drag-region></div>
 
     {#if error}
