@@ -82,6 +82,12 @@ sysctl = "^0.7"
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "^0.61", features = ["Win32_System_SystemInformation", "Win32_System_Threading"] }
 
+# Window blur on Wayland, on GTK's own connection
+[target.'cfg(target_os = "linux")'.dependencies]
+raw-window-handle = "^0.6"
+wayland-client = { version = "^0.31", features = ["system"] }
+wayland-protocols = { version = "^0.32", features = ["client", "staging"] }
+
 [dev-dependencies]
 tempfile = "3"
 

@@ -20,7 +20,7 @@
 use std::sync::{Arc, Mutex};
 
 use commands::*;
-use tauri::Window;
+use tauri::{Manager, Window};
 
 use crate::app::builds::KeptBuild;
 
@@ -45,6 +45,7 @@ impl AppState {
     }
 }
 
+mod backdrop;
 mod commands;
 
 /// Runs the GUI and returns when the window is closed.
@@ -57,6 +58,12 @@ pub fn gui_main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(AppState::new())
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                backdrop::apply(&window);
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             setup_client,
             check_system,

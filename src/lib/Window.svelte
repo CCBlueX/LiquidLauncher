@@ -108,7 +108,8 @@
     });
 </script>
 
-<div class="window">
+<!-- Windows 11 rounds the window itself -->
+<div class="window" class:rounded={navigator.platform.startsWith("Linux")}>
     <div class="drag-area" data-tauri-drag-region></div>
 
     {#if error}
@@ -140,6 +141,23 @@
         height: 100vh;
         padding: 32px;
         overflow: hidden;
+    }
+
+    /* Same radius as CORNER_RADIUS in backdrop.rs. Paint containment clips the fixed overlays too. */
+    .window.rounded {
+        border-radius: 8px;
+        contain: paint;
+    }
+
+    /* Windows 11's window border, drawn above the overlays. */
+    .window.rounded::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: inherit;
+        pointer-events: none;
+        z-index: 1001;
     }
 
     .drag-area {

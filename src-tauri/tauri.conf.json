@@ -23,11 +23,6 @@
         "transparent": true,
         "decorations": false,
         "center": true,
-        "windowEffects": {
-          "effects": [
-            "acrylic"
-          ]
-        },
         "shadow": true
       }
     ]
