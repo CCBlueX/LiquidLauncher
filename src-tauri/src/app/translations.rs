@@ -27,10 +27,10 @@ use std::time::Duration;
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sha2::{Digest, Sha256};
 use tokio::fs;
 use tracing::warn;
 
+use crate::utils::sha256;
 use crate::{HTTP_CLIENT, LAUNCHER_DIRECTORY, LAUNCHER_VERSION};
 
 const HOST: &str = "https://i18n.liquidbounce.net/launcher";
@@ -140,8 +140,4 @@ async fn download(language: &Language) -> Result<Vec<u8>> {
         bail!("Checksum mismatch");
     }
     Ok(json)
-}
-
-fn sha256(bytes: &[u8]) -> String {
-    base16ct::lower::encode_string(&Sha256::digest(bytes))
 }
