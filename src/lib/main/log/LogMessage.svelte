@@ -1,24 +1,24 @@
 <script>
     export let line;
+    export let pattern = null;
+
+    $: message = line.kind === "event" ? line.message : line.text;
+    // `pattern` has one group, so `split` puts the matches at the odd indices.
+    $: parts = pattern ? message.split(pattern) : [message];
 </script>
 
-{#if line.kind === "text"}
-    <div class="line">
-        <pre class="message" class:frame={line.isFrame}>{line.text}</pre>
-    </div>
-{:else}
-    <div class="line {line.level.toLowerCase()}">
+<div class="line {line.level?.toLowerCase() ?? ''}">
+    {#if line.kind !== "text"}
         <span class="time">{line.time ?? ""}</span>
         <span class="level">{line.level}</span>
         {#if line.kind === "launcher"}
             <span class="source launcher">Launcher</span>
-            <pre class="message">{line.text}</pre>
         {:else}
             <span class="source" title={line.thread}>{line.thread}</span>
-            <pre class="message">{#if line.logger}<span class="logger">[{line.logger}] </span>{/if}{line.message}</pre>
         {/if}
-    </div>
-{/if}
+    {/if}
+    <pre class="message" class:frame={line.isFrame}>{#if line.logger}<span class="logger">[{line.logger}] </span>{/if}{#each parts as part, i}{#if i % 2}<mark>{part}</mark>{:else}{part}{/if}{/each}</pre>
+</div>
 
 <style>
     .line {
@@ -78,5 +78,11 @@
 
     .debug .level, .trace .level, .debug .message, .trace .message {
         color: rgba(255, 255, 255, 0.45);
+    }
+
+    mark {
+        color: inherit;
+        background-color: rgba(70, 119, 255, 0.5);
+        border-radius: 2px;
     }
 </style>

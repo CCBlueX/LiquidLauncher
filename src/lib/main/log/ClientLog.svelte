@@ -4,12 +4,51 @@
     import { createEventDispatcher } from "svelte";
     import { confirm } from "@tauri-apps/plugin-dialog";
     import ToggleSetting from "../../settings/ToggleSetting.svelte";
+    import TextSetting from "../../settings/TextSetting.svelte";
     import ButtonSetting from "../../settings/ButtonSetting.svelte"
     import LogMessage from "./LogMessage.svelte";
 
     export let messages;
 
     let autoScroll = true;
+    let query = "";
+
+    const filters = [
+        { name: "Error", levels: ["FATAL", "ERROR"], color: "#ff4444", shown: true },
+        { name: "Warn", levels: ["WARN"], color: "#ff9800", shown: true },
+        { name: "Info", levels: ["INFO"], color: "#60b675", shown: true },
+        { name: "Debug", levels: ["DEBUG", "TRACE"], color: "rgba(255, 255, 255, 0.7)", shown: true },
+    ];
+
+    $: pattern = query ? new RegExp("(" + query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "i") : null;
+    $: levels = filters.filter(filter => filter.shown).flatMap(filter => filter.levels);
+    $: shown = pattern || filters.some(filter => !filter.shown) ? filterLines(messages, levels, pattern) : messages;
+
+    // Text lines such as a stack trace go with the event above them, output before the first event counts as info.
+    // A search keeps the event of each matching line, and all of an event whose first line matches.
+    function filterLines(lines, levels, pattern) {
+        const shown = [];
+        let entry = [];
+        const flush = () => {
+            const [first, ...rest] = entry;
+            if (!levels.includes(first.level ?? "INFO")) return;
+            if (!pattern || pattern.test(first.text)) {
+                shown.push(...entry);
+                return;
+            }
+            const matches = rest.filter(line => pattern.test(line.text));
+            if (matches.length) shown.push(first, ...matches);
+        };
+        for (const line of lines) {
+            if (line.kind !== "text" && entry.length) {
+                flush();
+                entry = [];
+            }
+            entry.push(line);
+        }
+        if (entry.length) flush();
+        return shown;
+    }
 
     const dispatch = createEventDispatcher();
 
@@ -39,15 +78,29 @@
 <div class="log" transition:fly={{ y: -10, duration: 200 }}>
     <div class="header">
         <div class="title">Client log</div>
+        <div class="filters">
+            <div class="search">
+                <TextSetting placeholder="Search" bind:value={query} />
+            </div>
+            {#each filters as filter}
+                <label class="filter" style:--color={filter.color}>
+                    <input type="checkbox" bind:checked={filter.shown}>
+                    <span>{filter.name}</span>
+                </label>
+            {/each}
+        </div>
         <button class="button-hide" on:click={() => dispatch("hideClientLog")}>
             <img class="icon" src="img/icon/icon-button-close.svg" alt="hide">
         </button>
     </div>
 
     <div class="output">
-        <VirtualList items={messages} let:item {autoScroll}>
-            <LogMessage line={item} />
-        </VirtualList>
+        <!-- Starts over on a new filter, as the old row heights belong to other lines. -->
+        {#key `${levels}|${query}`}
+            <VirtualList items={shown} let:item {autoScroll}>
+                <LogMessage line={item} {pattern} />
+            </VirtualList>
+        {/key}
     </div>
 
     <div class="settings">
@@ -96,6 +149,48 @@
     .title {
         font-size: 16px;
         color: white;
+    }
+
+    .filters {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+        margin-right: 20px;
+    }
+
+    .search {
+        width: 200px;
+        margin-right: 6px;
+    }
+
+    .filter {
+        position: relative;
+    }
+
+    .filter input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .filter span {
+        display: block;
+        padding: 3px 8px;
+        border: solid 1px rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+        color: rgba(255, 255, 255, 0.45);
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .filter input:checked + span {
+        color: var(--color);
+        border-color: var(--color);
+    }
+
+    .filter input:focus-visible + span {
+        outline: solid 1px #4677FF;
     }
 
     .button-hide {
