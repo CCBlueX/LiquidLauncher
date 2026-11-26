@@ -28,7 +28,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, to_value, Value};
+use serde_json::{from_value, json, to_value, Map, Value};
 use uuid::Uuid;
 
 use super::auth_manager;
@@ -53,7 +53,23 @@ pub struct AccountEntry {
     pub active: bool,
 }
 
-/// An entry of `accounts.json`, with the types and fields the launcher uses.
+/// An entry of the list. `Other` is one the launcher cannot use, like a TheAltening account.
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+enum Entry {
+    Account(StoredAccount),
+    Other(Value),
+}
+
+impl Entry {
+    fn account(&self) -> Option<&StoredAccount> {
+        match self {
+            Self::Account(account) => Some(account),
+            Self::Other(_) => None,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
 enum StoredAccount {
@@ -62,19 +78,35 @@ enum StoredAccount {
         name: String,
         uuid: Uuid,
         auth_manager: Value,
+        #[serde(flatten)]
+        extra: Extra,
     },
     #[serde(rename = "CrackedAccount")]
     Offline {
         name: String,
         /// LiquidBounce saves it after the first login.
+        #[serde(skip_serializing_if = "Option::is_none")]
         uuid: Option<Uuid>,
+        #[serde(flatten)]
+        extra: Extra,
     },
     #[serde(rename = "SessionAccount", rename_all = "camelCase")]
     Session {
         name: String,
         uuid: Uuid,
         access_token: String,
+        #[serde(flatten)]
+        extra: Extra,
     },
+}
+
+/// What LiquidBounce keeps next to every account, such as its bans.
+#[derive(Default, Serialize, Deserialize)]
+struct Extra {
+    #[serde(default)]
+    favorite: bool,
+    #[serde(flatten)]
+    unknown: Map<String, Value>,
 }
 
 impl StoredAccount {
@@ -82,7 +114,7 @@ impl StoredAccount {
     fn profile(&self) -> (&'static str, &str, Uuid) {
         match self {
             Self::Microsoft { name, uuid, .. } => ("Microsoft", name, *uuid),
-            Self::Offline { name, uuid } => {
+            Self::Offline { name, uuid, .. } => {
                 ("Offline", name, uuid.unwrap_or_else(|| offline_uuid(name)))
             }
             Self::Session { name, uuid, .. } => ("Session", name, *uuid),
@@ -94,21 +126,40 @@ impl StoredAccount {
         format!("{kind}:{uuid}")
     }
 
+    fn extra(&self) -> &Extra {
+        match self {
+            Self::Microsoft { extra, .. }
+            | Self::Offline { extra, .. }
+            | Self::Session { extra, .. } => extra,
+        }
+    }
+
+    fn extra_mut(&mut self) -> &mut Extra {
+        match self {
+            Self::Microsoft { extra, .. }
+            | Self::Offline { extra, .. }
+            | Self::Session { extra, .. } => extra,
+        }
+    }
+
     fn from_launcher(account: &MinecraftAccount) -> Result<Self> {
         Ok(match account {
             MinecraftAccount::MsaAccount { state, name, id } => Self::Microsoft {
                 name: name.clone(),
                 uuid: *id,
                 auth_manager: auth_manager::to_java(state)?,
+                extra: Extra::default(),
             },
             MinecraftAccount::OfflineAccount { name, id } => Self::Offline {
                 name: name.clone(),
                 uuid: Some(*id),
+                extra: Extra::default(),
             },
             MinecraftAccount::SessionAccount { name, id, token } => Self::Session {
                 name: name.clone(),
                 uuid: *id,
                 access_token: token.clone(),
+                extra: Extra::default(),
             },
         })
     }
@@ -142,68 +193,87 @@ pub async fn list(
     signed_in: Option<&MinecraftAccount>,
 ) -> Result<Vec<AccountEntry>> {
     let active = signed_in.map(launcher_id);
-    let mut accounts = read(data).await?;
+    let mut entries = read(data).await?;
 
     if let (Some(account), Some(id)) = (signed_in, &active) {
-        if position(&accounts, id).is_none() {
+        if position(&entries, id).is_none() {
             add(data, account).await?;
-            accounts = read(data).await?;
+            entries = read(data).await?;
         }
     }
 
-    Ok(accounts
+    Ok(entries
         .iter()
-        .filter_map(|raw| entry(raw, active.as_deref()))
+        .filter_map(Entry::account)
+        .map(|account| {
+            let (kind, name, uuid) = account.profile();
+            let id = account.id();
+
+            AccountEntry {
+                active: active.as_deref() == Some(id.as_str()),
+                id,
+                kind,
+                name: name.to_string(),
+                uuid,
+                favorite: account.extra().favorite,
+            }
+        })
         .collect())
 }
 
 pub async fn has_microsoft(data: &Path) -> Result<bool> {
-    let accounts = read(data).await?;
-    Ok(accounts
+    let entries = read(data).await?;
+    Ok(entries
         .iter()
-        .filter_map(parse)
-        .any(|account| matches!(account, StoredAccount::Microsoft { .. })))
+        .any(|entry| matches!(entry.account(), Some(StoredAccount::Microsoft { .. }))))
 }
 
 pub async fn select(data: &Path, id: &str) -> Result<MinecraftAccount> {
-    let accounts = read(data).await?;
-    accounts
-        .iter()
-        .filter_map(parse)
-        .find(|account| account.id() == id)
+    let entries = read(data).await?;
+    entries
+        .into_iter()
+        .find_map(|entry| match entry {
+            Entry::Account(account) if account.id() == id => Some(account),
+            _ => None,
+        })
         .context(NOT_IN_LIST)?
         .into_launcher()
 }
 
 /// Adds the account, or updates its entry when it is in the list already.
 pub async fn add(data: &Path, account: &MinecraftAccount) -> Result<()> {
-    let account = StoredAccount::from_launcher(account)?;
-    let fields = to_value(&account)?;
+    let mut account = StoredAccount::from_launcher(account)?;
 
-    edit(data, |accounts| {
-        let index = position(accounts, &account.id()).unwrap_or_else(|| {
-            accounts.push(json!({ "favorite": false, "bans": {} }));
-            accounts.len() - 1
-        });
-        merge(&mut accounts[index], fields);
+    edit(data, |entries| {
+        match account_mut(entries, &account.id()) {
+            Some(listed) => {
+                *account.extra_mut() = mem::take(listed.extra_mut());
+                *listed = account;
+            }
+            None => {
+                let bans = ("bans".to_string(), json!({}));
+                account.extra_mut().unknown.extend([bans]);
+                entries.push(Entry::Account(account));
+            }
+        }
         Ok(())
     })
     .await
 }
 
 pub async fn remove(data: &Path, id: &str) -> Result<()> {
-    edit(data, |accounts| {
-        let index = position(accounts, id).context(NOT_IN_LIST)?;
-        accounts.remove(index);
+    edit(data, |entries| {
+        let index = position(entries, id).context(NOT_IN_LIST)?;
+        entries.remove(index);
         Ok(())
     })
     .await
 }
 
 pub async fn set_favorite(data: &Path, id: &str, favorite: bool) -> Result<()> {
-    edit(data, |accounts| {
-        let index = position(accounts, id).context(NOT_IN_LIST)?;
-        accounts[index]["favorite"] = json!(favorite);
+    edit(data, |entries| {
+        let account = account_mut(entries, id).context(NOT_IN_LIST)?;
+        account.extra_mut().favorite = favorite;
         Ok(())
     })
     .await
@@ -213,54 +283,38 @@ fn path(data: &Path) -> PathBuf {
     GameDir::new(data).client().join("accounts.json")
 }
 
-async fn read(data: &Path) -> Result<Vec<Value>> {
+async fn read(data: &Path) -> Result<Vec<Entry>> {
     let Some(mut root) = read_root(&path(data)).await? else {
         return Ok(Vec::new());
     };
-    Ok(list_in(&mut root).map(mem::take).unwrap_or_default())
+    match list_in(&mut root) {
+        Some(list) => Ok(from_value(list.take())?),
+        None => Ok(Vec::new()),
+    }
 }
 
-async fn edit(data: &Path, change: impl FnOnce(&mut Vec<Value>) -> Result<()>) -> Result<()> {
+async fn edit(data: &Path, change: impl FnOnce(&mut Vec<Entry>) -> Result<()>) -> Result<()> {
     let path = path(data);
     let mut root = match read_root(&path).await? {
         Some(root) => root,
         None => json!({ "name": LIST_NAME, "value": [{ "name": LIST_NAME, "value": [] }] }),
     };
-    let accounts =
+    let list =
         list_in(&mut root).with_context(|| format!("Unexpected layout of {}", path.display()))?;
 
-    change(accounts)?;
+    let mut entries = from_value(list.take())?;
+    change(&mut entries)?;
+    *list = to_value(entries)?;
     write_root(&path, &root).await
 }
 
-/// `{"name": "Accounts", "value": [{"name": "Accounts", "value": [<account>, ...]}]}`
-fn list_in(root: &mut Value) -> Option<&mut Vec<Value>> {
+/// `{"name": "Accounts", "value": [{"name": "Accounts", "value": [<entry>, ...]}]}`
+fn list_in(root: &mut Value) -> Option<&mut Value> {
     root.get_mut("value")?
         .as_array_mut()?
         .iter_mut()
         .find(|value| value["name"] == LIST_NAME)?
-        .get_mut("value")?
-        .as_array_mut()
-}
-
-/// `None` for entries the launcher cannot use, like TheAltening accounts.
-fn parse(raw: &Value) -> Option<StoredAccount> {
-    StoredAccount::deserialize(raw).ok()
-}
-
-fn entry(raw: &Value, active: Option<&str>) -> Option<AccountEntry> {
-    let account = parse(raw)?;
-    let (kind, name, uuid) = account.profile();
-    let id = account.id();
-
-    Some(AccountEntry {
-        active: active == Some(id.as_str()),
-        id,
-        kind,
-        name: name.to_string(),
-        uuid,
-        favorite: raw["favorite"] == true,
-    })
+        .get_mut("value")
 }
 
 /// What [`StoredAccount::id`] is once the account is in the list.
@@ -273,16 +327,17 @@ fn launcher_id(account: &MinecraftAccount) -> String {
     format!("{kind}:{id}")
 }
 
-fn position(accounts: &[Value], id: &str) -> Option<usize> {
-    accounts
+fn position(entries: &[Entry], id: &str) -> Option<usize> {
+    entries
         .iter()
-        .position(|raw| parse(raw).is_some_and(|account| account.id() == id))
+        .position(|entry| entry.account().is_some_and(|account| account.id() == id))
 }
 
-fn merge(entry: &mut Value, fields: Value) {
-    if let (Value::Object(entry), Value::Object(fields)) = (entry, fields) {
-        entry.extend(fields);
-    }
+fn account_mut<'a>(entries: &'a mut [Entry], id: &str) -> Option<&'a mut StoredAccount> {
+    entries.iter_mut().find_map(|entry| match entry {
+        Entry::Account(account) if account.id() == id => Some(account),
+        _ => None,
+    })
 }
 
 #[cfg(test)]

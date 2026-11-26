@@ -23,7 +23,7 @@ use minecraft_auth::java::{JavaAuthManager, MinecraftProfile};
 use minecraft_auth::msa::MsaDeviceCode;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use uuid::{Builder, Uuid};
 
 use crate::app::gui::ShareableWindow;
 use crate::HTTP_CLIENT;
@@ -162,13 +162,6 @@ impl MinecraftAccount {
 
 /// Same as Java's `UUID.nameUUIDFromBytes("OfflinePlayer:<name>")`.
 pub fn offline_uuid(username: &str) -> Uuid {
-    let name_str = format!("OfflinePlayer:{}", username);
-    let mut md5: [u8; 16] = md5::compute(name_str.as_bytes()).into();
-
-    md5[6] &= 0x0f; // clear version
-    md5[6] |= 0x30; // version 3
-    md5[8] &= 0x3f; // clear variant
-    md5[8] |= 0x80; // IETF variant
-
-    Uuid::from_bytes(md5)
+    let name = format!("OfflinePlayer:{username}");
+    Builder::from_md5_bytes(md5::compute(name).into()).into_uuid()
 }

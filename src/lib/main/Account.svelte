@@ -1,6 +1,7 @@
 <script>
     import {createEventDispatcher} from "svelte";
     import {fly} from "svelte/transition";
+    import {createPopover} from "@melt-ui/svelte";
     import TextSetting from "../settings/TextSetting.svelte";
     import Avatar from "../accounts/Avatar.svelte";
     import AccountRow from "../accounts/AccountRow.svelte";
@@ -11,37 +12,32 @@
     const dispatch = createEventDispatcher();
     const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 150;
 
-    let root;
-    let open = false;
+    // The stylesheet places the popover under the card, it stays where it is in the document.
+    const {
+        elements: {trigger, content},
+        states: {open},
+    } = createPopover({forceVisible: true, positioning: null, portal: null});
+
     let search = "";
 
     $: query = search.trim().toLowerCase();
     $: shown = accounts.filter(entry => entry.name.toLowerCase().includes(query));
-
-    function toggle() {
-        open = !open;
-        search = "";
-    }
+    $: if (!$open) search = "";
 
     function choose(entry) {
-        open = false;
+        $open = false;
         if (!entry.active) dispatch("switchAccount", entry);
     }
 
     function manage() {
-        open = false;
+        $open = false;
         dispatch("manageAccounts");
     }
 </script>
 
-<svelte:window
-        on:click={e => open &&= root.contains(e.target)}
-        on:keydown={e => open &&= e.key !== "Escape"}
-/>
-
-<div class="account" bind:this={root}>
-    <div class="card" class:open>
-        <button class="switch" type="button" title="Switch account" aria-expanded={open} on:click={toggle}>
+<div class="account">
+    <div class="card" class:open={$open}>
+        <button class="switch" type="button" title="Switch account" {...$trigger} use:trigger>
             <Avatar uuid={account?.id} size={35} />
             <span class="details">
                 <span class="username">{account?.name}</span>
@@ -55,8 +51,8 @@
         </button>
     </div>
 
-    {#if open}
-        <div class="popover" transition:fly={{y: -6, duration}}>
+    {#if $open}
+        <div class="popover" {...$content} use:content transition:fly={{y: -6, duration}}>
             <!-- Few enough to see at a glance otherwise. -->
             {#if accounts.length > 5}
                 <TextSetting placeholder="Search accounts" bind:value={search} />

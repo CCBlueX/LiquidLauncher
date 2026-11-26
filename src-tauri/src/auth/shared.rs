@@ -17,13 +17,14 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::io::ErrorKind;
+use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use oauth2::{AccessToken, RefreshToken};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{json, to_vec, Map, Value};
+use tempfile::NamedTempFile;
 use tokio::fs;
 
 use super::ClientAccount;
@@ -99,15 +100,14 @@ fn path(data: &Path) -> PathBuf {
     GameDir::new(data).client().join("account.json")
 }
 
-/// Writes a temporary file first, so the client never reads half a file.
+/// Replaces the file in one step, so the client never reads half a file.
 pub(super) async fn write_root(path: &Path, root: &Value) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).await?;
-    }
+    let parent = path.parent().context("The file has no parent directory")?;
+    fs::create_dir_all(parent).await?;
 
-    let temporary = path.with_extension("json.tmp");
-    fs::write(&temporary, serde_json::to_vec(root)?).await?;
-    fs::rename(&temporary, path).await?;
+    let mut file = NamedTempFile::new_in(parent)?;
+    file.write_all(&to_vec(root)?)?;
+    file.persist(path)?;
     Ok(())
 }
 

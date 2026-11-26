@@ -8,7 +8,7 @@
     import ModalInput from "../login/loginmodal/ModalInput.svelte";
     import ButtonCopyClipboard from "../common/ButtonCopyClipboard.svelte";
     import RippleLoader from "../common/RippleLoader.svelte";
-    import {randomName} from "./randomName.js";
+    import {uniqueNamesGenerator, adjectives, animals, NumberDictionary} from "unique-names-generator";
 
     export let options;
 
@@ -52,6 +52,16 @@
                 error = `${e}`;
             }
         }
+    }
+
+    function randomName() {
+        const name = uniqueNamesGenerator({
+            dictionaries: [adjectives, animals, NumberDictionary.generate({length: 2})],
+            separator: "",
+            style: "capital",
+        });
+        // Some dictionary words are too long for a Minecraft name.
+        return /^\w{1,16}$/.test(name) ? name : randomName();
     }
 
     function cancel() {
