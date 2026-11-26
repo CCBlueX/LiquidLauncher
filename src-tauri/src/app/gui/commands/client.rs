@@ -43,6 +43,7 @@ use crate::app::options::Options;
 use crate::auth::{shared, ClientAccount};
 use crate::minecraft::game_dir::GameDir;
 use crate::minecraft::instance::{Instance, InstanceState};
+use crate::minecraft::log::{Level, LogLine};
 use crate::{app::gui::{AppState, Runner, RunnerInstance, RunnerInstances}, minecraft::{
     auth::MinecraftAccount,
     launcher::{LauncherData, StartParameter},
@@ -238,23 +239,17 @@ pub(crate) async fn delete_custom_mod(
 }
 
 fn handle_stdout(runner: &Runner, data: &[u8]) -> anyhow::Result<()> {
-    let data = String::from_utf8(data.to_vec())?;
-    if data.is_empty() {
-        return Ok(()); // ignore empty lines
-    }
-
-    info!("{}", data.strip_suffix("\n").unwrap_or(&data));
-    output(runner, &data)
+    let line = String::from_utf8_lossy(data);
+    let line = line.trim_end_matches(['\r', '\n']);
+    info!("{}", line);
+    output(runner, LogLine::parse(line))
 }
 
 fn handle_stderr(runner: &Runner, data: &[u8]) -> anyhow::Result<()> {
-    let data = String::from_utf8(data.to_vec())?;
-    if data.is_empty() {
-        return Ok(()); // ignore empty lines
-    }
-
-    error!("{}", data.strip_suffix("\n").unwrap_or(&data));
-    output(runner, &data)
+    let line = String::from_utf8_lossy(data);
+    let line = line.trim_end_matches(['\r', '\n']);
+    error!("{}", line);
+    output(runner, LogLine::parse(line))
 }
 
 fn handle_progress(runner: &Runner, progress_update: ProgressUpdate) -> anyhow::Result<()> {
@@ -269,11 +264,16 @@ fn handle_progress(runner: &Runner, progress_update: ProgressUpdate) -> anyhow::
 
 fn handle_log(runner: &Runner, msg: &str) -> anyhow::Result<()> {
     info!("{}", msg);
-    let _ = output(runner, msg);
+    let _ = output(runner, LogLine::Launcher { text: msg.to_owned(), level: Level::Info });
     Ok(())
 }
 
-fn output(runner: &Runner, line: &str) -> anyhow::Result<()> {
+fn handle_error(runner: &Runner, msg: &str) -> anyhow::Result<()> {
+    error!("{}", msg);
+    output(runner, LogLine::Launcher { text: msg.to_owned(), level: Level::Error })
+}
+
+fn output(runner: &Runner, line: LogLine) -> anyhow::Result<()> {
     runner.emit("process-output", json!({ "id": runner.id, "line": line }))
 }
 
@@ -373,7 +373,7 @@ pub(crate) async fn run_client(
             .await
             .unwrap_or_else(|e| {
                 let message = format!("Failed to authenticate client account: {:?}", e);
-                let _ = handle_stderr(&runner, message.as_bytes());
+                let _ = handle_error(&runner, &message);
                 None
             })
     } else {
@@ -441,7 +441,7 @@ pub(crate) async fn run_client(
                     runner
                         .emit("client-error", json!({ "id": runner.id }))
                         .unwrap();
-                    handle_stderr(&runner, message.as_bytes()).unwrap();
+                    handle_error(&runner, &message).unwrap();
                 };
                 marketplace::game_exited(&GameDir::new(data)).await;
 

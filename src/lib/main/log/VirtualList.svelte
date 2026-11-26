@@ -49,6 +49,10 @@
 
         if (autoScroll) {
             viewport.scrollTop = viewport.scrollHeight;
+            // Rows below the old estimate only get their real height once measured.
+            await handle_scroll();
+            await tick();
+            viewport.scrollTop = viewport.scrollHeight;
         }
 	}
 	async function handle_scroll() {

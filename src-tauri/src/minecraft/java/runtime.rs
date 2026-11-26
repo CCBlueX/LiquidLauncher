@@ -22,9 +22,10 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::fs;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::oneshot::Receiver;
+use tokio::{pin, select};
 use tracing::debug;
 
 pub struct JavaRuntime {
@@ -78,21 +79,28 @@ impl JavaRuntime {
         terminator: Receiver<()>,
         data: &D,
     ) -> Result<()> {
-        let mut stdout = running_task.stdout.take().unwrap();
-        let mut stderr = running_task.stderr.take().unwrap();
+        let mut stdout = BufReader::new(running_task.stdout.take().unwrap());
+        let mut stderr = BufReader::new(running_task.stderr.take().unwrap());
 
-        let mut stdout_buf = vec![0; 1024];
-        let mut stderr_buf = vec![0; 1024];
+        // Kept across iterations: `read_until` leaves a line read in part in them when cancelled.
+        let mut stdout_line = Vec::new();
+        let mut stderr_line = Vec::new();
 
-        tokio::pin!(terminator);
+        pin!(terminator);
 
         loop {
-            tokio::select! {
-                read_len = stdout.read(&mut stdout_buf) => {
-                    let _ = on_stdout(&data, &stdout_buf[..read_len?]);
+            select! {
+                read_len = stdout.read_until(b'\n', &mut stdout_line) => {
+                    if read_len? > 0 {
+                        let _ = on_stdout(&data, &stdout_line);
+                    }
+                    stdout_line.clear();
                 },
-                read_len = stderr.read(&mut stderr_buf) => {
-                    let _ = on_stderr(&data, &stderr_buf[..read_len?]);
+                read_len = stderr.read_until(b'\n', &mut stderr_line) => {
+                    if read_len? > 0 {
+                        let _ = on_stderr(&data, &stderr_line);
+                    }
+                    stderr_line.clear();
                 },
                 _ = &mut terminator => {
                     running_task.kill().await?;

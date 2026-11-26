@@ -14,7 +14,7 @@
     const dispatch = createEventDispatcher();
 
     async function handleUploadSetting(e) {
-        const log = messages.join("");
+        const log = messages.map(line => line.text).join("\n");
 
         if (await confirm("The entire log of this session will be uploaded. It may contain sensitive information like private chat messages. Are you sure you want to proceed?") !== true) {
             return;
@@ -46,7 +46,7 @@
 
     <div class="output">
         <VirtualList items={messages} let:item {autoScroll}>
-            <LogMessage text={item} />
+            <LogMessage line={item} />
         </VirtualList>
     </div>
 
