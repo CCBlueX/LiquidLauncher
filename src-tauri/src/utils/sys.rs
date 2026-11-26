@@ -27,7 +27,7 @@ use std::fs;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
-/// Get the total memory of the system in
+/// Get the total memory of the system in bytes
 pub fn sys_memory() -> u64 {
     let sys = System::new_with_specifics(
         RefreshKind::nothing().with_memory(MemoryRefreshKind::nothing().with_ram()),

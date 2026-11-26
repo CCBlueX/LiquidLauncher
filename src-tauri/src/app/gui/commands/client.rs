@@ -436,7 +436,7 @@ pub(crate) async fn run_client(
                         runner.window.lock().unwrap().show().unwrap();
                     }
 
-                    let message = format!("An error occured:\n\n{:?}", e);
+                    let message = format!("An error occurred:\n\n{:?}", e);
                     runner
                         .emit("client-error", json!({ "id": runner.id }))
                         .unwrap();
