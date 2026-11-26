@@ -189,7 +189,7 @@
             instance = instances.find(listed => listed.id === id) ?? null;
         } catch (error) {
             console.error("Failed to start client:", error);
-            logs[0] = [`Failed to start client: ${error}`];
+            logs[0] = [{ kind: "launcher", level: "ERROR", text: `Failed to start client: ${error}` }];
             logShown = 0;
         } finally {
             launching = false;
