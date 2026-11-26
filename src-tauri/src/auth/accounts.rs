@@ -48,7 +48,6 @@ pub struct AccountEntry {
     pub kind: &'static str,
     pub name: String,
     pub uuid: Uuid,
-    pub favorite: bool,
     /// The account the launcher is signed in with.
     pub active: bool,
 }
@@ -79,7 +78,7 @@ enum StoredAccount {
         uuid: Uuid,
         auth_manager: Value,
         #[serde(flatten)]
-        extra: Extra,
+        rest: Rest,
     },
     #[serde(rename = "CrackedAccount")]
     Offline {
@@ -88,7 +87,7 @@ enum StoredAccount {
         #[serde(skip_serializing_if = "Option::is_none")]
         uuid: Option<Uuid>,
         #[serde(flatten)]
-        extra: Extra,
+        rest: Rest,
     },
     #[serde(rename = "SessionAccount", rename_all = "camelCase")]
     Session {
@@ -96,18 +95,12 @@ enum StoredAccount {
         uuid: Uuid,
         access_token: String,
         #[serde(flatten)]
-        extra: Extra,
+        rest: Rest,
     },
 }
 
 /// What LiquidBounce keeps next to every account, such as its bans.
-#[derive(Default, Serialize, Deserialize)]
-struct Extra {
-    #[serde(default)]
-    favorite: bool,
-    #[serde(flatten)]
-    unknown: Map<String, Value>,
-}
+type Rest = Map<String, Value>;
 
 impl StoredAccount {
     /// Type as the frontend names it, name and UUID.
@@ -126,19 +119,11 @@ impl StoredAccount {
         format!("{kind}:{uuid}")
     }
 
-    fn extra(&self) -> &Extra {
+    fn rest_mut(&mut self) -> &mut Rest {
         match self {
-            Self::Microsoft { extra, .. }
-            | Self::Offline { extra, .. }
-            | Self::Session { extra, .. } => extra,
-        }
-    }
-
-    fn extra_mut(&mut self) -> &mut Extra {
-        match self {
-            Self::Microsoft { extra, .. }
-            | Self::Offline { extra, .. }
-            | Self::Session { extra, .. } => extra,
+            Self::Microsoft { rest, .. }
+            | Self::Offline { rest, .. }
+            | Self::Session { rest, .. } => rest,
         }
     }
 
@@ -148,18 +133,18 @@ impl StoredAccount {
                 name: name.clone(),
                 uuid: *id,
                 auth_manager: auth_manager::to_java(state)?,
-                extra: Extra::default(),
+                rest: Rest::new(),
             },
             MinecraftAccount::OfflineAccount { name, id } => Self::Offline {
                 name: name.clone(),
                 uuid: Some(*id),
-                extra: Extra::default(),
+                rest: Rest::new(),
             },
             MinecraftAccount::SessionAccount { name, id, token } => Self::Session {
                 name: name.clone(),
                 uuid: *id,
                 access_token: token.clone(),
-                extra: Extra::default(),
+                rest: Rest::new(),
             },
         })
     }
@@ -215,17 +200,9 @@ pub async fn list(
                 kind,
                 name: name.to_string(),
                 uuid,
-                favorite: account.extra().favorite,
             }
         })
         .collect())
-}
-
-pub async fn has_microsoft(data: &Path) -> Result<bool> {
-    let entries = read(data).await?;
-    Ok(entries
-        .iter()
-        .any(|entry| matches!(entry.account(), Some(StoredAccount::Microsoft { .. }))))
 }
 
 pub async fn select(data: &Path, id: &str) -> Result<MinecraftAccount> {
@@ -247,12 +224,13 @@ pub async fn add(data: &Path, account: &MinecraftAccount) -> Result<()> {
     edit(data, |entries| {
         match account_mut(entries, &account.id()) {
             Some(listed) => {
-                *account.extra_mut() = mem::take(listed.extra_mut());
+                *account.rest_mut() = mem::take(listed.rest_mut());
                 *listed = account;
             }
             None => {
-                let bans = ("bans".to_string(), json!({}));
-                account.extra_mut().unknown.extend([bans]);
+                let fresh = [("favorite", json!(false)), ("bans", json!({}))];
+                let fresh = fresh.map(|(key, value)| (key.to_string(), value));
+                account.rest_mut().extend(fresh);
                 entries.push(Entry::Account(account));
             }
         }
@@ -265,15 +243,6 @@ pub async fn remove(data: &Path, id: &str) -> Result<()> {
     edit(data, |entries| {
         let index = position(entries, id).context(NOT_IN_LIST)?;
         entries.remove(index);
-        Ok(())
-    })
-    .await
-}
-
-pub async fn set_favorite(data: &Path, id: &str, favorite: bool) -> Result<()> {
-    edit(data, |entries| {
-        let account = account_mut(entries, id).context(NOT_IN_LIST)?;
-        account.extra_mut().favorite = favorite;
         Ok(())
     })
     .await
@@ -457,7 +426,6 @@ mod tests {
                 "type": "Microsoft",
                 "name": "Notch",
                 "uuid": MICROSOFT_UUID,
-                "favorite": true,
                 "active": true
             })
         );
@@ -489,7 +457,6 @@ mod tests {
         );
 
         assert!(list(data.path(), None).await.unwrap().is_empty());
-        assert!(!has_microsoft(data.path()).await.unwrap());
     }
 
     #[tokio::test]
@@ -497,7 +464,6 @@ mod tests {
         let data = tempdir().unwrap();
 
         assert!(list(data.path(), None).await.unwrap().is_empty());
-        assert!(!has_microsoft(data.path()).await.unwrap());
     }
 
     #[tokio::test]
@@ -565,9 +531,7 @@ mod tests {
         let data = data_with(&original.to_string());
         let data = data.path();
 
-        let herobrine = format!("Offline:{}", offline_uuid("Herobrine"));
         add(data, &offline("Herobrine")).await.unwrap();
-        set_favorite(data, &herobrine, true).await.unwrap();
         remove(data, &format!("Offline:{STEVE_UUID}")).await.unwrap();
 
         assert_eq!(file(data)["extra"], "kept");
@@ -581,7 +545,7 @@ mod tests {
                 "type": "CrackedAccount",
                 "name": "Herobrine",
                 "uuid": offline_uuid("Herobrine"),
-                "favorite": true,
+                "favorite": false,
                 "bans": {}
             })
         );
@@ -600,16 +564,5 @@ mod tests {
         assert_eq!(entry["bans"]["play.example.net"]["permanent"], true);
         assert_eq!(entry["authManager"]["deviceKeyPair"]["algorithm"], "EC");
         assert!(entry["authManager"].get("minecraftToken").is_none());
-    }
-
-    #[tokio::test]
-    async fn only_a_microsoft_account_counts_as_microsoft() {
-        let data = tempdir().unwrap();
-
-        add(data.path(), &offline("Steve")).await.unwrap();
-        assert!(!has_microsoft(data.path()).await.unwrap());
-
-        add(data.path(), &microsoft()).await.unwrap();
-        assert!(has_microsoft(data.path()).await.unwrap());
     }
 }

@@ -17,8 +17,6 @@
  * along with LiquidLauncher. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::env;
-use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use serde_json::json;
@@ -36,9 +34,6 @@ use crate::{
     },
     minecraft::auth::MinecraftAccount,
 };
-
-/// Set to `1`, offline and session accounts no longer need a Microsoft account in the list.
-const ALLOW_OFFLINE_ENV: &str = "LIQUIDLAUNCHER_ALLOW_OFFLINE";
 
 /// The frontend offers to buy Minecraft for this error.
 const NO_MINECRAFT: &str = "no_minecraft";
@@ -115,7 +110,6 @@ pub(crate) async fn add_offline(
     if !is_name || !(1..=16).contains(&username.len()) {
         return Err("A username has 1 to 16 letters, digits and underscores.".to_string());
     }
-    require_offline_allowed(&data_directory(&options).await?).await?;
 
     let account = MinecraftAccount::auth_offline(username.to_string());
     save(&app_state, &options, account).await
@@ -136,7 +130,6 @@ pub(crate) async fn add_session(
     let account = if token.starts_with("M.") {
         MinecraftAccount::auth_msa_refresh_token(token).await
     } else {
-        require_offline_allowed(&data_directory(&options).await?).await?;
         MinecraftAccount::auth_session(token.to_string()).await
     }
     .map_err(error_text)?;
@@ -154,41 +147,6 @@ pub(crate) async fn remove_account(
     accounts::remove(&data_directory(&options).await?, &id)
         .await
         .map_err(error_text)
-}
-
-#[tauri::command]
-pub(crate) async fn set_favorite(
-    options: Options,
-    id: String,
-    favorite: bool,
-    app_state: State<'_, AppState>,
-) -> Result<(), String> {
-    ensure_client_stopped(&app_state)?;
-
-    accounts::set_favorite(&data_directory(&options).await?, &id, favorite)
-        .await
-        .map_err(error_text)
-}
-
-/// Whether offline and session accounts can be added and played with.
-#[tauri::command]
-pub(crate) async fn offline_allowed(options: Options) -> Result<bool, String> {
-    is_offline_allowed(&data_directory(&options).await?).await
-}
-
-async fn is_offline_allowed(data: &Path) -> Result<bool, String> {
-    if env::var(ALLOW_OFFLINE_ENV).is_ok_and(|value| value == "1") {
-        return Ok(true);
-    }
-    accounts::has_microsoft(data).await.map_err(error_text)
-}
-
-async fn require_offline_allowed(data: &Path) -> Result<(), String> {
-    if is_offline_allowed(data).await? {
-        Ok(())
-    } else {
-        Err("Add a Microsoft account first.".to_string())
-    }
 }
 
 async fn save(

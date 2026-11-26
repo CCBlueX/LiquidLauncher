@@ -12,7 +12,8 @@
     import ClientLog from "./log/ClientLog.svelte";
     import Settings from "./settings/Settings.svelte";
     import FirstRunWarning from "./FirstRunWarning.svelte";
-    import AccountManager from "../accounts/AccountManager.svelte";
+    import SettingsContainer from "../settings/SettingsContainer.svelte";
+    import SignIn from "../accounts/SignIn.svelte";
     import {accounts, loadAccounts} from "../accounts/accounts.js";
     import {onMount} from "svelte";
 
@@ -30,7 +31,7 @@
     let logs = {};
     let logShown = null;
     let settingsShown = false;
-    let accountManagerShown = false;
+    let addAccountShown = false;
     let settingsTab = "General";
     let launchVersionWarningShown = false;
     let firstRunWarningShown = false;
@@ -279,6 +280,25 @@
         await loadAccounts(options);
     }
 
+    async function removeAccount(entry) {
+        const confirmed = await confirm(
+            `Remove ${entry.name}? It disappears from LiquidBounce's account manager too.`
+        );
+        if (!confirmed) return;
+
+        try {
+            await invoke("remove_account", {options, id: entry.id});
+        } catch (e) {
+            alert("Failed to remove account.\n\n" + e);
+        }
+        await loadAccounts(options);
+    }
+
+    async function accountAdded() {
+        addAccountShown = false;
+        await loadAccounts(options);
+    }
+
     async function continueAfterFirstRun() {
         await hideFirstRunWarning();
         await runClient();
@@ -383,26 +403,25 @@
     />
 {/if}
 
-{#if accountManagerShown}
-    <AccountManager
-            bind:options
-            locked={instances.length > 0}
-            on:switchAccount={(e) => switchAccount(e.detail)}
-            on:hide={() => accountManagerShown = false}
-    />
+{#if addAccountShown}
+    <SettingsContainer title="Add account" pinned on:hideSettings={() => addAccountShown = false}>
+        <SignIn bind:options on:added={accountAdded} />
+    </SettingsContainer>
 {/if}
 
 <VerticalFlexWrapper
-        blur={settingsShown || accountManagerShown || logShown !== null || launchVersionWarningShown || firstRunWarningShown}
+        blur={settingsShown || addAccountShown || logShown !== null || launchVersionWarningShown || firstRunWarningShown}
 >
     <MainHeader
             account={options.start.account}
             accounts={$accounts}
+            accountsLocked={instances.length > 0}
             running={starting}
             {progressState}
             on:showSettings={() => showSettings("General")}
-            on:manageAccounts={() => accountManagerShown = true}
+            on:addAccount={() => addAccountShown = true}
             on:switchAccount={(e) => switchAccount(e.detail)}
+            on:removeAccount={(e) => removeAccount(e.detail)}
     />
 
     <ContentWrapper>

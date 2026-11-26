@@ -8,6 +8,8 @@
 
     export let account;
     export let accounts;
+    /** A running client writes the list when it exits, so it cannot be edited until then. */
+    export let locked;
 
     const dispatch = createEventDispatcher();
     const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 150;
@@ -29,9 +31,9 @@
         if (!entry.active) dispatch("switchAccount", entry);
     }
 
-    function manage() {
+    function addAccount() {
         $open = false;
-        dispatch("manageAccounts");
+        dispatch("addAccount");
     }
 </script>
 
@@ -59,13 +61,22 @@
             {/if}
             <div class="rows">
                 {#each shown as entry (entry.id)}
-                    <AccountRow {entry} on:click={() => choose(entry)} />
+                    <AccountRow {entry} on:click={() => choose(entry)}>
+                        {#if !locked && !entry.active}
+                            <button class="remove" type="button" title="Remove" aria-label="Remove {entry.name}" on:click={() => dispatch("removeAccount", entry)}>
+                                <img src="img/icon/icon-trash.svg" alt="">
+                            </button>
+                        {/if}
+                    </AccountRow>
                 {/each}
             </div>
-            <button class="manage" type="button" on:click={manage}>
-                Manage accounts
-                <img src="img/icon/icon-next.svg" alt="">
+            <button class="add" type="button" disabled={locked} on:click={addAccount}>
+                <img src="img/icon/icon-plus.svg" alt="">
+                Add account
             </button>
+            {#if locked}
+                <p class="note">Close LiquidBounce to add or remove accounts.</p>
+            {/if}
         </div>
     {/if}
 </div>
@@ -167,10 +178,30 @@
         overflow-y: auto;
     }
 
-    .manage {
+    .remove {
+        position: relative;
+        display: flex;
+        padding: 0;
+        border: none;
+        background: none;
+        cursor: pointer;
+        opacity: 0;
+        transition: ease opacity .2s;
+    }
+
+    .remove img {
+        height: 16px;
+    }
+
+    :global(.row:hover) > .remove,
+    :global(.row:focus-within) > .remove {
+        opacity: 1;
+    }
+
+    .add {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        column-gap: 10px;
         padding: 8px 10px;
         border: none;
         border-radius: 6px;
@@ -182,18 +213,30 @@
         transition: ease background-color .2s;
     }
 
-    .manage:hover {
+    .add:hover {
         background-color: rgba(255, 255, 255, .06);
     }
 
-    .manage img {
-        height: 10px;
+    .add:disabled {
         opacity: .5;
+        pointer-events: none;
+    }
+
+    .add img {
+        height: 10px;
+    }
+
+    .note {
+        padding: 0 10px 6px;
+        color: rgba(255, 255, 255, .5);
+        font-size: 11px;
+        line-height: 14px;
     }
 
     .switch:focus-visible,
     .settings:focus-visible,
-    .manage:focus-visible {
+    .remove:focus-visible,
+    .add:focus-visible {
         outline: solid 2px white;
         outline-offset: 2px;
     }

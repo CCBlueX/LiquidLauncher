@@ -1,5 +1,5 @@
 <script>
-    import {createEventDispatcher, onDestroy, onMount} from "svelte";
+    import {createEventDispatcher, onDestroy} from "svelte";
     import {invoke} from "@tauri-apps/api/core";
     import {listen} from "@tauri-apps/api/event";
     import {openUrl} from "@tauri-apps/plugin-opener";
@@ -14,7 +14,7 @@
 
     const dispatch = createEventDispatcher();
 
-    let types = ["Microsoft"];
+    const types = ["Microsoft", "Offline", "Session"];
     let type = "Microsoft";
     // "form" | "webview" | "deviceCode" | "noMinecraft"
     let view = "form";
@@ -85,10 +85,6 @@
         openSignInPage();
     });
 
-    onMount(async () => {
-        if (await invoke("offline_allowed", {options})) types = ["Microsoft", "Offline", "Session"];
-    });
-
     onDestroy(() => {
         attempt++;
         deviceCodeListener.then(unlisten => unlisten());
@@ -121,9 +117,7 @@
         <ModalButton text="Buy Minecraft" primary on:click={() => openUrl("https://www.minecraft.net/store/minecraft-java-bedrock-edition-pc")} />
         <ModalButton text="Use another account" primary={false} on:click={cancel} />
     {:else}
-        {#if types.length > 1}
-            <Tabs tabs={types} bind:activeTab={type} />
-        {/if}
+        <Tabs tabs={types} bind:activeTab={type} />
 
         {#if type === "Microsoft"}
             <p class="hint">Use the Microsoft account that owns Minecraft: Java Edition.</p>

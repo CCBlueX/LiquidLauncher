@@ -1,7 +1,7 @@
 import {writable} from "svelte/store";
 import {invoke} from "@tauri-apps/api/core";
 
-// LiquidBounce's account list: {id, type, name, uuid, favorite, active}
+// LiquidBounce's account list: {id, type, name, uuid, active}
 export const accounts = writable([]);
 
 export async function loadAccounts(options) {

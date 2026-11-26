@@ -9,6 +9,7 @@
 
     export let account;
     export let accounts;
+    export let accountsLocked;
     export let running;
     export let progressState;
 </script>
@@ -27,9 +28,11 @@
     <Account
             {account}
             {accounts}
+            locked={accountsLocked}
             on:showSettings
-            on:manageAccounts
+            on:addAccount
             on:switchAccount
+            on:removeAccount
     />
     <ButtonClose />
 </TitleBar>
